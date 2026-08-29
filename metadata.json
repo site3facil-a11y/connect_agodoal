@@ -1,0 +1,6 @@
+{
+  "name": "Algodoal Connect",
+  "description": "Plataforma completa para a Ilha de Algodoal (APA Maiandeua): Painel administrativo com controle de anúncios, período e métricas para restaurantes, pousadas, passeios, charretes e eventos; Login Social (Google, Instagram, Facebook, Apple); e Tábua de Marés de Marapanim e da Marinha do Brasil.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
