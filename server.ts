@@ -34,7 +34,10 @@ import {
   deleteAdvertisement,
   incrementAdMetrics,
   getUsers,
-  findOrCreateUser
+  findOrCreateUser,
+  getAdminSettings,
+  validateAdminCredentials,
+  updateAdminSettings
 } from './src/db/database';
 
 async function startServer() {
@@ -88,6 +91,77 @@ async function startServer() {
       });
     } catch (err: any) {
       res.status(500).json({ error: 'Erro no login social', details: err.message });
+    }
+  });
+
+  // Admin Credentials Authentication
+  app.post('/api/auth/admin-login', async (req, res) => {
+    try {
+      const { usernameOrEmail, pinOrPassword } = req.body;
+      if (!usernameOrEmail || !pinOrPassword) {
+        return res.status(400).json({ error: 'Usuário e senha são obrigatórios.' });
+      }
+
+      const isValid = await validateAdminCredentials(usernameOrEmail, pinOrPassword);
+      if (!isValid) {
+        return res.status(401).json({ error: 'Credenciais de Administrador inválidas. Verifique usuário e senha/PIN.' });
+      }
+
+      const settings = await getAdminSettings();
+      const adminProfile = {
+        id: 'usr_admin_master',
+        name: 'Administrador Geral (Algodoal Connect)',
+        email: settings.admin_email || 'admin@algodoalconnect.com.br',
+        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+        provider: 'email' as const,
+        role: 'admin' as const,
+        created_at: new Date().toISOString()
+      };
+
+      const user = await findOrCreateUser(adminProfile);
+
+      res.json({
+        success: true,
+        user,
+        token: `adm_token_${Date.now()}_${Math.random().toString(36).substring(2)}`
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Erro na autenticação de administrador', details: err.message });
+    }
+  });
+
+  app.get('/api/admin/settings', async (req, res) => {
+    try {
+      const settings = await getAdminSettings();
+      // Mask the pin/password for security
+      res.json({
+        admin_username: settings.admin_username,
+        admin_email: settings.admin_email,
+        updated_at: settings.updated_at
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Erro ao buscar configurações', details: err.message });
+    }
+  });
+
+  app.post('/api/admin/settings/password', async (req, res) => {
+    try {
+      const { currentPassword, newPassword, newEmail, newUsername } = req.body;
+      const settings = await getAdminSettings();
+      const isValid = await validateAdminCredentials(settings.admin_username, currentPassword);
+      if (!isValid) {
+        return res.status(401).json({ error: 'Senha/PIN atual incorreta.' });
+      }
+
+      const updated = await updateAdminSettings({
+        admin_pin: newPassword || settings.admin_pin,
+        admin_email: newEmail || settings.admin_email,
+        admin_username: newUsername || settings.admin_username
+      });
+
+      res.json({ success: true, message: 'Credenciais de Administrador atualizadas com sucesso!' });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Erro ao atualizar senha', details: err.message });
     }
   });
 

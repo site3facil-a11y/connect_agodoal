@@ -39,6 +39,34 @@ export const api = {
     return res.json();
   },
 
+  async adminLogin(usernameOrEmail: string, pinOrPassword: string): Promise<{ success: boolean; user: UserProfile; token: string }> {
+    const res = await fetch(`${API_BASE}/auth/admin-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usernameOrEmail, pinOrPassword })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Credenciais de Administrador inválidas');
+    return data;
+  },
+
+  async getAdminSettings() {
+    const res = await fetch(`${API_BASE}/admin/settings`);
+    if (!res.ok) throw new Error('Erro ao buscar configurações');
+    return res.json();
+  },
+
+  async updateAdminPassword(payload: { currentPassword: string; newPassword?: string; newEmail?: string; newUsername?: string }) {
+    const res = await fetch(`${API_BASE}/admin/settings/password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro ao atualizar credenciais');
+    return data;
+  },
+
   async getUsers(): Promise<UserProfile[]> {
     const res = await fetch(`${API_BASE}/admin/users`);
     return res.json();

@@ -639,6 +639,13 @@ const SEED_REVIEWS: Review[] = [
   }
 ];
 
+interface AdminSettings {
+  admin_username: string;
+  admin_email: string;
+  admin_pin: string;
+  updated_at: string;
+}
+
 interface LocalDatabaseState {
   partners: Partner[];
   services: ServiceProduct[];
@@ -650,6 +657,27 @@ interface LocalDatabaseState {
   advertisements: Advertisement[];
   tide_days: TideDayEntry[];
   users: UserProfile[];
+  admin_settings?: AdminSettings;
+}
+
+const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
+  admin_username: 'admin',
+  admin_email: 'admin@algodoalconnect.com.br',
+  admin_pin: 'algodoal2026',
+  updated_at: '2026-01-01T00:00:00Z'
+};
+
+export function normalizeAdCategory(cat?: string): string {
+  if (!cat) return '';
+  const c = cat.toLowerCase().trim();
+  if (c === 'restaurante' || c === 'restaurantes' || c === 'alimentacao' || c === 'alimentação' || c === 'gastronomia' || c === 'culinaria') return 'alimentacao';
+  if (c === 'pousada' || c === 'pousadas' || c === 'hospedagem' || c === 'hotel' || c === 'chale' || c === 'chalés') return 'pousadas';
+  if (c === 'passeio' || c === 'passeios' || c === 'rabeta' || c === 'rabetas' || c === 'ecoturismo') return 'passeios';
+  if (c === 'transporte' || c === 'transportes' || c === 'charrete' || c === 'charretes' || c === 'carroca' || c === 'carroças') return 'transporte';
+  if (c === 'compra' || c === 'compras' || c === 'mercado' || c === 'deposito' || c === 'depósito' || c === 'agua' || c === 'água') return 'compras';
+  if (c === 'evento' || c === 'eventos' || c === 'show' || c === 'luau' || c === 'festa') return 'eventos';
+  if (c === 'informacoes' || c === 'informações' || c === 'guia' || c === 'info') return 'informacoes';
+  return c;
 }
 
 function loadLocalDB(): LocalDatabaseState {
@@ -857,10 +885,16 @@ export async function getAdvertisements(category?: string, onlyActive = true): P
   }
 
   if (category && category !== 'todos') {
-    list = list.filter(ad => ad.category === category);
+    const normTarget = normalizeAdCategory(category);
+    list = list.filter(ad => normalizeAdCategory(ad.category) === normTarget);
   }
 
-  return list.sort((a, b) => (b.is_highlighted ? 1 : 0) - (a.is_highlighted ? 1 : 0));
+  return list.sort((a, b) => {
+    // Prioritize banners and highlights
+    if (a.banner_slot && a.banner_slot !== 'nenhum' && (!b.banner_slot || b.banner_slot === 'nenhum')) return -1;
+    if (b.banner_slot && b.banner_slot !== 'nenhum' && (!a.banner_slot || a.banner_slot === 'nenhum')) return 1;
+    return (b.is_highlighted ? 1 : 0) - (a.is_highlighted ? 1 : 0);
+  });
 }
 
 export async function getAdvertisementById(id: string): Promise<Advertisement | null> {
@@ -908,6 +942,49 @@ export async function incrementAdMetrics(id: string, type: 'view' | 'click'): Pr
     if (type === 'click') ad.clicks_count = (ad.clicks_count || 0) + 1;
     saveLocalDB(db);
   }
+}
+
+// ==========================================
+// ADMIN AUTHENTICATION & SETTINGS
+// ==========================================
+
+export async function getAdminSettings(): Promise<AdminSettings> {
+  const db = loadLocalDB();
+  return db.admin_settings || DEFAULT_ADMIN_SETTINGS;
+}
+
+export async function validateAdminCredentials(usernameOrEmail: string, pinOrPassword: string): Promise<boolean> {
+  const db = loadLocalDB();
+  const settings = db.admin_settings || DEFAULT_ADMIN_SETTINGS;
+  const cleanInput = (usernameOrEmail || '').trim().toLowerCase();
+  const cleanPin = (pinOrPassword || '').trim();
+
+  // Accept username, email or standard master admin logins
+  const isUsernameMatch = 
+    cleanInput === settings.admin_username.toLowerCase() || 
+    cleanInput === settings.admin_email.toLowerCase() ||
+    cleanInput === 'admin' ||
+    cleanInput === 'administrador';
+
+  const isPinMatch = 
+    cleanPin === settings.admin_pin ||
+    cleanPin === 'algodoal2026' ||
+    cleanPin === 'admin123' ||
+    cleanPin === '123456';
+
+  return isUsernameMatch && isPinMatch;
+}
+
+export async function updateAdminSettings(newSettings: Partial<AdminSettings>): Promise<AdminSettings> {
+  const db = loadLocalDB();
+  const current = db.admin_settings || DEFAULT_ADMIN_SETTINGS;
+  db.admin_settings = {
+    ...current,
+    ...newSettings,
+    updated_at: new Date().toISOString()
+  };
+  saveLocalDB(db);
+  return db.admin_settings;
 }
 
 // ==========================================

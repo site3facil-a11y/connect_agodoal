@@ -101,35 +101,30 @@ export const SocialAuthModal: React.FC<SocialAuthModalProps> = ({
     setIsLoading(true);
     setErrorMsg('');
 
-    // Master PIN code or admin password
-    if (adminPin === 'algodoal2026' || adminPin === 'admin123' || adminPin === '123456') {
-      const adminProfile: UserProfile = {
-        id: 'usr_admin_master',
-        name: 'Administrador Master',
-        email: 'admin@algodoalconnect.com.br',
-        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-        provider: 'email',
-        role: 'admin',
-        created_at: new Date().toISOString()
-      };
+    try {
+      const res = await fetch('/api/auth/admin-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          usernameOrEmail: emailInput || 'admin',
+          pinOrPassword: adminPin
+        })
+      });
 
-      try {
-        await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(adminProfile)
-        });
-      } catch (e) {
-        // continue
+      const data = await res.json();
+      if (res.ok && data.success && data.user) {
+        localStorage.setItem('algodoal_admin_token', data.token);
+        onLoginSuccess(data.user);
+        onClose();
+        if (onOpenAdminPanel) onOpenAdminPanel();
+      } else {
+        setErrorMsg(data.error || 'Credenciais de Administrador incorretas.');
       }
-
-      onLoginSuccess(adminProfile);
-      onClose();
-      if (onOpenAdminPanel) onOpenAdminPanel();
-    } else {
-      setErrorMsg('PIN de administrador incorreto. Use "admin123" ou "algodoal2026".');
+    } catch (err: any) {
+      setErrorMsg('Falha na comunicação com o servidor ao autenticar administrador.');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   return (

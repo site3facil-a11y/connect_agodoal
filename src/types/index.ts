@@ -1,6 +1,6 @@
 export type ServiceCategory = 'transporte' | 'passeios' | 'compras' | 'alimentacao' | 'pousadas' | 'eventos' | 'informacoes';
 
-export type AdCategory = 'restaurante' | 'pousada' | 'passeio' | 'transporte' | 'evento' | 'compras';
+export type AdCategory = 'transporte' | 'pousadas' | 'passeios' | 'alimentacao' | 'compras' | 'eventos' | 'informacoes' | 'restaurante' | 'pousada' | 'passeio' | 'evento';
 
 export type OrderStatus = 'pendente' | 'aceito' | 'em_rota' | 'concluido' | 'cancelado';
 

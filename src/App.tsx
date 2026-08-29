@@ -515,8 +515,10 @@ _Aguardo sua confirmação e orientações!_`;
           setIsAdminPanelOpen(false);
           loadData();
         }}
+        onRefreshData={loadData}
         currentUser={currentUser}
-        onRequireAuth={() => setIsAuthModalOpen(true)}
+        onLoginSuccess={handleUserLogin}
+        onLogout={handleUserLogout}
       />
 
       {/* Tábua de Marés (Marapanim & Marinha) Modal */}
