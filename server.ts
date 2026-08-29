@@ -42,6 +42,7 @@ async function startServer() {
 
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));
+  app.use('/assets/images', express.static(path.join(process.cwd(), 'src', 'assets', 'images')));
 
   // =====================================
   // API ROUTES
