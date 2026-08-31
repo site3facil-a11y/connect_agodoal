@@ -1,0 +1,65 @@
+name: Deploy to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy to AWS Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT || 22 }}
+          script: |
+            echo "🚀 Iniciando deploy no servidor AWS..."
+            
+            # Diretório da aplicação no servidor
+            APP_DIR="${{ secrets.APP_DIR || '/var/www/connect_agodoal' }}"
+            
+            if [ ! -d "$APP_DIR" ]; then
+              echo "Diretório $APP_DIR não encontrado. Tentando pasta ~/connect_agodoal..."
+              APP_DIR="$HOME/connect_agodoal"
+            fi
+            
+            cd $APP_DIR || exit 1
+            echo "📂 Diretório atual: $(pwd)"
+            
+            # Puxar código atualizado
+            echo "⬇️ Puxando código do GitHub..."
+            git fetch origin
+            git pull origin main || git pull origin master
+            
+            # Instalar pacotes
+            echo "📦 Instalando dependências..."
+            npm install
+            
+            # Compilar o projeto
+            echo "🛠️ Compilando projeto..."
+            npm run build
+            
+            # Reiniciar serviço da aplicação (via systemd ou Nginx - Sem PM2)
+            if systemctl is-active --quiet connect_agodoal; then
+              echo "🔄 Reiniciando serviço connect_agodoal..."
+              sudo systemctl restart connect_agodoal
+            elif systemctl is-active --quiet algodoal; then
+              echo "🔄 Reiniciando serviço algodoal..."
+              sudo systemctl restart algodoal
+            fi
+            
+            if command -v systemctl &> /dev/null; then
+              echo "🔄 Recarregando Nginx..."
+              sudo systemctl reload nginx 2>/dev/null || sudo systemctl restart nginx 2>/dev/null || true
+            fi
+            
+            echo "✅ Deploy finalizado com sucesso no servidor AWS!"

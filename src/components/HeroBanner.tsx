@@ -65,7 +65,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
             <div 
               className="absolute inset-0 bg-cover bg-center mix-blend-overlay opacity-40 pointer-events-none transition-transform duration-700 hover:scale-105"
               style={{
-                backgroundImage: `url('${IslandImages.sunset}')`
+                backgroundImage: `url('${IslandImages.carroca}')`
               }}
             />
             

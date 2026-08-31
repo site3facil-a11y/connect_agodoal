@@ -46,6 +46,7 @@ async function startServer() {
 
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));
+  app.use('/imagens', express.static(path.join(process.cwd(), 'public', 'imagens')));
   app.use('/assets/images', express.static(path.join(process.cwd(), 'src', 'assets', 'images')));
 
   // =====================================
