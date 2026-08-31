@@ -1,8 +1,10 @@
 import React from 'react';
-import { Sparkles, Sun, Waves, Search, ShieldCheck, User, MapPin, Bell } from 'lucide-react';
+import { Sparkles, Sun, Moon, Waves, Search, ShieldCheck, User, MapPin, Bell } from 'lucide-react';
 import { UserProfile } from '../../types/index.ts';
 
 interface MobileTopBarProps {
+  theme?: 'dark' | 'light';
+  onToggleTheme?: () => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
   onOpenAdmin: () => void;
@@ -12,6 +14,8 @@ interface MobileTopBarProps {
 }
 
 export const MobileTopBar: React.FC<MobileTopBarProps> = ({
+  theme = 'dark',
+  onToggleTheme,
   searchTerm,
   onSearchChange,
   onOpenAdmin,
@@ -19,26 +23,36 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
   currentUser,
   currentTideSummary = '🌊 Preamar 16:45 (4.2m) • Maré Enchendo'
 }) => {
+  const isDark = theme === 'dark';
+
   return (
-    <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md text-white border-b border-slate-800/80 shadow-md">
+    <header className={`sticky top-0 z-40 backdrop-blur-md border-b shadow-md transition-colors ${
+      isDark ? 'bg-slate-900/95 text-white border-slate-800/80' : 'bg-white/95 text-slate-900 border-slate-200'
+    }`}>
       {/* Dynamic Status Pill */}
-      <div className="px-4 py-1.5 bg-gradient-to-r from-teal-950 via-slate-900 to-amber-950/40 border-b border-teal-900/40 flex items-center justify-between text-[11px]">
+      <div className={`px-4 py-1.5 border-b flex items-center justify-between text-[11px] ${
+        isDark 
+          ? 'bg-gradient-to-r from-teal-950 via-slate-900 to-amber-950/40 border-teal-900/40 text-slate-300' 
+          : 'bg-gradient-to-r from-teal-50 via-slate-50 to-amber-50 border-teal-100 text-slate-700'
+      }`}>
         <button 
           onClick={onOpenTides}
-          className="flex items-center gap-1.5 text-teal-300 font-semibold hover:text-teal-200 transition cursor-pointer"
+          className={`flex items-center gap-1.5 font-semibold transition cursor-pointer ${
+            isDark ? 'text-teal-300 hover:text-teal-200' : 'text-teal-700 hover:text-teal-800'
+          }`}
         >
           <Waves className="w-3.5 h-3.5 text-teal-400 animate-pulse" />
           <span className="truncate max-w-[210px] sm:max-w-none">{currentTideSummary}</span>
         </button>
 
         <div className="flex items-center gap-2 text-slate-400 shrink-0">
-          <span className="flex items-center gap-1 text-amber-400 font-bold">
-            <Sun className="w-3 h-3 text-amber-400 animate-spin-slow" />
+          <span className="flex items-center gap-1 text-amber-500 font-bold">
+            <Sun className="w-3 h-3 text-amber-500 animate-spin-slow" />
             31°C
           </span>
-          <span className="w-1 h-1 rounded-full bg-slate-600" />
-          <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+          <span className="w-1 h-1 rounded-full bg-slate-400" />
+          <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
             Ilha Online
           </span>
         </div>
@@ -53,28 +67,47 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <h1 className="text-base font-black font-heading tracking-tight text-white leading-none">
-                Algodoal<span className="text-amber-400">Connect</span>
+              <h1 className={`text-base font-black font-heading tracking-tight leading-none ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                Algodoal<span className="text-amber-500">Connect</span>
               </h1>
-              <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-teal-500/20 text-teal-300 border border-teal-500/30">
+              <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-teal-500/20 text-teal-600 border border-teal-500/30">
                 APA
               </span>
             </div>
-            <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
-              <MapPin className="w-2.5 h-2.5 text-amber-400" />
+            <p className={`text-[10px] flex items-center gap-1 mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              <MapPin className="w-2.5 h-2.5 text-amber-500" />
               Ilha de Maiandeua, Pará
             </p>
           </div>
         </div>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          {/* Theme Toggle */}
+          {onToggleTheme && (
+            <button
+              onClick={onToggleTheme}
+              title={isDark ? 'Ativar Modo Claro' : 'Ativar Modo Escuro'}
+              className={`p-2 rounded-xl transition cursor-pointer text-xs border ${
+                isDark 
+                  ? 'bg-slate-800 hover:bg-slate-700 text-amber-400 border-slate-700' 
+                  : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200'
+              }`}
+            >
+              {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+            </button>
+          )}
+
           <button
             onClick={onOpenAdmin}
             title={currentUser?.role === 'admin' ? 'Painel do Administrador (Ativo)' : 'Login de Administrador'}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer text-xs font-bold"
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border transition cursor-pointer text-xs font-bold ${
+              isDark 
+                ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700' 
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
+            }`}
           >
-            <ShieldCheck className={`w-3.5 h-3.5 ${currentUser?.role === 'admin' ? 'text-emerald-400' : 'text-amber-400'}`} />
+            <ShieldCheck className={`w-3.5 h-3.5 ${currentUser?.role === 'admin' ? 'text-emerald-500' : 'text-amber-500'}`} />
             <span className="text-[11px] hidden sm:inline">
               {currentUser?.role === 'admin' ? 'Admin' : 'Painel'}
             </span>
@@ -85,13 +118,17 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
       {/* Mobile Search Bar */}
       <div className="px-4 pb-3">
         <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 ${isDark ? 'text-slate-400' : 'text-slate-400'}`} />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Buscar charretes, rabetas, pousadas, peixadas..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-800/90 text-white placeholder-slate-400 text-xs font-medium border border-slate-700/80 focus:outline-hidden focus:border-teal-400 focus:ring-2 focus:ring-teal-500/20 transition shadow-inner"
+            className={`w-full pl-10 pr-4 py-2.5 rounded-2xl text-xs font-medium border focus:outline-hidden transition shadow-inner ${
+              isDark
+                ? 'bg-slate-800/90 text-white placeholder-slate-400 border-slate-700/80 focus:border-teal-400 focus:ring-2 focus:ring-teal-500/20'
+                : 'bg-slate-50 text-slate-900 placeholder-slate-400 border-slate-300 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20'
+            }`}
           />
           {searchTerm && (
             <button

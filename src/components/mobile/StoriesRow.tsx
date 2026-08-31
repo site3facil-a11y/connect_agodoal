@@ -89,19 +89,28 @@ const ISLAND_STORIES: IslandStory[] = [
   }
 ];
 
-export const StoriesRow: React.FC = () => {
+interface StoriesRowProps {
+  theme?: 'dark' | 'light';
+}
+
+export const StoriesRow: React.FC<StoriesRowProps> = ({ theme = 'dark' }) => {
   const [selectedStory, setSelectedStory] = useState<IslandStory | null>(null);
+  const isDark = theme === 'dark';
 
   return (
-    <section className="py-3 px-4 bg-slate-900 border-b border-slate-800">
+    <section className={`py-3 px-4 border-b transition-colors ${
+      isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+    }`}>
       <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-          <h3 className="text-xs font-black uppercase tracking-wider text-slate-300">
+          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+          <h3 className={`text-xs font-black uppercase tracking-wider ${
+            isDark ? 'text-slate-300' : 'text-slate-800'
+          }`}>
             Destaques da Ilha (Stories)
           </h3>
         </div>
-        <span className="text-[10px] font-bold text-teal-400">Toque p/ Ver</span>
+        <span className="text-[10px] font-bold text-teal-600">Toque p/ Ver</span>
       </div>
 
       {/* Horizontal Stories Carousel */}
@@ -113,7 +122,9 @@ export const StoriesRow: React.FC = () => {
             className="flex flex-col items-center gap-1 shrink-0 group focus:outline-hidden cursor-pointer"
           >
             <div className="w-[66px] h-[66px] rounded-full p-[2px] bg-gradient-to-tr from-amber-400 via-teal-400 to-emerald-500 group-hover:scale-105 transition duration-200 shadow-md">
-              <div className="w-full h-full rounded-full border-2 border-slate-900 overflow-hidden relative bg-slate-800">
+              <div className={`w-full h-full rounded-full border-2 overflow-hidden relative ${
+                isDark ? 'border-slate-900 bg-slate-800' : 'border-white bg-slate-100'
+              }`}>
                 <img
                   src={story.coverImage}
                   alt={story.title}
@@ -122,12 +133,14 @@ export const StoriesRow: React.FC = () => {
                     (e.target as HTMLElement).style.display = 'none';
                   }}
                 />
-                <span className="absolute bottom-0 right-0 text-xs bg-slate-950/80 rounded-full px-1">
+                <span className="absolute bottom-0 right-0 text-xs bg-slate-950/80 text-white rounded-full px-1">
                   {story.emoji}
                 </span>
               </div>
             </div>
-            <span className="text-[11px] font-bold text-slate-200 truncate max-w-[68px] leading-tight">
+            <span className={`text-[11px] font-bold truncate max-w-[68px] leading-tight ${
+              isDark ? 'text-slate-200' : 'text-slate-700'
+            }`}>
               {story.title}
             </span>
           </button>
@@ -138,33 +151,32 @@ export const StoriesRow: React.FC = () => {
       {selectedStory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
           <div className="relative w-full max-w-sm h-[82vh] max-h-[700px] rounded-3xl overflow-hidden bg-slate-950 text-white shadow-2xl flex flex-col justify-between border border-teal-500/40">
-            {/* Background Image */}
+            {/* Background Story Image */}
             <img
               src={selectedStory.fullImage}
               alt={selectedStory.title}
-              className="absolute inset-0 w-full h-full object-cover opacity-75"
+              className="absolute inset-0 w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = '/assets/images/algodoal_sunset_1787985478872.jpg';
+              }}
             />
 
             {/* Gradient Overlays */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-slate-950/80" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/95" />
 
             {/* Top Bar inside Story */}
             <div className="relative z-10 p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xl">{selectedStory.emoji}</span>
                 <div>
-                  <h4 className="text-sm font-black text-white leading-tight">
-                    {selectedStory.title}
-                  </h4>
-                  <span className="text-[10px] text-teal-300 font-bold uppercase tracking-wider">
-                    {selectedStory.tag} • {selectedStory.location}
-                  </span>
+                  <h4 className="text-sm font-black leading-none">{selectedStory.title}</h4>
+                  <span className="text-[10px] text-teal-300 font-semibold">{selectedStory.tag}</span>
                 </div>
               </div>
 
               <button
                 onClick={() => setSelectedStory(null)}
-                className="w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black transition cursor-pointer"
+                className="w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center backdrop-blur-md hover:bg-black/80 transition"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -172,36 +184,34 @@ export const StoriesRow: React.FC = () => {
 
             {/* Bottom Content inside Story */}
             <div className="relative z-10 p-5 space-y-3">
-              <div className="p-3.5 rounded-2xl bg-slate-900/80 backdrop-blur-md border border-slate-700/80">
-                <span className="text-xs font-black text-amber-400 uppercase tracking-wide block mb-1">
-                  {selectedStory.subtitle}
-                </span>
-                <p className="text-xs text-slate-200 leading-relaxed">
-                  {selectedStory.description}
-                </p>
-                <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-2">
-                  <MapPin className="w-3 h-3 text-teal-400" />
-                  <span>{selectedStory.location}</span>
-                </div>
+              <div className="flex items-center gap-1 text-xs text-amber-300 font-bold">
+                <MapPin className="w-3.5 h-3.5" />
+                <span>{selectedStory.location}</span>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2">
+              <h3 className="text-lg font-black font-heading leading-snug">
+                {selectedStory.subtitle}
+              </h3>
+
+              <p className="text-xs text-slate-200 leading-relaxed bg-black/40 p-3 rounded-2xl backdrop-blur-xs border border-white/10">
+                {selectedStory.description}
+              </p>
+
+              <div className="pt-2 flex items-center gap-2">
                 {selectedStory.whatsapp && (
                   <a
-                    href={`https://wa.me/${selectedStory.whatsapp}?text=Olá! Vi o destaque de ${encodeURIComponent(selectedStory.title)} no Algodoal Connect e gostaria de mais informações.`}
+                    href={`https://wa.me/${selectedStory.whatsapp}?text=Olá! Vi o destaque sobre ${encodeURIComponent(selectedStory.title)} no Algodoal Connect.`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg transition"
+                    className="flex-1 py-3 px-4 rounded-2xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg transition"
                   >
                     <MessageCircle className="w-4 h-4" />
-                    <span>Chamar no WhatsApp</span>
+                    <span>Saber Mais no WhatsApp</span>
                   </a>
                 )}
-
                 <button
                   onClick={() => setSelectedStory(null)}
-                  className="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition cursor-pointer"
+                  className="py-3 px-4 rounded-2xl bg-white/20 text-white font-bold text-xs backdrop-blur-md hover:bg-white/30 transition"
                 >
                   Fechar
                 </button>

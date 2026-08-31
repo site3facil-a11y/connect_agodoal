@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Smartphone, 
   Monitor, 
-  Maximize2, 
+  Sun, 
+  Moon, 
   Sparkles, 
   ShieldCheck, 
   Waves, 
@@ -15,13 +16,13 @@ import {
   Calendar,
   Layers,
   Heart,
-  Share2
+  Share2,
+  MapPin
 } from 'lucide-react';
 
 import { Advertisement, Partner, TideDayEntry, UserProfile } from './types/index.ts';
-import { api } from './services/api.ts';
 
-// Mobile-First Components
+// Mobile & Responsive Components
 import { MobileTopBar } from './components/mobile/MobileTopBar.tsx';
 import { StoriesRow } from './components/mobile/StoriesRow.tsx';
 import { HeroBannersCarousel } from './components/mobile/HeroBannersCarousel.tsx';
@@ -33,6 +34,7 @@ import { MobileBottomNav, TabType } from './components/mobile/MobileBottomNav.ts
 import { QuickOrderModal } from './components/mobile/QuickOrderModal.tsx';
 import { AdminPanelModal } from './components/AdminPanelModal.tsx';
 import { TideScheduleModal } from './components/TideScheduleModal.tsx';
+import { DesktopNavbar } from './components/desktop/DesktopNavbar.tsx';
 
 // Fallback Initial Partners Data for Instant Prototype Rendering
 const INITIAL_PROTOTYPE_PARTNERS: Partner[] = [
@@ -149,8 +151,11 @@ const INITIAL_PROTOTYPE_PARTNERS: Partner[] = [
 ];
 
 export function App() {
-  // Device Frame View State ('mobile-frame' | 'mobile-wide' | 'fullscreen')
-  const [deviceView, setDeviceView] = useState<'mobile-frame' | 'fullscreen'>('mobile-frame');
+  // Theme Mode ('dark' | 'light')
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
+  // Device Frame View State ('mobile-frame' | 'desktop-view')
+  const [deviceView, setDeviceView] = useState<'mobile-frame' | 'desktop-view'>('desktop-view');
 
   // Navigation Tabs
   const [activeTab, setActiveTab] = useState<TabType>('home');
@@ -172,6 +177,10 @@ export function App() {
   useEffect(() => {
     loadRealData();
   }, []);
+
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   const loadRealData = async () => {
     try {
@@ -220,133 +229,288 @@ export function App() {
   };
 
   const todayTide = tideDays && tideDays.length > 0 ? tideDays[0] : null;
+  const isDark = theme === 'dark';
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-start selection:bg-teal-500 selection:text-white">
+    <div className={`min-h-screen flex flex-col items-center justify-start selection:bg-teal-500 selection:text-white transition-colors duration-200 ${
+      isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-800'
+    }`}>
       
       {/* ======================================================== */}
-      {/* 1. TOP PROTOTYPE BAR (Device Switcher & Brand Info)       */}
+      {/* 1. TOP SIMULATION & CONTROLS TOOLBAR                     */}
       {/* ======================================================== */}
-      <div className="w-full bg-slate-900 border-b border-slate-800 px-4 py-2 flex items-center justify-between z-30 text-xs">
+      <div className={`w-full border-b px-4 py-2 flex items-center justify-between z-30 text-xs transition-colors ${
+        isDark ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700 shadow-xs'
+      }`}>
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-pulse" />
-          <span className="font-bold text-slate-300">
-            Protótipo de Layout <strong className="text-teal-400">Mobile-First</strong>
+          <span className="w-2.5 h-2.5 rounded-full bg-teal-500 animate-pulse" />
+          <span className="font-bold">
+            Algodoal Connect • <strong className="text-teal-600">Visualização de Layout</strong>
           </span>
-          <span className="hidden sm:inline-block px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 text-[10px] border border-slate-700">
-            Node.js + PostgreSQL + Docker Ready
+          <span className={`hidden md:inline-block px-2 py-0.5 rounded-md text-[10px] border ${
+            isDark ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-600 border-slate-200'
+          }`}>
+            Mobile-First + Desktop Responsivo
           </span>
         </div>
 
-        {/* Device Switcher Controls */}
-        <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+        {/* View Switcher & Theme Switcher Controls */}
+        <div className="flex items-center gap-2">
+          {/* Theme Switcher Button */}
           <button
-            onClick={() => setDeviceView('mobile-frame')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
-              deviceView === 'mobile-frame'
-                ? 'bg-teal-500 text-slate-950 shadow-xs'
-                : 'text-slate-400 hover:text-white'
+            onClick={toggleTheme}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-xl font-bold text-xs transition cursor-pointer border ${
+              isDark 
+                ? 'bg-slate-800 hover:bg-slate-700 text-amber-400 border-slate-700' 
+                : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-300'
             }`}
+            title="Alternar Tema Claro / Escuro"
           >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>Celular (Frame)</span>
+            {isDark ? (
+              <>
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Tema Claro</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-3.5 h-3.5 text-slate-700" />
+                <span className="hidden sm:inline">Tema Escuro</span>
+              </>
+            )}
           </button>
 
-          <button
-            onClick={() => setDeviceView('fullscreen')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
-              deviceView === 'fullscreen'
-                ? 'bg-teal-500 text-slate-950 shadow-xs'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Monitor className="w-3.5 h-3.5" />
-            <span>Tela Cheia</span>
-          </button>
+          {/* View Modes */}
+          <div className={`flex items-center gap-1 p-1 rounded-xl border ${
+            isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
+          }`}>
+            <button
+              onClick={() => setDeviceView('mobile-frame')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
+                deviceView === 'mobile-frame'
+                  ? 'bg-teal-500 text-slate-950 shadow-xs'
+                  : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Celular</span>
+            </button>
+
+            <button
+              onClick={() => setDeviceView('desktop-view')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
+                deviceView === 'desktop-view'
+                  ? 'bg-teal-500 text-slate-950 shadow-xs'
+                  : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Monitor className="w-3.5 h-3.5" />
+              <span>Computador (Desktop)</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* ======================================================== */}
-      {/* 2. MAIN APPLICATION CONTAINER (Mobile Frame or Scaled)   */}
+      {/* 2. DESKTOP FULL-WIDTH VIEW                               */}
       {/* ======================================================== */}
-      <main
-        className={`w-full transition-all duration-300 flex flex-col justify-start relative ${
-          deviceView === 'mobile-frame'
-            ? 'max-w-[430px] my-4 sm:my-8 rounded-[40px] border-[8px] border-slate-800 shadow-2xl shadow-teal-950/40 overflow-hidden bg-slate-950 min-h-[860px]'
-            : 'max-w-4xl mx-auto min-h-screen bg-slate-950 border-x border-slate-800 shadow-2xl'
-        }`}
-      >
-        {/* Dynamic Island Bezel for Mobile Frame */}
-        {deviceView === 'mobile-frame' && (
-          <div className="w-full bg-slate-900 pt-2 pb-1 flex items-center justify-center border-b border-slate-800/60">
-            <div className="w-24 h-4 bg-slate-950 rounded-full flex items-center justify-end px-2 gap-1 border border-slate-800">
-              <span className="w-2 h-2 rounded-full bg-teal-400/80 animate-pulse" />
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-700" />
+      {deviceView === 'desktop-view' ? (
+        <div className={`w-full min-h-screen flex flex-col ${isDark ? 'bg-slate-950' : 'bg-slate-100'}`}>
+          {/* Desktop Top Navigation Bar */}
+          <DesktopNavbar
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            onOpenAdmin={() => setIsAdminModalOpen(true)}
+            onOpenTides={() => setIsTidesModalOpen(true)}
+            onOpenCharreteCalc={() => setIsCharreteModalOpen(true)}
+            onOpenQuickOrder={() => setIsQuickOrderModalOpen(true)}
+            currentUser={currentUser}
+            currentTideSummary="🌊 Preamar 16:45 (4.4m) • Maré Alta"
+          />
+
+          {/* Desktop Grid Layout (Hero + Main Content + Side Column) */}
+          <div className="max-w-7xl mx-auto w-full px-6 py-6 space-y-6">
+            
+            {/* Top Stories Highlights */}
+            <div className={`rounded-3xl border overflow-hidden shadow-sm ${
+              isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+            }`}>
+              <StoriesRow theme={theme} />
+            </div>
+
+            {/* Desktop Hero Section: 2 Columns (Commercial Banners + Tide & Island Status) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* Left Column: Commercial Hero Banners (7 Cols) */}
+              <div className="lg:col-span-7 space-y-4">
+                <HeroBannersCarousel
+                  advertisements={advertisements}
+                  onAdClick={(ad) => {
+                    if (ad.category) setSelectedCategory(ad.category);
+                  }}
+                />
+
+                {/* 8 Essential Island Actions Grid */}
+                <div className={`rounded-3xl border overflow-hidden p-2 ${
+                  isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200'
+                }`}>
+                  <QuickActionsGrid
+                    theme={theme}
+                    onSelectCategory={(cat) => setSelectedCategory(cat)}
+                    onOpenTides={() => setIsTidesModalOpen(true)}
+                    onOpenCharreteCalculator={() => setIsCharreteModalOpen(true)}
+                    onOpenSupplyOrder={() => setIsQuickOrderModalOpen(true)}
+                    onOpenAdmin={() => setIsAdminModalOpen(true)}
+                  />
+                </div>
+              </div>
+
+              {/* Right Column: Live Tide Wave Graph + Charrete Route Estimator (5 Cols) */}
+              <div className="lg:col-span-5 space-y-5">
+                {/* Tide Widget */}
+                <TideWaveWidget
+                  theme={theme}
+                  currentTideDay={todayTide}
+                  onOpenFullTides={() => setIsTidesModalOpen(true)}
+                />
+
+                {/* Charrete Route Calculator Card */}
+                <CharreteGoCalculator theme={theme} />
+              </div>
+            </div>
+
+            {/* Main Category Feed Grid (Pousadas, Gastronomia, Rabetas, Suprimentos) */}
+            <div className={`rounded-3xl border overflow-hidden p-4 sm:p-6 shadow-sm ${
+              isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-white border-slate-200'
+            }`}>
+              <div className="mb-4">
+                <h2 className={`text-xl font-black font-heading ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  Explorar Locais & Serviços em Algodoal
+                </h2>
+                <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Consulte pousadas, restaurantes, condutores de charretes e passeios de barco com contato direto pelo WhatsApp.
+                </p>
+              </div>
+
+              <MobileCategoryFeed
+                theme={theme}
+                selectedCategory={selectedCategory}
+                onSelectCategory={setSelectedCategory}
+                searchTerm={searchTerm}
+                partners={partners}
+                onOpenOrderModal={() => setIsQuickOrderModalOpen(true)}
+              />
             </div>
           </div>
-        )}
 
-        {/* 1. Mobile Top Bar with Live Island Weather, Tides & Search */}
-        <MobileTopBar
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          onOpenAdmin={() => setIsAdminModalOpen(true)}
-          onOpenTides={() => setIsTidesModalOpen(true)}
-          currentUser={currentUser}
-          currentTideSummary="🌊 Preamar 16:45 (4.4m) • Maré Alta p/ Banho"
-        />
+          {/* Desktop Footer with Environmental Protection Info */}
+          <footer className={`w-full py-8 border-t mt-12 transition-colors ${
+            isDark ? 'bg-slate-950 border-slate-900 text-slate-400' : 'bg-white border-slate-200 text-slate-600'
+          }`}>
+            <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🌴</span>
+                <span className="font-bold">Algodoal Connect • Área de Proteção Ambiental (APA) de Algodoal-Maiandeua</span>
+              </div>
+              <p className="text-[11px]">
+                Preserve a natureza: recolha seu lixo, respeite os animais e apoie o comércio tradicional local.
+              </p>
+            </div>
+          </footer>
+        </div>
+      ) : (
+        /* ======================================================== */
+        /* 3. MOBILE FRAME PREVIEW VIEW                             */
+        /* ======================================================== */
+        <main
+          className={`w-full max-w-[430px] my-4 sm:my-8 rounded-[40px] border-[8px] shadow-2xl overflow-hidden min-h-[860px] flex flex-col justify-start relative transition-all duration-300 ${
+            isDark 
+              ? 'border-slate-800 shadow-teal-950/40 bg-slate-950' 
+              : 'border-slate-300 shadow-slate-400/40 bg-slate-50'
+          }`}
+        >
+          {/* Dynamic Island Bezel for Mobile Frame */}
+          <div className={`w-full pt-2 pb-1 flex items-center justify-center border-b ${
+            isDark ? 'bg-slate-900 border-slate-800/60' : 'bg-slate-200 border-slate-300'
+          }`}>
+            <div className={`w-24 h-4 rounded-full flex items-center justify-end px-2 gap-1 border ${
+              isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-800 border-slate-700'
+            }`}>
+              <span className="w-2 h-2 rounded-full bg-teal-400/80 animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
+            </div>
+          </div>
 
-        {/* 2. Instagram/SuperApp Stories Row */}
-        <StoriesRow />
+          {/* 1. Mobile Top Bar with Live Island Weather, Tides & Search */}
+          <MobileTopBar
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            onOpenAdmin={() => setIsAdminModalOpen(true)}
+            onOpenTides={() => setIsTidesModalOpen(true)}
+            currentUser={currentUser}
+            currentTideSummary="🌊 Preamar 16:45 (4.4m) • Maré Alta"
+          />
 
-        {/* 3. Hero Carousel Commercial Banners */}
-        <HeroBannersCarousel
-          advertisements={advertisements}
-          onAdClick={(ad) => {
-            if (ad.category) setSelectedCategory(ad.category);
-          }}
-        />
+          {/* 2. Instagram/SuperApp Stories Row */}
+          <StoriesRow theme={theme} />
 
-        {/* 4. Quick Actions Grid (8 Essential Categories) */}
-        <QuickActionsGrid
-          onSelectCategory={(cat) => setSelectedCategory(cat)}
-          onOpenTides={() => setIsTidesModalOpen(true)}
-          onOpenCharreteCalculator={() => setIsCharreteModalOpen(true)}
-          onOpenSupplyOrder={() => setIsQuickOrderModalOpen(true)}
-          onOpenAdmin={() => setIsAdminModalOpen(true)}
-        />
+          {/* 3. Hero Carousel Commercial Banners */}
+          <HeroBannersCarousel
+            advertisements={advertisements}
+            onAdClick={(ad) => {
+              if (ad.category) setSelectedCategory(ad.category);
+            }}
+          />
 
-        {/* 5. Live Tide Wave Widget (Marapanim Tide Graph) */}
-        <TideWaveWidget
-          currentTideDay={todayTide}
-          onOpenFullTides={() => setIsTidesModalOpen(true)}
-        />
+          {/* 4. Quick Actions Grid (8 Essential Categories) */}
+          <QuickActionsGrid
+            theme={theme}
+            onSelectCategory={(cat) => setSelectedCategory(cat)}
+            onOpenTides={() => setIsTidesModalOpen(true)}
+            onOpenCharreteCalculator={() => setIsCharreteModalOpen(true)}
+            onOpenSupplyOrder={() => setIsQuickOrderModalOpen(true)}
+            onOpenAdmin={() => setIsAdminModalOpen(true)}
+          />
 
-        {/* 6. CharreteGO Route Calculator */}
-        <CharreteGoCalculator />
+          {/* 5. Live Tide Wave Widget (Marapanim Tide Graph) */}
+          <TideWaveWidget
+            theme={theme}
+            currentTideDay={todayTide}
+            onOpenFullTides={() => setIsTidesModalOpen(true)}
+          />
 
-        {/* 7. Categorized Feed with Search & Filter */}
-        <MobileCategoryFeed
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
-          searchTerm={searchTerm}
-          partners={partners}
-          onOpenOrderModal={() => setIsQuickOrderModalOpen(true)}
-        />
+          {/* 6. CharreteGO Route Calculator */}
+          <CharreteGoCalculator theme={theme} />
 
-        {/* Extra bottom padding to avoid bottom nav bar overlap */}
-        <div className="h-20 w-full" />
+          {/* 7. Categorized Feed with Search & Filter */}
+          <MobileCategoryFeed
+            theme={theme}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            searchTerm={searchTerm}
+            partners={partners}
+            onOpenOrderModal={() => setIsQuickOrderModalOpen(true)}
+          />
 
-        {/* 8. Fixed Mobile Bottom Navigation Bar */}
-        <MobileBottomNav
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          isAdminLoggedIn={currentUser?.role === 'admin'}
-        />
-      </main>
+          {/* Extra bottom padding to avoid bottom nav bar overlap */}
+          <div className="h-20 w-full" />
+
+          {/* 8. Fixed Mobile Bottom Navigation Bar */}
+          <MobileBottomNav
+            theme={theme}
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            isAdminLoggedIn={currentUser?.role === 'admin'}
+          />
+        </main>
+      )}
 
       {/* ======================================================== */}
-      {/* 3. MODALS SYSTEM                                         */}
+      {/* 4. MODALS SYSTEM                                         */}
       {/* ======================================================== */}
       
       {/* Modal: Tábua de Marés Detalhada */}
@@ -363,6 +527,7 @@ export function App() {
 
       {/* Modal: CharreteGO Modal Version */}
       <CharreteGoCalculator
+        theme={theme}
         isOpen={isCharreteModalOpen}
         onClose={() => setIsCharreteModalOpen(false)}
         isModal={true}
