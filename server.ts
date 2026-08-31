@@ -1,3 +1,11 @@
+/**
+ * =======================================================================
+ * Algodoal Connect — Backend & API Server
+ * Produzido e Desenvolvido por: 3facil.com
+ * Website Oficial: https://www.3facil.com
+ * =======================================================================
+ */
+
 import express from 'express';
 import cors from 'cors';
 import path from 'path';

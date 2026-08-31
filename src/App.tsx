@@ -1,3 +1,12 @@
+/**
+ * =======================================================================
+ * Algodoal Connect — SuperApp da Ilha de Algodoal (APA de Algodoal-Maiandeua)
+ * Produzido e Desenvolvido por: 3facil.com
+ * Website Oficial: https://www.3facil.com
+ * Contato / Suporte: www.3facil.com
+ * =======================================================================
+ */
+
 import React, { useState, useEffect } from 'react';
 import { 
   Smartphone, 
@@ -440,18 +449,35 @@ export function App() {
             </div>
           </div>
 
-          {/* Desktop Footer with Environmental Protection Info */}
+          {/* Desktop Footer with Environmental Protection Info & Developer Attribution */}
           <footer className={`w-full py-8 border-t mt-12 transition-colors ${
             isDark ? 'bg-slate-950 border-slate-900 text-slate-400' : 'bg-white border-slate-200 text-slate-600'
           }`}>
             <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">🌴</span>
-                <span className="font-bold">Algodoal Connect • Guia de Anúncios da APA de Algodoal-Maiandeua</span>
+              <div className="flex flex-col sm:flex-row items-center gap-2 text-center sm:text-left">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🌴</span>
+                  <span className="font-bold">Algodoal Connect • Guia de Anúncios da APA de Algodoal-Maiandeua</span>
+                </div>
+                <span className="hidden sm:inline text-slate-400">•</span>
+                <p className="text-[11px]">
+                  Preserve a natureza: recolha seu lixo, respeite os animais e apoie o comércio local.
+                </p>
               </div>
-              <p className="text-[11px]">
-                Preserve a natureza: recolha seu lixo, respeite os animais e apoie o comércio tradicional local.
-              </p>
+
+              {/* 3facil.com Credit */}
+              <div className="flex items-center gap-1.5 text-[11px]">
+                <span className="text-slate-500 dark:text-slate-400">Produzido por</span>
+                <a 
+                  href="https://www.3facil.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="font-bold text-teal-600 dark:text-teal-400 hover:underline transition-colors bg-teal-50 dark:bg-teal-950/50 px-2.5 py-0.5 rounded-full border border-teal-200 dark:border-teal-800/60"
+                  title="Produzido por 3facil.com - Visite www.3facil.com"
+                >
+                  3facil.com
+                </a>
+              </div>
             </div>
           </footer>
         </div>
@@ -521,6 +547,25 @@ export function App() {
             searchTerm={searchTerm}
             partners={partners}
           />
+
+          {/* Mobile Footer with 3facil.com Credit */}
+          <div className="px-6 pt-2 pb-6 text-center">
+            <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
+              <span>Produzido por</span>
+              <a 
+                href="https://www.3facil.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="font-bold text-teal-600 dark:text-teal-400 hover:underline bg-teal-50 dark:bg-teal-950/50 px-2.5 py-0.5 rounded-full border border-teal-200 dark:border-teal-800/60 transition"
+                title="Produzido por 3facil.com"
+              >
+                3facil.com
+              </a>
+            </div>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+              APA de Algodoal-Maiandeua • Pará
+            </p>
+          </div>
 
           {/* Extra bottom padding to avoid bottom nav bar overlap */}
           <div className="h-20 w-full" />
