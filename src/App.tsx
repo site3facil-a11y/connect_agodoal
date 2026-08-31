@@ -1,571 +1,387 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Partner, 
-  ServiceProduct, 
-  Order, 
-  OrderStatus, 
-  ServiceCategory, 
-  IslandSpot, 
-  BoatCrossingSchedule, 
-  UsefulContact, 
-  TideSchedule,
-  PaymentMethod,
-  UserProfile,
-  Advertisement
-} from './types/index.ts';
+  Smartphone, 
+  Monitor, 
+  Maximize2, 
+  Sparkles, 
+  ShieldCheck, 
+  Waves, 
+  Truck, 
+  ShoppingBag, 
+  Hotel, 
+  Utensils, 
+  Compass, 
+  Info,
+  Calendar,
+  Layers,
+  Heart,
+  Share2
+} from 'lucide-react';
+
+import { Advertisement, Partner, TideDayEntry, UserProfile } from './types/index.ts';
 import { api } from './services/api.ts';
-import { Navbar } from './components/Navbar.tsx';
-import { HeroBanner } from './components/HeroBanner.tsx';
-import { CategoryNav } from './components/CategoryNav.tsx';
-import { HowItWorks } from './components/HowItWorks.tsx';
-import { TransportView } from './components/TransportView.tsx';
-import { ToursView } from './components/ToursView.tsx';
-import { MarketView } from './components/MarketView.tsx';
-import { RestaurantsView } from './components/RestaurantsView.tsx';
-import { PousadasView } from './components/PousadasView.tsx';
-import { EventsView } from './components/EventsView.tsx';
-import { IslandGuideView } from './components/IslandGuideView.tsx';
-import { OrderModal } from './components/OrderModal.tsx';
-import { OrderTrackerModal } from './components/OrderTrackerModal.tsx';
-import { PartnerPortal } from './components/PartnerPortal.tsx';
-import { NewPartnerModal } from './components/NewPartnerModal.tsx';
-import { SocialAuthModal } from './components/SocialAuthModal.tsx';
+
+// Mobile-First Components
+import { MobileTopBar } from './components/mobile/MobileTopBar.tsx';
+import { StoriesRow } from './components/mobile/StoriesRow.tsx';
+import { HeroBannersCarousel } from './components/mobile/HeroBannersCarousel.tsx';
+import { QuickActionsGrid } from './components/mobile/QuickActionsGrid.tsx';
+import { TideWaveWidget } from './components/mobile/TideWaveWidget.tsx';
+import { CharreteGoCalculator } from './components/mobile/CharreteGoCalculator.tsx';
+import { MobileCategoryFeed } from './components/mobile/MobileCategoryFeed.tsx';
+import { MobileBottomNav, TabType } from './components/mobile/MobileBottomNav.tsx';
+import { QuickOrderModal } from './components/mobile/QuickOrderModal.tsx';
 import { AdminPanelModal } from './components/AdminPanelModal.tsx';
 import { TideScheduleModal } from './components/TideScheduleModal.tsx';
-import { PreservationFooter } from './components/PreservationFooter.tsx';
-import { Loader2, AlertCircle, PhoneCall, X } from 'lucide-react';
 
-export default function App() {
-  // Navigation & UI States
-  const [activeCategory, setActiveCategory] = useState<ServiceCategory>('transporte');
-  const [isPartnerPortalOpen, setIsPartnerPortalOpen] = useState(false);
-  const [isOrderTrackerOpen, setIsOrderTrackerOpen] = useState(false);
-  const [isNewPartnerModalOpen, setIsNewPartnerModalOpen] = useState(false);
-  const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+// Fallback Initial Partners Data for Instant Prototype Rendering
+const INITIAL_PROTOTYPE_PARTNERS: Partner[] = [
+  {
+    id: 'p1',
+    name: 'Pousada & Chalés Princesa do Mar',
+    category: 'pousadas',
+    subcategory: 'Hospedagem Frente ao Mar',
+    phone: '5591981234567',
+    whatsapp: '5591981234567',
+    description: 'Chalés privativos com vista para o mar, ar-condicionado, Wi-Fi Starlink e café da manhã regional incluso com tapioquinha na hora.',
+    photo_url: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&auto=format&fit=crop&q=80',
+    location: 'Praia da Princesa (Beira-mar)',
+    rating: 4.9,
+    total_reviews: 48,
+    is_active: true,
+    verified: true,
+    price_starting: 180.00,
+    amenities: ['Frente ao Mar', 'Ar-Condicionado', 'Wi-Fi Starlink', 'Café da Manhã'],
+    created_at: '2026-01-01'
+  },
+  {
+    id: 'p2',
+    name: 'Restaurante & Peixada da Ilha',
+    category: 'alimentacao',
+    subcategory: 'Gastronomia Paraense & Peixada',
+    phone: '5591982345678',
+    whatsapp: '5591982345678',
+    description: 'A mais famosa peixada da ilha com filhote grelhado, caldeirada com jambu e tucupi, e açaí paraense legítimo batido no dia.',
+    photo_url: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80',
+    location: 'Praia da Princesa, Barraca #07',
+    rating: 4.8,
+    total_reviews: 94,
+    is_active: true,
+    verified: true,
+    price_starting: 65.00,
+    amenities: ['Pé na Areia', 'Peixe Fresco', 'Açaí Puro', 'Aceita PIX'],
+    created_at: '2026-01-01'
+  },
+  {
+    id: 'p3',
+    name: 'Associação de Charreteiros da APA #14',
+    category: 'transporte',
+    subcategory: 'Transporte Oficial Credenciado',
+    phone: '5591983456789',
+    whatsapp: '5591983456789',
+    description: 'Charrete credenciada pelo Instituto de Desenvolvimento Florestal e da Biodiversidade (IDEFLOR-Bio). Transporte seguro de bagagens do porto até a Princesa.',
+    photo_url: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop&q=80',
+    location: 'Porto de Algodoal (Ponto Oficial)',
+    rating: 5.0,
+    total_reviews: 120,
+    is_active: true,
+    verified: true,
+    price_starting: 35.00,
+    vehicle_badge: 'Charrete #14',
+    amenities: ['Credenciado APA', 'Capacidade 4 pax', 'Espaço P/ Malas'],
+    created_at: '2026-01-01'
+  },
+  {
+    id: 'p4',
+    name: 'Passeio de Rabeta Furo Velho & Lago',
+    category: 'passeios',
+    subcategory: 'Ecoturismo & Travessias',
+    phone: '5591984567890',
+    whatsapp: '5591984567890',
+    description: 'Passeios de barco rabeta pelos canais do Furo Velho, dunas do Lago da Princesa e travessias rápidas para Fortalezinha e Camboinha.',
+    photo_url: '/assets/images/rabeta_barco_mar_1787985502030.jpg',
+    location: 'Praia do Porto / Canal',
+    rating: 4.9,
+    total_reviews: 62,
+    is_active: true,
+    verified: true,
+    price_starting: 25.00,
+    vehicle_badge: 'Rabeta Estrela do Mar',
+    amenities: ['Coletes Salva-Vidas', 'Guia Local', 'Parada p/ Banho'],
+    created_at: '2026-01-01'
+  },
+  {
+    id: 'p5',
+    name: 'Disk Gelo & Água Mineral 20L Princesa',
+    category: 'compras',
+    subcategory: 'Depósito & Conveniência',
+    phone: '5591985678901',
+    whatsapp: '5591985678901',
+    description: 'Entrega rápida de galão de água mineral 20L, sacos de gelo filtrado 5kg/10kg, carvão e bebidas direto na sua barraca ou casa.',
+    photo_url: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=800&auto=format&fit=crop&q=80',
+    location: 'Vila de Algodoal (Entrega em toda a ilha)',
+    rating: 4.9,
+    total_reviews: 77,
+    is_active: true,
+    verified: true,
+    price_starting: 15.00,
+    amenities: ['Entrega Express', 'Gelo Filtrado', 'Água 20L', 'PIX'],
+    created_at: '2026-01-01'
+  },
+  {
+    id: 'p6',
+    name: 'Luau & Noite do Carimbó Raiz',
+    category: 'eventos',
+    subcategory: 'Cultura & Música ao Vivo',
+    phone: '5591986789012',
+    whatsapp: '5591986789012',
+    description: 'Apresentações semanais do tradicional Carimbó de Marapanim, fogueira na praia da Princesa e noites de reggae paraense.',
+    photo_url: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&auto=format&fit=crop&q=80',
+    location: 'Praia da Princesa (Espaço Cultural)',
+    rating: 5.0,
+    total_reviews: 83,
+    is_active: true,
+    verified: true,
+    price_starting: 0.00,
+    amenities: ['Entrada Franca', 'Carimbó Raiz', 'Bebidas Geladas'],
+    created_at: '2026-01-01'
+  }
+];
+
+export function App() {
+  // Device Frame View State ('mobile-frame' | 'mobile-wide' | 'fullscreen')
+  const [deviceView, setDeviceView] = useState<'mobile-frame' | 'fullscreen'>('mobile-frame');
+
+  // Navigation Tabs
+  const [activeTab, setActiveTab] = useState<TabType>('home');
+  const [selectedCategory, setSelectedCategory] = useState<string>('todos');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+
+  // Modals
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [isTidesModalOpen, setIsTidesModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [isCharreteModalOpen, setIsCharreteModalOpen] = useState(false);
+  const [isQuickOrderModalOpen, setIsQuickOrderModalOpen] = useState(false);
 
-  // User State from LocalStorage
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
-    try {
-      const saved = localStorage.getItem('algodoal_current_user');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-
-  // Data States loaded from real backend DB
-  const [partners, setPartners] = useState<Partner[]>([]);
-  const [services, setServices] = useState<ServiceProduct[]>([]);
+  // Data States
   const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [islandSpots, setIslandSpots] = useState<IslandSpot[]>([]);
-  const [boatCrossings, setBoatCrossings] = useState<BoatCrossingSchedule[]>([]);
-  const [tides, setTides] = useState<TideSchedule[]>([]);
-  const [contacts, setContacts] = useState<UsefulContact[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-
-  // Modal Booking States
-  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
-  const [selectedServiceToBook, setSelectedServiceToBook] = useState<ServiceProduct | undefined>();
-  const [selectedPartnerToBook, setSelectedPartnerToBook] = useState<Partner | undefined>();
-  const [multiOrderItems, setMultiOrderItems] = useState<Array<{ service: ServiceProduct; partner: Partner; quantity: number }>>([]);
-  const [routeOrigin, setRouteOrigin] = useState<string | undefined>();
-  const [routeDest, setRouteDest] = useState<string | undefined>();
-
-  // Fetch all initial data from backend API
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-      setFetchError(null);
-
-      const [
-        partnersData, 
-        servicesData, 
-        adsData,
-        ordersData, 
-        spotsData, 
-        boatsData, 
-        tidesData, 
-        contactsData
-      ] = await Promise.all([
-        api.getPartners(),
-        api.getServices(),
-        api.getAdvertisements('todos', false).catch(() => []),
-        api.getOrders(),
-        api.getIslandSpots(),
-        api.getBoatCrossings(),
-        api.getTides(),
-        api.getContacts()
-      ]);
-
-      setPartners(partnersData);
-      setServices(servicesData);
-      setAdvertisements(adsData);
-      setOrders(ordersData);
-      setIslandSpots(spotsData);
-      setBoatCrossings(boatsData);
-      setTides(tidesData);
-      setContacts(contactsData);
-    } catch (err: any) {
-      console.error('Error fetching data from Algodoal Connect API:', err);
-      setFetchError('Não foi possível sincronizar os dados com o servidor. Verifique sua conexão.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [partners, setPartners] = useState<Partner[]>(INITIAL_PROTOTYPE_PARTNERS);
+  const [tideDays, setTideDays] = useState<TideDayEntry[]>([]);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    loadData();
-    // Poll orders periodically to show live updates
-    const interval = setInterval(async () => {
-      try {
-        const freshOrders = await api.getOrders();
-        setOrders(freshOrders);
-      } catch (e) {
-        // silent fail on polling
-      }
-    }, 15000);
-
-    return () => clearInterval(interval);
+    loadRealData();
   }, []);
 
-  const handleUserLogin = (user: UserProfile) => {
-    setCurrentUser(user);
+  const loadRealData = async () => {
     try {
-      localStorage.setItem('algodoal_current_user', JSON.stringify(user));
-    } catch (e) {
-      console.error(e);
+      // 1. Fetch Real Ads from Backend
+      const resAds = await fetch('/api/advertisements?only_active=true');
+      if (resAds.ok) {
+        const dataAds = await resAds.json();
+        if (dataAds && dataAds.length > 0) {
+          setAdvertisements(dataAds);
+        }
+      }
+
+      // 2. Fetch Real Partners
+      const resPartners = await fetch('/api/partners');
+      if (resPartners.ok) {
+        const dataPartners = await resPartners.json();
+        if (dataPartners && dataPartners.length > 0) {
+          setPartners(dataPartners);
+        }
+      }
+
+      // 3. Fetch Tides
+      const resTides = await fetch('/api/tides/days');
+      if (resTides.ok) {
+        const dataTides = await resTides.json();
+        if (dataTides && dataTides.length > 0) {
+          setTideDays(dataTides);
+        }
+      }
+    } catch (err) {
+      console.log('Utilizando dados estruturados para renderização do protótipo.');
     }
-    // If admin, can open admin panel right away or notify
-    if (user.role === 'admin') {
-      setIsAdminPanelOpen(true);
+  };
+
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+    if (tab === 'mares') {
+      setIsTidesModalOpen(true);
+    } else if (tab === 'transporte') {
+      setSelectedCategory('transporte');
+    } else if (tab === 'pedidos') {
+      setIsQuickOrderModalOpen(true);
+    } else if (tab === 'admin') {
+      setIsAdminModalOpen(true);
     }
   };
 
-  const handleUserLogout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem('algodoal_current_user');
-  };
-
-  // Filtered partners & services according to search term
-  const filteredPartners = partners.filter(p => {
-    if (!searchTerm.trim()) return true;
-    const term = searchTerm.toLowerCase();
-    return (
-      p.name.toLowerCase().includes(term) ||
-      p.description.toLowerCase().includes(term) ||
-      p.location.toLowerCase().includes(term) ||
-      p.category.toLowerCase().includes(term) ||
-      (p.subcategory && p.subcategory.toLowerCase().includes(term))
-    );
-  });
-
-  const filteredServices = services.filter(s => {
-    if (!searchTerm.trim()) return true;
-    const term = searchTerm.toLowerCase();
-    return (
-      s.name.toLowerCase().includes(term) ||
-      s.description.toLowerCase().includes(term) ||
-      s.category.toLowerCase().includes(term)
-    );
-  });
-
-  // Handlers for single-item bookings (Charrete, Rabeta, Restaurante)
-  const handleBookService = (
-    service: ServiceProduct,
-    partner: Partner,
-    customOrigin?: string,
-    customDest?: string
-  ) => {
-    setSelectedServiceToBook(service);
-    setSelectedPartnerToBook(partner);
-    setMultiOrderItems([]);
-    setRouteOrigin(customOrigin);
-    setRouteDest(customDest);
-    setIsOrderModalOpen(true);
-  };
-
-  // Handlers for multi-item bookings (Compras / Mercadinho)
-  const handleOpenMultiOrder = (
-    items: Array<{ service: ServiceProduct; partner: Partner; quantity: number }>
-  ) => {
-    setMultiOrderItems(items);
-    setSelectedServiceToBook(undefined);
-    setSelectedPartnerToBook(undefined);
-    setIsOrderModalOpen(true);
-  };
-
-  // Direct WhatsApp contact with partner
-  const handleCallPartnerDirect = (partner: Partner) => {
-    const rawNumber = partner.whatsapp || partner.phone.replace(/\D/g, '');
-    const cleanNumber = rawNumber.startsWith('55') ? rawNumber : `55${rawNumber}`;
-    const text = encodeURIComponent(
-      `Olá ${partner.name}! Vi seu serviço no catálogo do Algodoal Connect e gostaria de tirar dúvidas e solicitar um atendimento na ilha.`
-    );
-    window.open(`https://wa.me/${cleanNumber}?text=${text}`, '_blank');
-  };
-
-  // Create Order and Open Direct WhatsApp with Provider
-  const handleCreateOrder = async (orderData: {
-    customer_name: string;
-    customer_phone: string;
-    customer_location: string;
-    destination_location?: string;
-    partner_id: string;
-    partner_name: string;
-    category: ServiceCategory;
-    items: Array<{ service_id: string; name: string; price: number; quantity: number; unit: string }>;
-    total_price: number;
-    payment_method: PaymentMethod;
-    notes?: string;
-  }) => {
-    // 1. Save locally/backend for history tracking
-    const created = await api.createOrder(orderData);
-    setOrders(prev => [created, ...prev]);
-
-    // 2. Locate partner to get their direct WhatsApp phone
-    const partner = partners.find(p => p.id === orderData.partner_id) || partners[0];
-    const rawNumber = partner?.whatsapp || partner?.phone.replace(/\D/g, '') || '91981234567';
-    const cleanNumber = rawNumber.startsWith('55') ? rawNumber : `55${rawNumber}`;
-
-    // 3. Format complete message
-    const itemsList = orderData.items
-      .map(i => `• ${i.quantity}x ${i.name} (R$ ${(i.price * i.quantity).toFixed(2)})`)
-      .join('\n');
-
-    const message = 
-`🌴 *Algodoal Connect - Solicitação de Contato Direto*
-
-Olá, *${orderData.partner_name}*!
-Encontrei seu contato no *Algodoal Connect* e gostaria de combinar este atendimento:
-
-👤 *Turista/Cliente:* ${orderData.customer_name}
-📱 *WhatsApp:* ${orderData.customer_phone}
-📍 *Local / Ponto de Encontro:* ${orderData.customer_location}
-${orderData.destination_location ? `🏁 *Destino:* ${orderData.destination_location}\n` : ''}
-📋 *Serviço / Pedido:*
-${itemsList}
-
-💰 *Valor Tabelado Estimado:* R$ ${orderData.total_price.toFixed(2)}
-💳 *Forma de Pagamento Preferida:* ${orderData.payment_method.toUpperCase()}
-${orderData.notes ? `📝 *Observações:* ${orderData.notes}\n` : ''}
-_Aguardo sua confirmação e orientações!_`;
-
-    const encoded = encodeURIComponent(message);
-    window.open(`https://wa.me/${cleanNumber}?text=${encoded}`, '_blank');
-    setIsOrderTrackerOpen(true);
-  };
-
-  // Partner status updater
-  const handleUpdateOrderStatus = async (orderId: string, status: OrderStatus) => {
-    const updated = await api.updateOrderStatus(orderId, status);
-    setOrders(prev => prev.map(o => o.id === orderId ? updated : o));
-  };
-
-  // Add new service via partner portal
-  const handleAddNewService = async (serviceData: Partial<ServiceProduct>) => {
-    const created = await api.createService(serviceData);
-    setServices(prev => [...prev, created]);
-  };
-
-  // Delete service via partner portal
-  const handleDeleteService = async (serviceId: string) => {
-    await api.deleteService(serviceId);
-    setServices(prev => prev.filter(s => s.id !== serviceId));
-  };
-
-  // Register new partner
-  const handleRegisterPartner = async (partnerData: any) => {
-    const created = await api.createPartner(partnerData);
-    setPartners(prev => [...prev, created]);
-  };
-
-  // Active uncompleted orders count
-  const activeOrderCount = orders.filter(
-    o => o.status === 'pendente' || o.status === 'aceito' || o.status === 'em_rota'
-  ).length;
+  const todayTide = tideDays && tideDays.length > 0 ? tideDays[0] : null;
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans selection:bg-amber-400 selection:text-slate-950">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-start selection:bg-teal-500 selection:text-white">
       
-      {/* Navigation Bar */}
-      <Navbar
-        activeCategory={activeCategory}
-        onSelectCategory={(cat) => {
-          setIsPartnerPortalOpen(false);
-          setActiveCategory(cat);
-        }}
-        orderCount={activeOrderCount}
-        onOpenOrders={() => setIsOrderTrackerOpen(true)}
-        onOpenPartnerPortal={() => setIsPartnerPortalOpen(!isPartnerPortalOpen)}
-        onOpenNewPartner={() => setIsNewPartnerModalOpen(true)}
-        onOpenEmergency={() => setIsEmergencyModalOpen(true)}
-        isPartnerPortalOpen={isPartnerPortalOpen}
-        currentUser={currentUser}
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
-        onOpenAdminPanel={() => setIsAdminPanelOpen(true)}
-        onOpenTidesModal={() => setIsTidesModalOpen(true)}
-      />
+      {/* ======================================================== */}
+      {/* 1. TOP PROTOTYPE BAR (Device Switcher & Brand Info)       */}
+      {/* ======================================================== */}
+      <div className="w-full bg-slate-900 border-b border-slate-800 px-4 py-2 flex items-center justify-between z-30 text-xs">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-pulse" />
+          <span className="font-bold text-slate-300">
+            Protótipo de Layout <strong className="text-teal-400">Mobile-First</strong>
+          </span>
+          <span className="hidden sm:inline-block px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 text-[10px] border border-slate-700">
+            Node.js + PostgreSQL + Docker Ready
+          </span>
+        </div>
 
-      {/* Main Content Area */}
-      <main className="flex-1">
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-28">
-            <Loader2 className="w-10 h-10 text-sky-600 animate-spin mb-3" />
-            <h3 className="text-base font-bold text-slate-900 font-heading">
-              Conectando com o banco de dados da Ilha...
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Carregando parceiros, marés de Marapanim, anúncios e horários de barco.
-            </p>
+        {/* Device Switcher Controls */}
+        <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <button
+            onClick={() => setDeviceView('mobile-frame')}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
+              deviceView === 'mobile-frame'
+                ? 'bg-teal-500 text-slate-950 shadow-xs'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Smartphone className="w-3.5 h-3.5" />
+            <span>Celular (Frame)</span>
+          </button>
+
+          <button
+            onClick={() => setDeviceView('fullscreen')}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
+              deviceView === 'fullscreen'
+                ? 'bg-teal-500 text-slate-950 shadow-xs'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Monitor className="w-3.5 h-3.5" />
+            <span>Tela Cheia</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ======================================================== */}
+      {/* 2. MAIN APPLICATION CONTAINER (Mobile Frame or Scaled)   */}
+      {/* ======================================================== */}
+      <main
+        className={`w-full transition-all duration-300 flex flex-col justify-start relative ${
+          deviceView === 'mobile-frame'
+            ? 'max-w-[430px] my-4 sm:my-8 rounded-[40px] border-[8px] border-slate-800 shadow-2xl shadow-teal-950/40 overflow-hidden bg-slate-950 min-h-[860px]'
+            : 'max-w-4xl mx-auto min-h-screen bg-slate-950 border-x border-slate-800 shadow-2xl'
+        }`}
+      >
+        {/* Dynamic Island Bezel for Mobile Frame */}
+        {deviceView === 'mobile-frame' && (
+          <div className="w-full bg-slate-900 pt-2 pb-1 flex items-center justify-center border-b border-slate-800/60">
+            <div className="w-24 h-4 bg-slate-950 rounded-full flex items-center justify-end px-2 gap-1 border border-slate-800">
+              <span className="w-2 h-2 rounded-full bg-teal-400/80 animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-700" />
+            </div>
           </div>
-        ) : fetchError ? (
-          <div className="max-w-xl mx-auto my-12 p-6 rounded-3xl bg-red-50 border border-red-200 text-center">
-            <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
-            <h4 className="text-base font-bold text-red-900 font-heading">{fetchError}</h4>
-            <button
-              onClick={loadData}
-              className="mt-4 bg-red-700 hover:bg-red-800 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-md cursor-pointer"
-            >
-              Tentar Novamente
-            </button>
-          </div>
-        ) : isPartnerPortalOpen ? (
-          /* Partner & Merchant Portal */
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <PartnerPortal
-              partners={partners}
-              services={services}
-              orders={orders}
-              onUpdateOrderStatus={handleUpdateOrderStatus}
-              onAddNewService={handleAddNewService}
-              onDeleteService={handleDeleteService}
-              onRefreshData={loadData}
-            />
-          </div>
-        ) : (
-          /* Tourist View */
-          <>
-            {/* Hero Header from Flyer */}
-            <HeroBanner
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-              onSelectCategory={(cat) => setActiveCategory(cat)}
-              advertisements={advertisements}
-              onQuickCallCart={() => {
-                setActiveCategory('transporte');
-                const defaultService = services.find(s => s.category === 'transporte') || services[0];
-                const defaultPartner = partners.find(p => p.category === 'transporte') || partners[0];
-                if (defaultService && defaultPartner) {
-                  handleBookService(defaultService, defaultPartner, 'Porto de Algodoal', 'Praia da Princesa');
-                }
-              }}
-            />
-
-            {/* Main Categories Navigation Bar */}
-            <CategoryNav
-              activeCategory={activeCategory}
-              onSelectCategory={(cat) => setActiveCategory(cat)}
-            />
-
-            {/* Dynamic Category View Container */}
-            <section className="py-10">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                
-                {/* Search result indicator if active */}
-                {searchTerm && (
-                  <div className="mb-6 p-3.5 rounded-2xl bg-white border border-sky-200 text-xs font-semibold text-slate-700 flex items-center justify-between shadow-sm">
-                    <span>
-                      Filtrando por: "<strong className="text-sky-700">{searchTerm}</strong>" ({filteredServices.length} itens encontrados)
-                    </span>
-                    <button
-                      onClick={() => setSearchTerm('')}
-                      className="text-sky-700 hover:text-sky-900 underline font-bold cursor-pointer"
-                    >
-                      Limpar Busca
-                    </button>
-                  </div>
-                )}
-
-                {/* 1. Transporte (Charretes & Barcos) */}
-                {activeCategory === 'transporte' && (
-                  <TransportView
-                    partners={filteredPartners}
-                    services={filteredServices}
-                    onBookService={handleBookService}
-                    onCallPartnerDirect={handleCallPartnerDirect}
-                  />
-                )}
-
-                {/* 2. Pousadas (Hospedagem & Chalés) */}
-                {activeCategory === 'pousadas' && (
-                  <PousadasView
-                    partners={filteredPartners}
-                    services={filteredServices}
-                  />
-                )}
-
-                {/* 3. Passeios (Rabetas & Lago) */}
-                {activeCategory === 'passeios' && (
-                  <ToursView
-                    partners={filteredPartners}
-                    services={filteredServices}
-                    onBookService={handleBookService}
-                    onCallPartnerDirect={handleCallPartnerDirect}
-                  />
-                )}
-
-                {/* 4. Alimentação (Restaurantes & Peixadas) */}
-                {activeCategory === 'alimentacao' && (
-                  <RestaurantsView
-                    partners={filteredPartners}
-                    services={filteredServices}
-                    onBookService={handleBookService}
-                    onCallPartnerDirect={handleCallPartnerDirect}
-                  />
-                )}
-
-                {/* 5. Compras (Mercadinho & Água 20L) */}
-                {activeCategory === 'compras' && (
-                  <MarketView
-                    partners={filteredPartners}
-                    services={filteredServices}
-                    onOpenMultiOrder={handleOpenMultiOrder}
-                    onCallPartnerDirect={handleCallPartnerDirect}
-                  />
-                )}
-
-                {/* 6. Eventos (Luaus & Festivais) */}
-                {activeCategory === 'eventos' && (
-                  <EventsView
-                    advertisements={advertisements}
-                  />
-                )}
-
-                {/* 7. Guia / Informações Úteis (Marés, Travessia & Telefones) */}
-                {activeCategory === 'informacoes' && (
-                  <IslandGuideView
-                    spots={islandSpots}
-                    boatCrossings={boatCrossings}
-                    contacts={contacts}
-                    tides={tides}
-                  />
-                )}
-              </div>
-            </section>
-
-            {/* How It Works Section */}
-            <HowItWorks />
-          </>
         )}
+
+        {/* 1. Mobile Top Bar with Live Island Weather, Tides & Search */}
+        <MobileTopBar
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          onOpenAdmin={() => setIsAdminModalOpen(true)}
+          onOpenTides={() => setIsTidesModalOpen(true)}
+          currentUser={currentUser}
+          currentTideSummary="🌊 Preamar 16:45 (4.4m) • Maré Alta p/ Banho"
+        />
+
+        {/* 2. Instagram/SuperApp Stories Row */}
+        <StoriesRow />
+
+        {/* 3. Hero Carousel Commercial Banners */}
+        <HeroBannersCarousel
+          advertisements={advertisements}
+          onAdClick={(ad) => {
+            if (ad.category) setSelectedCategory(ad.category);
+          }}
+        />
+
+        {/* 4. Quick Actions Grid (8 Essential Categories) */}
+        <QuickActionsGrid
+          onSelectCategory={(cat) => setSelectedCategory(cat)}
+          onOpenTides={() => setIsTidesModalOpen(true)}
+          onOpenCharreteCalculator={() => setIsCharreteModalOpen(true)}
+          onOpenSupplyOrder={() => setIsQuickOrderModalOpen(true)}
+          onOpenAdmin={() => setIsAdminModalOpen(true)}
+        />
+
+        {/* 5. Live Tide Wave Widget (Marapanim Tide Graph) */}
+        <TideWaveWidget
+          currentTideDay={todayTide}
+          onOpenFullTides={() => setIsTidesModalOpen(true)}
+        />
+
+        {/* 6. CharreteGO Route Calculator */}
+        <CharreteGoCalculator />
+
+        {/* 7. Categorized Feed with Search & Filter */}
+        <MobileCategoryFeed
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+          searchTerm={searchTerm}
+          partners={partners}
+          onOpenOrderModal={() => setIsQuickOrderModalOpen(true)}
+        />
+
+        {/* Extra bottom padding to avoid bottom nav bar overlap */}
+        <div className="h-20 w-full" />
+
+        {/* 8. Fixed Mobile Bottom Navigation Bar */}
+        <MobileBottomNav
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          isAdminLoggedIn={currentUser?.role === 'admin'}
+        />
       </main>
 
-      {/* Environmental & Brand Footer */}
-      <PreservationFooter
-        onOpenCategory={(cat) => {
-          setIsPartnerPortalOpen(false);
-          setActiveCategory(cat);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
-      />
-
-      {/* Booking Order Modal */}
-      <OrderModal
-        isOpen={isOrderModalOpen}
-        onClose={() => setIsOrderModalOpen(false)}
-        service={selectedServiceToBook}
-        partner={selectedPartnerToBook}
-        multiItems={multiOrderItems}
-        initialOrigin={routeOrigin}
-        initialDest={routeDest}
-        onSubmitOrder={handleCreateOrder}
-      />
-
-      {/* Live Order Tracker Modal */}
-      <OrderTrackerModal
-        isOpen={isOrderTrackerOpen}
-        onClose={() => setIsOrderTrackerOpen(false)}
-        orders={orders}
-        onRefresh={loadData}
-      />
-
-      {/* Register New Partner Modal */}
-      <NewPartnerModal
-        isOpen={isNewPartnerModalOpen}
-        onClose={() => setIsNewPartnerModalOpen(false)}
-        onRegisterPartner={handleRegisterPartner}
-      />
-
-      {/* Social Auth Modal */}
-      <SocialAuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onLoginSuccess={handleUserLogin}
-      />
-
-      {/* Admin Management Panel Modal */}
-      <AdminPanelModal
-        isOpen={isAdminPanelOpen}
-        onClose={() => {
-          setIsAdminPanelOpen(false);
-          loadData();
-        }}
-        onRefreshData={loadData}
-        currentUser={currentUser}
-        onLoginSuccess={handleUserLogin}
-        onLogout={handleUserLogout}
-      />
-
-      {/* Tábua de Marés (Marapanim & Marinha) Modal */}
+      {/* ======================================================== */}
+      {/* 3. MODALS SYSTEM                                         */}
+      {/* ======================================================== */}
+      
+      {/* Modal: Tábua de Marés Detalhada */}
       <TideScheduleModal
         isOpen={isTidesModalOpen}
         onClose={() => setIsTidesModalOpen(false)}
       />
 
-      {/* Quick Emergency Modal */}
-      {isEmergencyModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#0e0e0e] rounded-3xl max-w-md w-full p-6 shadow-2xl border border-white/15 animate-in fade-in zoom-in-95 duration-200 text-[#E5E5E5]">
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
-              <div className="flex items-center gap-2 text-red-400">
-                <PhoneCall className="w-5 h-5" />
-                <h3 className="text-lg font-bold text-white font-serif">
-                  Contatos de Emergência
-                </h3>
-              </div>
-              <button
-                onClick={() => setIsEmergencyModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-[#1c1c1c] hover:bg-[#282828] text-zinc-400 hover:text-white flex items-center justify-center transition border border-white/10 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      {/* Modal: Pedido Rápido de Água & Gelo */}
+      <QuickOrderModal
+        isOpen={isQuickOrderModalOpen}
+        onClose={() => setIsQuickOrderModalOpen(false)}
+      />
 
-            <div className="mt-4 space-y-3">
-              {contacts.map((c) => (
-                <div key={c.id} className="p-3.5 rounded-2xl bg-[#141414] border border-white/10 flex items-center justify-between shadow-sm">
-                  <div>
-                    <h5 className="text-xs font-bold text-white font-serif">{c.title}</h5>
-                    <span className="text-[11px] text-zinc-400 block">{c.location}</span>
-                  </div>
-                  <a
-                    href={`tel:${c.phone.replace(/\D/g, '')}`}
-                    className="bg-red-900/80 hover:bg-red-800 text-red-100 font-bold text-xs px-3.5 py-1.5 rounded-xl border border-red-700/50 transition cursor-pointer"
-                  >
-                    Ligar
-                  </a>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal: CharreteGO Modal Version */}
+      <CharreteGoCalculator
+        isOpen={isCharreteModalOpen}
+        onClose={() => setIsCharreteModalOpen(false)}
+        isModal={true}
+      />
 
+      {/* Modal: Gerenciador de Anúncios e Painel Administrativo */}
+      <AdminPanelModal
+        isOpen={isAdminModalOpen}
+        onClose={() => {
+          setIsAdminModalOpen(false);
+          loadRealData();
+        }}
+        onRefreshData={loadRealData}
+        currentUser={currentUser}
+        onLoginSuccess={(user) => setCurrentUser(user)}
+        onLogout={() => setCurrentUser(null)}
+      />
     </div>
   );
 }
+
+export default App;
