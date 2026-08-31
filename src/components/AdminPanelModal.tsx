@@ -66,13 +66,16 @@ const CATEGORY_TABS: Array<{ id: string; label: string; icon: any; color: string
 ];
 
 const OFFICIAL_IMAGE_PRESETS = [
-  { name: 'Rabeta Barco Mar', url: '/assets/images/rabeta_barco_mar_1787985502030.jpg' },
-  { name: 'Passeio Manguezal', url: '/assets/images/passeio_manguezal_1787985512998.jpg' },
-  { name: 'Vila Algodoal Rua', url: '/assets/images/vila_algodoal_rua_1787985524739.jpg' },
+  { name: 'Charrete Tradicional', url: '/imagens/carroca.jpg' },
+  { name: 'Vila Algodoal Rua', url: '/imagens/vila.jpg' },
+  { name: 'Porto de Chegada', url: '/imagens/porto.jpg' },
+  { name: 'Canal & Rabetas', url: '/imagens/canal.jpg' },
+  { name: 'Praia & Ilha', url: '/imagens/algodoal.jpg' },
+  { name: 'Luau & Noite', url: '/imagens/festa.jpg' },
+  { name: 'Porto Barcos', url: '/imagens/porto2.jpg' },
+  { name: 'Vila & Passeios', url: '/imagens/vila2.jpg' },
   { name: 'Restaurante / Peixada', url: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80' },
-  { name: 'Depósito Água & Gelo', url: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=800&auto=format&fit=crop&q=80' },
-  { name: 'Luau & Praia Noite', url: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&auto=format&fit=crop&q=80' },
-  { name: 'Charrete Tradicional', url: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&auto=format&fit=crop&q=80' }
+  { name: 'Depósito Água & Gelo', url: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=800&auto=format&fit=crop&q=80' }
 ];
 
 export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
@@ -108,13 +111,16 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
   // Ad Form Modal state
   const [isEditingAd, setIsEditingAd] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [imageInputMode, setImageInputMode] = useState<'upload' | 'url' | 'presets'>('upload');
+  const [isDragOver, setIsDragOver] = useState(false);
   const [currentAd, setCurrentAd] = useState<Partial<Advertisement>>({
     title: '',
     business_name: '',
     category: 'alimentacao',
     tagline: '',
     description: '',
-    image_url: '/assets/images/rabeta_barco_mar_1787985502030.jpg',
+    image_url: '/imagens/carroca.jpg',
     whatsapp: '',
     phone: '',
     location: 'Praia da Princesa, Ilha de Algodoal',
@@ -316,6 +322,47 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleImageFileUpload = async (file: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione um arquivo de imagem válido (JPG, PNG, WebP, GIF).');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert('A imagem deve ter no máximo 10MB.');
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64Data = reader.result as string;
+        try {
+          const res = await api.uploadImage(base64Data, file.name);
+          if (res.success && res.url) {
+            setCurrentAd(prev => ({ ...prev, image_url: res.url }));
+            showSuccess(`Imagem "${file.name}" enviada com sucesso!`);
+          } else {
+            setCurrentAd(prev => ({ ...prev, image_url: base64Data }));
+            showSuccess(`Imagem "${file.name}" pronta!`);
+          }
+        } catch (err) {
+          console.warn('Fallback base64 para imagem:', err);
+          setCurrentAd(prev => ({ ...prev, image_url: base64Data }));
+          showSuccess(`Imagem "${file.name}" carregada!`);
+        } finally {
+          setIsUploadingImage(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+      setIsUploadingImage(false);
+      alert('Erro ao ler arquivo de imagem.');
     }
   };
 
@@ -1440,30 +1487,178 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     />
                   </div>
 
-                  {/* Image Selector */}
-                  <div>
-                    <label className="block text-xs font-black uppercase text-slate-800 mb-1">
-                      URL da Imagem ou Foto da Ilha
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="https://... ou /assets/images/..."
-                      value={currentAd.image_url || ''}
-                      onChange={(e) => setCurrentAd(prev => ({ ...prev, image_url: e.target.value }))}
-                      className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white mb-2"
-                    />
-                    <div className="flex flex-wrap gap-1.5">
-                      {OFFICIAL_IMAGE_PRESETS.map((preset, idx) => (
+                  {/* Image Selector & Upload Section */}
+                  <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-black uppercase text-slate-800">
+                        Foto / Imagem do Anúncio *
+                      </label>
+                      <div className="flex bg-slate-100 p-0.5 rounded-lg text-[10px] font-bold">
                         <button
-                          key={idx}
                           type="button"
-                          onClick={() => setCurrentAd(prev => ({ ...prev, image_url: preset.url }))}
-                          className="px-2 py-1 rounded-lg bg-slate-200 hover:bg-amber-200 text-[10px] font-bold text-slate-800 transition cursor-pointer"
+                          onClick={() => setImageInputMode('upload')}
+                          className={`px-2 py-1 rounded-md transition cursor-pointer flex items-center gap-1 ${
+                            imageInputMode === 'upload' ? 'bg-amber-400 text-slate-950 font-black shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                          }`}
                         >
-                          {preset.name}
+                          <UploadCloud className="w-3 h-3" />
+                          <span>Subir Imagem</span>
                         </button>
-                      ))}
+                        <button
+                          type="button"
+                          onClick={() => setImageInputMode('presets')}
+                          className={`px-2 py-1 rounded-md transition cursor-pointer flex items-center gap-1 ${
+                            imageInputMode === 'presets' ? 'bg-amber-400 text-slate-950 font-black shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          <ImageIcon className="w-3 h-3" />
+                          <span>Fotos da Ilha</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setImageInputMode('url')}
+                          className={`px-2 py-1 rounded-md transition cursor-pointer flex items-center gap-1 ${
+                            imageInputMode === 'url' ? 'bg-amber-400 text-slate-950 font-black shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          <span>URL / Link</span>
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Mode 1: Subir Imagem do Dispositivo */}
+                    {imageInputMode === 'upload' && (
+                      <div className="space-y-2">
+                        <div
+                          onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                          onDragLeave={() => setIsDragOver(false)}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            setIsDragOver(false);
+                            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                              handleImageFileUpload(e.dataTransfer.files[0]);
+                            }
+                          }}
+                          onClick={() => {
+                            const input = document.getElementById('ad-image-file-input') as HTMLInputElement;
+                            if (input) input.click();
+                          }}
+                          className={`border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition ${
+                            isDragOver
+                              ? 'border-amber-500 bg-amber-50/80 scale-[1.01]'
+                              : 'border-slate-300 hover:border-amber-400 bg-slate-50/70 hover:bg-amber-50/30'
+                          }`}
+                        >
+                          <input
+                            type="file"
+                            id="ad-image-file-input"
+                            accept="image/*"
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                handleImageFileUpload(e.target.files[0]);
+                              }
+                            }}
+                            className="hidden"
+                          />
+
+                          {isUploadingImage ? (
+                            <div className="py-3 flex flex-col items-center justify-center gap-2">
+                              <RefreshCw className="w-6 h-6 text-amber-500 animate-spin" />
+                              <span className="text-xs font-black text-slate-800">Enviando e processando imagem...</span>
+                            </div>
+                          ) : (
+                            <div className="py-2 flex flex-col items-center justify-center gap-1.5">
+                              <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shadow-xs">
+                                <UploadCloud className="w-5 h-5" />
+                              </div>
+                              <div className="text-xs font-black text-slate-800">
+                                Clique para escolher uma foto ou arraste o arquivo aqui
+                              </div>
+                              <p className="text-[11px] text-slate-500">
+                                Suporta JPG, PNG, WebP do seu celular ou computador (Máx: 10MB)
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {currentAd.image_url && (
+                          <div className="flex items-center justify-between p-2 rounded-xl bg-slate-100 border border-slate-200 text-xs">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <img
+                                src={currentAd.image_url}
+                                alt="Miniatura"
+                                className="w-8 h-8 rounded-lg object-cover border border-slate-300 shrink-0"
+                              />
+                              <span className="text-[11px] font-bold text-slate-700 truncate">
+                                Imagem selecionada: {currentAd.image_url.split('/').pop()}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const input = document.getElementById('ad-image-file-input') as HTMLInputElement;
+                                if (input) input.click();
+                              }}
+                              className="text-[11px] font-black text-amber-700 hover:text-amber-800 underline ml-2 shrink-0 cursor-pointer"
+                            >
+                              Trocar foto
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Mode 2: Fotos Pré-configuradas da Ilha */}
+                    {imageInputMode === 'presets' && (
+                      <div className="space-y-2">
+                        <span className="text-[11px] text-slate-500 font-bold block">
+                          Selecione uma foto temática da Ilha de Algodoal:
+                        </span>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-44 overflow-y-auto pr-1">
+                          {OFFICIAL_IMAGE_PRESETS.map((preset, idx) => {
+                            const isChosen = currentAd.image_url === preset.url;
+                            return (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setCurrentAd(prev => ({ ...prev, image_url: preset.url }))}
+                                className={`p-1.5 rounded-xl border text-left flex items-center gap-2 transition cursor-pointer ${
+                                  isChosen
+                                    ? 'border-amber-500 bg-amber-100/70 font-black text-slate-900 shadow-xs'
+                                    : 'border-slate-200 hover:border-amber-300 bg-slate-50 text-slate-700'
+                                }`}
+                              >
+                                <img
+                                  src={preset.url}
+                                  alt={preset.name}
+                                  className="w-7 h-7 rounded-lg object-cover border border-slate-300 shrink-0"
+                                />
+                                <span className="text-[10px] font-bold truncate leading-tight">
+                                  {preset.name}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Mode 3: Digitar URL direta */}
+                    {imageInputMode === 'url' && (
+                      <div className="space-y-1.5">
+                        <input
+                          type="text"
+                          placeholder="https://exemplo.com/foto.jpg ou /imagens/carroca.jpg"
+                          value={currentAd.image_url || ''}
+                          onChange={(e) => setCurrentAd(prev => ({ ...prev, image_url: e.target.value }))}
+                          className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                        />
+                        <p className="text-[10px] text-slate-400">
+                          Cole o link direto da imagem hospedada ou caminho relativo local.
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Status checkbox */}
@@ -1495,7 +1690,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     <div className="rounded-2xl border border-slate-200 overflow-hidden shadow-sm bg-white">
                       <div className="relative h-40 bg-slate-100">
                         <img
-                          src={currentAd.image_url || '/assets/images/rabeta_barco_mar_1787985502030.jpg'}
+                          src={currentAd.image_url || '/imagens/carroca.jpg'}
                           alt="Prévia"
                           className="w-full h-full object-cover"
                         />
@@ -1545,9 +1740,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
                     <button
                       type="submit"
-                      className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs transition shadow-md cursor-pointer"
+                      className="px-6 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs transition shadow-md cursor-pointer flex items-center gap-1.5"
                     >
-                      Salvar no Banco de Dados
+                      <Check className="w-4 h-4" />
+                      <span>Salvar</span>
                     </button>
                   </div>
                 </div>

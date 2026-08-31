@@ -64,6 +64,61 @@ async function startServer() {
   });
 
   // =====================================
+  // IMAGE UPLOAD API
+  // =====================================
+  app.post('/api/upload', (req, res) => {
+    try {
+      const { image, filename } = req.body;
+      if (!image) {
+        return res.status(400).json({ error: 'Nenhuma imagem enviada.' });
+      }
+
+      // Check if it is a base64 data URL
+      const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (!matches || matches.length !== 3) {
+        // If it is already a direct URL or path, just return it
+        if (typeof image === 'string' && (image.startsWith('http') || image.startsWith('/'))) {
+          return res.json({ success: true, url: image });
+        }
+        return res.status(400).json({ error: 'Formato de imagem inválido.' });
+      }
+
+      const mimeType = matches[1];
+      const base64Data = matches[2];
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      let extension = 'jpg';
+      if (mimeType.includes('png')) extension = 'png';
+      else if (mimeType.includes('webp')) extension = 'webp';
+      else if (mimeType.includes('gif')) extension = 'gif';
+      else if (mimeType.includes('svg')) extension = 'svg';
+
+      const safeName = filename
+        ? filename.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase().slice(0, 30)
+        : 'img';
+      const newFileName = `upload_${Date.now()}_${safeName}.${extension}`;
+
+      const uploadDir = path.join(process.cwd(), 'public', 'imagens');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      const filePath = path.join(uploadDir, newFileName);
+      fs.writeFileSync(filePath, buffer);
+
+      const publicUrl = `/imagens/${newFileName}`;
+      res.json({
+        success: true,
+        url: publicUrl,
+        filename: newFileName
+      });
+    } catch (err: any) {
+      console.error('Erro no upload de imagem:', err);
+      res.status(500).json({ error: 'Erro ao processar imagem no servidor', details: err.message });
+    }
+  });
+
+  // =====================================
   // AUTHENTICATION & USERS (Social Login)
   // =====================================
   app.post('/api/auth/login', async (req, res) => {

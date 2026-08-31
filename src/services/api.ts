@@ -28,6 +28,17 @@ export const api = {
     return res.json();
   },
 
+  // Image Upload
+  async uploadImage(base64Data: string, filename?: string): Promise<{ success: boolean; url: string; filename?: string }> {
+    const res = await fetch(`${API_BASE}/upload`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64Data, filename })
+    });
+    if (!res.ok) throw new Error('Falha no upload da imagem');
+    return res.json();
+  },
+
   // Auth & Social Login
   async socialLogin(profile: Partial<UserProfile> & { provider: AuthProvider }) {
     const res = await fetch(`${API_BASE}/auth/login`, {
