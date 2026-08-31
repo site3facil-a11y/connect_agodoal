@@ -1,7 +1,7 @@
 import React from 'react';
-import { Home, Waves, Truck, ShoppingBag, ShieldCheck, User } from 'lucide-react';
+import { Home, Waves, Truck, ShoppingBag, ShieldCheck, Hotel } from 'lucide-react';
 
-export type TabType = 'home' | 'mares' | 'transporte' | 'pedidos' | 'admin';
+export type TabType = 'home' | 'pousadas' | 'transporte' | 'compras' | 'mares' | 'admin';
 
 interface MobileBottomNavProps {
   theme?: 'dark' | 'light';
@@ -20,9 +20,10 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 
   const NAV_ITEMS: Array<{ id: TabType; label: string; icon: any; badge?: string }> = [
     { id: 'home', label: 'Início', icon: Home },
-    { id: 'mares', label: 'Marés', icon: Waves, badge: 'Hoje' },
+    { id: 'pousadas', label: 'Pousadas', icon: Hotel },
     { id: 'transporte', label: 'Charretes', icon: Truck },
-    { id: 'pedidos', label: 'Gelo & Água', icon: ShoppingBag },
+    { id: 'compras', label: 'Depósitos', icon: ShoppingBag },
+    { id: 'mares', label: 'Marés', icon: Waves, badge: 'Hoje' },
     { id: 'admin', label: 'Admin', icon: ShieldCheck, badge: isAdminLoggedIn ? '🟢' : undefined }
   ];
 

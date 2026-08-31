@@ -28,8 +28,6 @@ interface DesktopNavbarProps {
   onSelectCategory: (cat: string) => void;
   onOpenAdmin: () => void;
   onOpenTides: () => void;
-  onOpenCharreteCalc: () => void;
-  onOpenQuickOrder: () => void;
   currentUser?: UserProfile | null;
   currentTideSummary?: string;
 }
@@ -43,8 +41,6 @@ export const DesktopNavbar: React.FC<DesktopNavbarProps> = ({
   onSelectCategory,
   onOpenAdmin,
   onOpenTides,
-  onOpenCharreteCalc,
-  onOpenQuickOrder,
   currentUser,
   currentTideSummary = '🌊 Preamar 16:45 (4.4m) • Maré Alta'
 }) => {
@@ -175,27 +171,31 @@ export const DesktopNavbar: React.FC<DesktopNavbarProps> = ({
         {/* Desktop Quick Direct Shortcuts */}
         <div className="flex items-center gap-2.5">
           <button
-            onClick={onOpenCharreteCalc}
+            onClick={() => onSelectCategory('transporte')}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer border ${
-              isDark 
-                ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25' 
-                : 'bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100'
+              selectedCategory === 'transporte'
+                ? 'bg-amber-500 text-slate-950 border-amber-400 font-black shadow-xs'
+                : isDark 
+                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25' 
+                  : 'bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100'
             }`}
           >
             <Truck className="w-4 h-4 text-amber-500" />
-            <span>Pedir Charrete</span>
+            <span>Charretes APA</span>
           </button>
 
           <button
-            onClick={onOpenQuickOrder}
+            onClick={() => onSelectCategory('compras')}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer border ${
-              isDark 
-                ? 'bg-sky-500/15 border-sky-500/40 text-sky-300 hover:bg-sky-500/25' 
-                : 'bg-sky-50 border-sky-300 text-sky-800 hover:bg-sky-100'
+              selectedCategory === 'compras'
+                ? 'bg-sky-500 text-slate-950 border-sky-400 font-black shadow-xs'
+                : isDark 
+                  ? 'bg-sky-500/15 border-sky-500/40 text-sky-300 hover:bg-sky-500/25' 
+                  : 'bg-sky-50 border-sky-300 text-sky-800 hover:bg-sky-100'
             }`}
           >
             <ShoppingBag className="w-4 h-4 text-sky-500" />
-            <span>Disk Gelo & Água</span>
+            <span>Depósitos & Gelo</span>
           </button>
 
           <button
@@ -207,7 +207,7 @@ export const DesktopNavbar: React.FC<DesktopNavbarProps> = ({
             }`}
           >
             <Waves className="w-4 h-4 text-teal-500" />
-            <span>Marés do Mês</span>
+            <span>Tábua de Marés</span>
           </button>
 
           {/* Admin Button */}
@@ -222,7 +222,7 @@ export const DesktopNavbar: React.FC<DesktopNavbarProps> = ({
             }`}
           >
             <ShieldCheck className={`w-4 h-4 ${currentUser?.role === 'admin' ? 'text-slate-950' : 'text-amber-500'}`} />
-            <span>{currentUser?.role === 'admin' ? 'Admin Ativo' : 'Painel Gestor'}</span>
+            <span>{currentUser?.role === 'admin' ? 'Admin Ativo' : 'Painel do Gestor'}</span>
           </button>
         </div>
       </div>

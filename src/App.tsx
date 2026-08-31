@@ -17,7 +17,10 @@ import {
   Layers,
   Heart,
   Share2,
-  MapPin
+  MapPin,
+  MessageCircle,
+  Megaphone,
+  CheckCircle2
 } from 'lucide-react';
 
 import { Advertisement, Partner, TideDayEntry, UserProfile } from './types/index.ts';
@@ -28,10 +31,8 @@ import { StoriesRow } from './components/mobile/StoriesRow.tsx';
 import { HeroBannersCarousel } from './components/mobile/HeroBannersCarousel.tsx';
 import { QuickActionsGrid } from './components/mobile/QuickActionsGrid.tsx';
 import { TideWaveWidget } from './components/mobile/TideWaveWidget.tsx';
-import { CharreteGoCalculator } from './components/mobile/CharreteGoCalculator.tsx';
 import { MobileCategoryFeed } from './components/mobile/MobileCategoryFeed.tsx';
 import { MobileBottomNav, TabType } from './components/mobile/MobileBottomNav.tsx';
-import { QuickOrderModal } from './components/mobile/QuickOrderModal.tsx';
 import { AdminPanelModal } from './components/AdminPanelModal.tsx';
 import { TideScheduleModal } from './components/TideScheduleModal.tsx';
 import { DesktopNavbar } from './components/desktop/DesktopNavbar.tsx';
@@ -116,12 +117,12 @@ const INITIAL_PROTOTYPE_PARTNERS: Partner[] = [
     id: 'p5',
     name: 'Disk Gelo & Água Mineral 20L Princesa',
     category: 'compras',
-    subcategory: 'Depósito & Conveniência',
+    subcategory: 'Depósito & Bebidas Geladas',
     phone: '5591985678901',
     whatsapp: '5591985678901',
     description: 'Entrega rápida de galão de água mineral 20L, sacos de gelo filtrado 5kg/10kg, carvão e bebidas direto na sua barraca ou casa.',
     photo_url: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=800&auto=format&fit=crop&q=80',
-    location: 'Vila de Algodoal (Entrega em toda a ilha)',
+    location: 'Vila de Algodoal (Atendimento em toda a ilha)',
     rating: 4.9,
     total_reviews: 77,
     is_active: true,
@@ -157,7 +158,7 @@ export function App() {
   // Device Frame View State ('mobile-frame' | 'desktop-view')
   const [deviceView, setDeviceView] = useState<'mobile-frame' | 'desktop-view'>('desktop-view');
 
-  // Navigation Tabs
+  // Navigation Tabs & Category Filters
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [selectedCategory, setSelectedCategory] = useState<string>('todos');
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -165,8 +166,6 @@ export function App() {
   // Modals
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [isTidesModalOpen, setIsTidesModalOpen] = useState(false);
-  const [isCharreteModalOpen, setIsCharreteModalOpen] = useState(false);
-  const [isQuickOrderModalOpen, setIsQuickOrderModalOpen] = useState(false);
 
   // Data States
   const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
@@ -211,18 +210,22 @@ export function App() {
         }
       }
     } catch (err) {
-      console.log('Utilizando dados estruturados para renderização do protótipo.');
+      console.log('Utilizando dados estruturados para renderização do portal.');
     }
   };
 
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
-    if (tab === 'mares') {
-      setIsTidesModalOpen(true);
+    if (tab === 'home') {
+      setSelectedCategory('todos');
+    } else if (tab === 'pousadas') {
+      setSelectedCategory('pousadas');
     } else if (tab === 'transporte') {
       setSelectedCategory('transporte');
-    } else if (tab === 'pedidos') {
-      setIsQuickOrderModalOpen(true);
+    } else if (tab === 'compras') {
+      setSelectedCategory('compras');
+    } else if (tab === 'mares') {
+      setIsTidesModalOpen(true);
     } else if (tab === 'admin') {
       setIsAdminModalOpen(true);
     }
@@ -245,12 +248,12 @@ export function App() {
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-teal-500 animate-pulse" />
           <span className="font-bold">
-            Algodoal Connect • <strong className="text-teal-600">Visualização de Layout</strong>
+            Algodoal Connect • <strong className="text-teal-600">Portal de Anúncios & Guia</strong>
           </span>
           <span className={`hidden md:inline-block px-2 py-0.5 rounded-md text-[10px] border ${
             isDark ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-600 border-slate-200'
           }`}>
-            Mobile-First + Desktop Responsivo
+            Contatos 100% Diretos via WhatsApp
           </span>
         </div>
 
@@ -325,8 +328,6 @@ export function App() {
             onSelectCategory={setSelectedCategory}
             onOpenAdmin={() => setIsAdminModalOpen(true)}
             onOpenTides={() => setIsTidesModalOpen(true)}
-            onOpenCharreteCalc={() => setIsCharreteModalOpen(true)}
-            onOpenQuickOrder={() => setIsQuickOrderModalOpen(true)}
             currentUser={currentUser}
             currentTideSummary="🌊 Preamar 16:45 (4.4m) • Maré Alta"
           />
@@ -360,14 +361,12 @@ export function App() {
                     theme={theme}
                     onSelectCategory={(cat) => setSelectedCategory(cat)}
                     onOpenTides={() => setIsTidesModalOpen(true)}
-                    onOpenCharreteCalculator={() => setIsCharreteModalOpen(true)}
-                    onOpenSupplyOrder={() => setIsQuickOrderModalOpen(true)}
                     onOpenAdmin={() => setIsAdminModalOpen(true)}
                   />
                 </div>
               </div>
 
-              {/* Right Column: Live Tide Wave Graph + Charrete Route Estimator (5 Cols) */}
+              {/* Right Column: Live Tide Wave Graph + Transparency & Direct Contact Portal Box (5 Cols) */}
               <div className="lg:col-span-5 space-y-5">
                 {/* Tide Widget */}
                 <TideWaveWidget
@@ -376,8 +375,53 @@ export function App() {
                   onOpenFullTides={() => setIsTidesModalOpen(true)}
                 />
 
-                {/* Charrete Route Calculator Card */}
-                <CharreteGoCalculator theme={theme} />
+                {/* Portal Transparency & How It Works Card */}
+                <div className={`rounded-3xl border p-5 space-y-3.5 shadow-sm transition-colors ${
+                  isDark ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-teal-950/30 border-slate-800' : 'bg-white border-slate-200'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <span className="p-2 rounded-2xl bg-teal-500/20 text-teal-500">
+                      <Megaphone className="w-5 h-5" />
+                    </span>
+                    <div>
+                      <h3 className={`text-sm font-black font-heading ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                        Portal de Anúncios Diretos
+                      </h3>
+                      <p className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        100% livre de comissões e intermediações
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-teal-500 shrink-0 mt-0.5" />
+                      <p className={isDark ? 'text-slate-300' : 'text-slate-600'}>
+                        <strong>Contato 100% Direto:</strong> Você fala diretamente com o dono da pousada, charreteiro, piloteiro ou depósito via WhatsApp.
+                      </p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-teal-500 shrink-0 mt-0.5" />
+                      <p className={isDark ? 'text-slate-300' : 'text-slate-600'}>
+                        <strong>Sem taxas extras:</strong> Negocie valores, combine horários e reserve sem nenhuma cobrança ou intermediação do site.
+                      </p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-teal-500 shrink-0 mt-0.5" />
+                      <p className={isDark ? 'text-slate-300' : 'text-slate-600'}>
+                        <strong>Comércio da APA Valorizado:</strong> Apoio e divulgação aos trabalhadores e empreendedores da Ilha de Algodoal.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setIsAdminModalOpen(true)}
+                    className="w-full py-2.5 px-4 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-md transition cursor-pointer"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Anunciar no Guia / Painel Gestor</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -387,10 +431,10 @@ export function App() {
             }`}>
               <div className="mb-4">
                 <h2 className={`text-xl font-black font-heading ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  Explorar Locais & Serviços em Algodoal
+                  Explorar Anúncios & Serviços em Algodoal
                 </h2>
                 <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Consulte pousadas, restaurantes, condutores de charretes e passeios de barco com contato direto pelo WhatsApp.
+                  Consulte pousadas, restaurantes, condutores de charretes, barcos e depósitos com contato direto pelo WhatsApp.
                 </p>
               </div>
 
@@ -400,7 +444,6 @@ export function App() {
                 onSelectCategory={setSelectedCategory}
                 searchTerm={searchTerm}
                 partners={partners}
-                onOpenOrderModal={() => setIsQuickOrderModalOpen(true)}
               />
             </div>
           </div>
@@ -412,7 +455,7 @@ export function App() {
             <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
               <div className="flex items-center gap-2">
                 <span className="text-xl">🌴</span>
-                <span className="font-bold">Algodoal Connect • Área de Proteção Ambiental (APA) de Algodoal-Maiandeua</span>
+                <span className="font-bold">Algodoal Connect • Guia de Anúncios da APA de Algodoal-Maiandeua</span>
               </div>
               <p className="text-[11px]">
                 Preserve a natureza: recolha seu lixo, respeite os animais e apoie o comércio tradicional local.
@@ -471,8 +514,6 @@ export function App() {
             theme={theme}
             onSelectCategory={(cat) => setSelectedCategory(cat)}
             onOpenTides={() => setIsTidesModalOpen(true)}
-            onOpenCharreteCalculator={() => setIsCharreteModalOpen(true)}
-            onOpenSupplyOrder={() => setIsQuickOrderModalOpen(true)}
             onOpenAdmin={() => setIsAdminModalOpen(true)}
           />
 
@@ -483,23 +524,19 @@ export function App() {
             onOpenFullTides={() => setIsTidesModalOpen(true)}
           />
 
-          {/* 6. CharreteGO Route Calculator */}
-          <CharreteGoCalculator theme={theme} />
-
-          {/* 7. Categorized Feed with Search & Filter */}
+          {/* 6. Categorized Feed with Direct WhatsApp Contacts & Search */}
           <MobileCategoryFeed
             theme={theme}
             selectedCategory={selectedCategory}
             onSelectCategory={setSelectedCategory}
             searchTerm={searchTerm}
             partners={partners}
-            onOpenOrderModal={() => setIsQuickOrderModalOpen(true)}
           />
 
           {/* Extra bottom padding to avoid bottom nav bar overlap */}
           <div className="h-20 w-full" />
 
-          {/* 8. Fixed Mobile Bottom Navigation Bar */}
+          {/* 7. Fixed Mobile Bottom Navigation Bar */}
           <MobileBottomNav
             theme={theme}
             activeTab={activeTab}
@@ -517,20 +554,6 @@ export function App() {
       <TideScheduleModal
         isOpen={isTidesModalOpen}
         onClose={() => setIsTidesModalOpen(false)}
-      />
-
-      {/* Modal: Pedido Rápido de Água & Gelo */}
-      <QuickOrderModal
-        isOpen={isQuickOrderModalOpen}
-        onClose={() => setIsQuickOrderModalOpen(false)}
-      />
-
-      {/* Modal: CharreteGO Modal Version */}
-      <CharreteGoCalculator
-        theme={theme}
-        isOpen={isCharreteModalOpen}
-        onClose={() => setIsCharreteModalOpen(false)}
-        isModal={true}
       />
 
       {/* Modal: Gerenciador de Anúncios e Painel Administrativo */}

@@ -16,8 +16,6 @@ interface QuickActionsGridProps {
   theme?: 'dark' | 'light';
   onSelectCategory: (categoryId: string) => void;
   onOpenTides: () => void;
-  onOpenCharreteCalculator: () => void;
-  onOpenSupplyOrder: () => void;
   onOpenAdmin: () => void;
 }
 
@@ -25,8 +23,6 @@ export const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({
   theme = 'dark',
   onSelectCategory,
   onOpenTides,
-  onOpenCharreteCalculator,
-  onOpenSupplyOrder,
   onOpenAdmin
 }) => {
   const isDark = theme === 'dark';
@@ -35,12 +31,12 @@ export const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({
     {
       id: 'charretes',
       title: 'Charretes',
-      subtitle: 'Tabela & Pedir',
+      subtitle: 'Contatos Oficiais',
       emoji: '🐎',
       icon: Truck,
       bg: isDark ? 'from-amber-500/20 to-amber-600/30 border-amber-500/40 text-amber-300' : 'from-amber-100 to-amber-200/80 border-amber-300 text-amber-900',
       badge: 'Oficial APA',
-      onClick: onOpenCharreteCalculator
+      onClick: () => onSelectCategory('transporte')
     },
     {
       id: 'rabetas',
@@ -74,13 +70,13 @@ export const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({
     },
     {
       id: 'suprimentos',
-      title: 'Gelo & Água 20L',
-      subtitle: 'Entrega na Praia',
+      title: 'Depósitos & Gelo',
+      subtitle: 'Bebidas & Água 20L',
       emoji: '📦',
       icon: ShoppingBag,
       bg: isDark ? 'from-sky-500/20 to-sky-600/30 border-sky-500/40 text-sky-300' : 'from-sky-100 to-sky-200/80 border-sky-300 text-sky-900',
       badge: 'Disk Praia',
-      onClick: onOpenSupplyOrder
+      onClick: () => onSelectCategory('compras')
     },
     {
       id: 'mares',
@@ -104,8 +100,8 @@ export const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({
     },
     {
       id: 'admin',
-      title: 'Gerenciar Ads',
-      subtitle: 'Painel do Admin',
+      title: 'Anuncie Conosco',
+      subtitle: 'Painel do Gestor',
       emoji: '🛡️',
       icon: ShieldCheck,
       bg: isDark ? 'from-indigo-500/20 to-indigo-600/30 border-indigo-500/40 text-indigo-300' : 'from-indigo-100 to-indigo-200/80 border-indigo-300 text-indigo-900',
