@@ -27,7 +27,6 @@ import { Advertisement, Partner, TideDayEntry, UserProfile } from './types/index
 
 // Mobile & Responsive Components
 import { MobileTopBar } from './components/mobile/MobileTopBar.tsx';
-import { StoriesRow } from './components/mobile/StoriesRow.tsx';
 import { HeroBannersCarousel } from './components/mobile/HeroBannersCarousel.tsx';
 import { QuickActionsGrid } from './components/mobile/QuickActionsGrid.tsx';
 import { TideWaveWidget } from './components/mobile/TideWaveWidget.tsx';
@@ -335,13 +334,6 @@ export function App() {
           {/* Desktop Grid Layout (Hero + Main Content + Side Column) */}
           <div className="max-w-7xl mx-auto w-full px-6 py-6 space-y-6">
             
-            {/* Top Stories Highlights */}
-            <div className={`rounded-3xl border overflow-hidden shadow-sm ${
-              isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-            }`}>
-              <StoriesRow theme={theme} />
-            </div>
-
             {/* Desktop Hero Section: 2 Columns (Commercial Banners + Tide & Island Status) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               {/* Left Column: Commercial Hero Banners (7 Cols) */}
@@ -498,10 +490,7 @@ export function App() {
             currentTideSummary="🌊 Preamar 16:45 (4.4m) • Maré Alta"
           />
 
-          {/* 2. Instagram/SuperApp Stories Row */}
-          <StoriesRow theme={theme} />
-
-          {/* 3. Hero Carousel Commercial Banners */}
+          {/* 2. Hero Carousel Commercial Banners */}
           <HeroBannersCarousel
             advertisements={advertisements}
             onAdClick={(ad) => {
@@ -509,7 +498,7 @@ export function App() {
             }}
           />
 
-          {/* 4. Quick Actions Grid (8 Essential Categories) */}
+          {/* 3. Quick Actions Grid (8 Essential Categories) */}
           <QuickActionsGrid
             theme={theme}
             onSelectCategory={(cat) => setSelectedCategory(cat)}
@@ -517,14 +506,14 @@ export function App() {
             onOpenAdmin={() => setIsAdminModalOpen(true)}
           />
 
-          {/* 5. Live Tide Wave Widget (Marapanim Tide Graph) */}
+          {/* 4. Live Tide Wave Widget (Marapanim Tide Graph) */}
           <TideWaveWidget
             theme={theme}
             currentTideDay={todayTide}
             onOpenFullTides={() => setIsTidesModalOpen(true)}
           />
 
-          {/* 6. Categorized Feed with Direct WhatsApp Contacts & Search */}
+          {/* 5. Categorized Feed with Stories & Direct WhatsApp Contacts */}
           <MobileCategoryFeed
             theme={theme}
             selectedCategory={selectedCategory}

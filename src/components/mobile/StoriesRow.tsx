@@ -11,6 +11,7 @@ export interface IslandStory {
   description: string;
   location: string;
   tag: string;
+  category?: string;
   whatsapp?: string;
 }
 
@@ -25,6 +26,7 @@ const ISLAND_STORIES: IslandStory[] = [
     description: 'Vista aérea espetacular da chegada em Algodoal. O porto e o trapiche de madeira dão as boas-vindas com águas calmas e rabetas ancoradas.',
     location: 'Porto de Algodoal / Canal',
     tag: 'Chegada na Ilha',
+    category: 'todos',
     whatsapp: '5591983456789'
   },
   {
@@ -37,6 +39,7 @@ const ISLAND_STORIES: IslandStory[] = [
     description: 'Na Ilha de Algodoal não circulam carros. O transporte oficial e ecológico é feito por charreteiros credenciados que conduzem com carinho pelas ruas de areia.',
     location: 'Porto de Algodoal ⇄ Praia da Princesa',
     tag: 'Transporte APA',
+    category: 'transporte',
     whatsapp: '5591983456789'
   },
   {
@@ -49,6 +52,7 @@ const ISLAND_STORIES: IslandStory[] = [
     description: 'Ruas tranquilas de areia batida ladeadas por buganvílias, coqueirais e casas rústicas com vista direta para a brisa do Atlântico.',
     location: 'Vila de Algodoal',
     tag: 'Passeio a Pé',
+    category: 'pousadas',
     whatsapp: '5591981234567'
   },
   {
@@ -61,6 +65,7 @@ const ISLAND_STORIES: IslandStory[] = [
     description: 'Na maré baixa, bancos de areia dourada se estendem por quilômetros entre canais verdes e manguezais preservados da APA.',
     location: 'Praia da Princesa & Dunas',
     tag: 'Natureza Selvagem',
+    category: 'passeios',
     whatsapp: '5591981234567'
   },
   {
@@ -73,6 +78,7 @@ const ISLAND_STORIES: IslandStory[] = [
     description: 'Passeios de barco rabeta pelo Furo Velho, travessia para Fortalezinha e navegação em águas esverdeadas e límpidas com mestres locais.',
     location: 'Canal do Furo Velho & Camboinha',
     tag: 'Passeios Náuticos',
+    category: 'passeios',
     whatsapp: '5591984567890'
   },
   {
@@ -85,6 +91,7 @@ const ISLAND_STORIES: IslandStory[] = [
     description: 'O pôr do sol inesquecível na beira da Praia da Princesa com charretes trotando nas águas rasas sob a luz dourada do fim de tarde.',
     location: 'Praia da Princesa',
     tag: 'Cenário Mágico',
+    category: 'passeios',
     whatsapp: '5591983456789'
   },
   {
@@ -97,6 +104,7 @@ const ISLAND_STORIES: IslandStory[] = [
     description: 'A energia contagiante do Carimbó raiz de Marapanim, luaus pé na areia e noites de reggae paraense com fogueira à beira-mar.',
     location: 'Praia da Princesa (Decks Culturais)',
     tag: 'Cultura & Música',
+    category: 'eventos',
     whatsapp: '5591986789012'
   },
   {
@@ -109,66 +117,96 @@ const ISLAND_STORIES: IslandStory[] = [
     description: 'A travessia tradicional de barco a partir do porto de Marudá com vista para as praias e a vida caiçara da Amazônia Atlântica.',
     location: 'Porto de Marudá / Algodoal',
     tag: 'Barcos de Linha',
+    category: 'compras',
     whatsapp: '5591984567890'
   }
 ];
 
 interface StoriesRowProps {
   theme?: 'dark' | 'light';
+  selectedCategory?: string;
+  onSelectCategory?: (cat: string) => void;
+  showHeaderTitle?: boolean;
+  className?: string;
 }
 
-export const StoriesRow: React.FC<StoriesRowProps> = ({ theme = 'dark' }) => {
+export const StoriesRow: React.FC<StoriesRowProps> = ({ 
+  theme = 'dark',
+  selectedCategory,
+  onSelectCategory,
+  showHeaderTitle = true,
+  className = ''
+}) => {
   const [selectedStory, setSelectedStory] = useState<IslandStory | null>(null);
   const isDark = theme === 'dark';
 
+  const handleStoryClick = (story: IslandStory) => {
+    setSelectedStory(story);
+    if (onSelectCategory && story.category) {
+      onSelectCategory(story.category);
+    }
+  };
+
   return (
-    <section className={`py-3 px-4 border-b transition-colors ${
-      isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-    }`}>
-      <div className="flex items-center justify-between mb-2.5">
-        <div className="flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-          <h3 className={`text-xs font-black uppercase tracking-wider ${
-            isDark ? 'text-slate-300' : 'text-slate-800'
-          }`}>
-            Destaques da Ilha (Stories)
-          </h3>
+    <section className={`py-3 px-4 transition-colors ${
+      isDark ? 'bg-slate-900' : 'bg-white'
+    } ${className}`}>
+      {showHeaderTitle && (
+        <div className="flex items-center justify-between mb-2.5">
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <h3 className={`text-xs font-black uppercase tracking-wider ${
+              isDark ? 'text-slate-300' : 'text-slate-800'
+            }`}>
+              Destaques da Ilha (Stories)
+            </h3>
+          </div>
+          <span className="text-[10px] font-bold text-teal-600">Toque p/ Ver</span>
         </div>
-        <span className="text-[10px] font-bold text-teal-600">Toque p/ Ver</span>
-      </div>
+      )}
 
       {/* Horizontal Stories Carousel */}
       <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1">
-        {ISLAND_STORIES.map((story) => (
-          <button
-            key={story.id}
-            onClick={() => setSelectedStory(story)}
-            className="flex flex-col items-center gap-1 shrink-0 group focus:outline-hidden cursor-pointer"
-          >
-            <div className="w-[66px] h-[66px] rounded-full p-[2px] bg-gradient-to-tr from-amber-400 via-teal-400 to-emerald-500 group-hover:scale-105 transition duration-200 shadow-md">
-              <div className={`w-full h-full rounded-full border-2 overflow-hidden relative ${
-                isDark ? 'border-slate-900 bg-slate-800' : 'border-white bg-slate-100'
+        {ISLAND_STORIES.map((story) => {
+          const isSelectedCategory = selectedCategory && story.category === selectedCategory && story.category !== 'todos';
+
+          return (
+            <button
+              key={story.id}
+              onClick={() => handleStoryClick(story)}
+              className="flex flex-col items-center gap-1 shrink-0 group focus:outline-hidden cursor-pointer"
+            >
+              <div className={`w-[66px] h-[66px] rounded-full p-[2px] transition duration-200 shadow-md ${
+                isSelectedCategory
+                  ? 'bg-gradient-to-tr from-amber-400 via-teal-400 to-emerald-400 scale-105 ring-2 ring-teal-400 ring-offset-2 ring-offset-slate-900'
+                  : 'bg-gradient-to-tr from-amber-400 via-teal-400 to-emerald-500 group-hover:scale-105'
               }`}>
-                <img
-                  src={story.coverImage}
-                  alt={story.title}
-                  className="w-full h-full object-cover group-hover:opacity-90 transition"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
-                <span className="absolute bottom-0 right-0 text-xs bg-slate-950/80 text-white rounded-full px-1">
-                  {story.emoji}
-                </span>
+                <div className={`w-full h-full rounded-full border-2 overflow-hidden relative ${
+                  isDark ? 'border-slate-900 bg-slate-800' : 'border-white bg-slate-100'
+                }`}>
+                  <img
+                    src={story.coverImage}
+                    alt={story.title}
+                    className="w-full h-full object-cover group-hover:opacity-90 transition"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                  <span className="absolute bottom-0 right-0 text-xs bg-slate-950/80 text-white rounded-full px-1">
+                    {story.emoji}
+                  </span>
+                </div>
               </div>
-            </div>
-            <span className={`text-[11px] font-bold truncate max-w-[68px] leading-tight ${
-              isDark ? 'text-slate-200' : 'text-slate-700'
-            }`}>
-              {story.title}
-            </span>
-          </button>
-        ))}
+              <span className={`text-[11px] font-bold truncate max-w-[68px] leading-tight ${
+                isSelectedCategory
+                  ? 'text-teal-400 font-black'
+                  : isDark ? 'text-slate-200' : 'text-slate-700'
+              }`}>
+                {story.title}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Story Fullscreen Preview Modal */}

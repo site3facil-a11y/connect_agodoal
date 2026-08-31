@@ -15,9 +15,11 @@ import {
   Phone, 
   SlidersHorizontal,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  X
 } from 'lucide-react';
 import { Partner, ServiceCategory } from '../../types/index.ts';
+import { StoriesRow } from './StoriesRow.tsx';
 
 interface MobileCategoryFeedProps {
   theme?: 'dark' | 'light';
@@ -27,16 +29,6 @@ interface MobileCategoryFeedProps {
   partners: Partner[];
   onOpenOrderModal?: (partner: Partner) => void;
 }
-
-const CATEGORY_TABS = [
-  { id: 'todos', label: 'Tudo', icon: Sparkles, color: 'text-amber-400' },
-  { id: 'pousadas', label: 'Pousadas', icon: Hotel, color: 'text-emerald-400' },
-  { id: 'alimentacao', label: 'Restaurantes', icon: Utensils, color: 'text-rose-400' },
-  { id: 'passeios', label: 'Rabetas & Tours', icon: Compass, color: 'text-teal-400' },
-  { id: 'transporte', label: 'Charretes', icon: Truck, color: 'text-amber-400' },
-  { id: 'compras', label: 'Depósitos & Gelo', icon: ShoppingBag, color: 'text-sky-400' },
-  { id: 'eventos', label: 'Luaus & Festas', icon: PartyPopper, color: 'text-purple-400' },
-];
 
 export const MobileCategoryFeed: React.FC<MobileCategoryFeedProps> = ({
   theme = 'dark',
@@ -76,36 +68,33 @@ export const MobileCategoryFeed: React.FC<MobileCategoryFeedProps> = ({
   }, [partners, selectedCategory, searchTerm]);
 
   return (
-    <section className={`px-4 py-3 transition-colors ${isDark ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
-      {/* Category Pills Header */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
-        {CATEGORY_TABS.map((tab) => {
-          const Icon = tab.icon;
-          const isSelected = selectedCategory === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => onSelectCategory(tab.id)}
-              className={`px-3.5 py-2 rounded-2xl border text-xs font-black shrink-0 transition flex items-center gap-1.5 cursor-pointer ${
-                isSelected
-                  ? 'bg-teal-500 border-teal-400 text-slate-950 shadow-md shadow-teal-950/20'
-                  : isDark
-                    ? 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800'
-                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-slate-950' : tab.color}`} />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
+    <section className={`px-2 sm:px-4 py-3 transition-colors ${isDark ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
+      {/* Destaques da Ilha (Stories) replacing redundant category menu */}
+      <div className="mb-3 rounded-2xl overflow-hidden border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
+        <StoriesRow
+          theme={theme}
+          selectedCategory={selectedCategory}
+          onSelectCategory={onSelectCategory}
+          showHeaderTitle={true}
+        />
       </div>
 
-      {/* Results Header */}
-      <div className="flex items-center justify-between py-2 text-xs">
-        <span className={`font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-          {filteredPartners.length} locais encontrados
-        </span>
+      {/* Filter / Results Header */}
+      <div className="flex items-center justify-between py-2 px-1 text-xs">
+        <div className="flex items-center gap-2">
+          <span className={`font-bold ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+            {filteredPartners.length} {filteredPartners.length === 1 ? 'local encontrado' : 'locais encontrados'}
+          </span>
+          {selectedCategory !== 'todos' && (
+            <button
+              onClick={() => onSelectCategory('todos')}
+              className="px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-500 hover:bg-teal-500 hover:text-slate-950 text-[10px] font-black flex items-center gap-1 transition cursor-pointer"
+            >
+              <span>Ver Todos</span>
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </div>
         <span className="text-[11px] text-teal-500 font-bold">
           Preços em Reais (R$)
         </span>
