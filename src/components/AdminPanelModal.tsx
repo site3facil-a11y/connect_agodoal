@@ -566,7 +566,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       });
       if (res.ok) {
         setPartners(prev => prev.map(p => p.id === partner.id ? { ...p, verified: newVerified } : p));
-        showSuccess(`Selo de "${partner.name}" alterado para ${newVerified ? 'Credenciado Oficial APA' : 'Sem Selo'}`);
+        showSuccess(`Status de "${partner.name}" atualizado com sucesso!`);
         if (onRefreshData) onRefreshData();
       }
     } catch (err) {
@@ -1527,7 +1527,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         </h3>
                       </div>
                       <p className="text-xs text-slate-500 mt-1">
-                        Gerencie pousadas, chalés, charretes APA, restaurantes, passeios de rabeta e comércios da Ilha.
+                        Gerencie pousadas, chalés, charretes, restaurantes, passeios de rabeta e comércios da Ilha.
                       </p>
                       <div className="flex items-center gap-3 mt-2 text-xs font-bold text-slate-600">
                         <span className="bg-slate-100 px-2.5 py-0.5 rounded-lg border border-slate-200">
@@ -1535,9 +1535,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         </span>
                         <span className="bg-emerald-50 px-2.5 py-0.5 rounded-lg text-emerald-700 border border-emerald-200">
                           Ativos: <strong className="text-emerald-900">{partners.filter(p => p.is_active).length}</strong>
-                        </span>
-                        <span className="bg-amber-50 px-2.5 py-0.5 rounded-lg text-amber-700 border border-amber-200">
-                          Credenciados APA: <strong className="text-amber-900">{partners.filter(p => p.verified).length}</strong>
                         </span>
                       </div>
                     </div>

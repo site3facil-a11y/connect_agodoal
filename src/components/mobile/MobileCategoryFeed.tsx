@@ -140,13 +140,6 @@ export const MobileCategoryFeed: React.FC<MobileCategoryFeedProps> = ({
                     <span className="px-2.5 py-1 rounded-xl bg-slate-950/80 backdrop-blur-md text-teal-300 font-bold text-[10px] uppercase tracking-wider border border-teal-500/30 shadow-md">
                       {item.subcategory || item.category}
                     </span>
-
-                    {item.verified && (
-                      <span className="px-2.5 py-1 rounded-full bg-emerald-500 text-slate-950 font-black text-[10px] uppercase flex items-center gap-1 shadow-md">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Verificado APA
-                      </span>
-                    )}
                   </div>
 
                   {/* Price Tag over Media */}

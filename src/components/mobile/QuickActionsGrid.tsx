@@ -31,11 +31,11 @@ export const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({
     {
       id: 'charretes',
       title: 'Charretes',
-      subtitle: 'Contatos Oficiais',
+      subtitle: 'Contatos da Ilha',
       emoji: '🐎',
       icon: Truck,
       bg: isDark ? 'from-amber-500/20 to-amber-600/30 border-amber-500/40 text-amber-300' : 'from-amber-100 to-amber-200/80 border-amber-300 text-amber-900',
-      badge: 'Oficial APA',
+      badge: 'Porto ⇄ Praia',
       onClick: () => onSelectCategory('transporte')
     },
     {

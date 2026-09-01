@@ -53,7 +53,7 @@ export const DesktopNavbar: React.FC<DesktopNavbarProps> = ({
 
   const NAV_CATEGORIES = [
     { id: 'todos', label: 'Todos os Serviços', icon: Sparkles },
-    { id: 'transporte', label: 'Charretes APA', icon: Truck },
+    { id: 'transporte', label: 'Charretes da Ilha', icon: Truck },
     { id: 'pousadas', label: 'Pousadas', icon: Hotel },
     { id: 'alimentacao', label: 'Gastronomia', icon: Utensils },
     { id: 'passeios', label: 'Rabetas & Lago', icon: Compass },
@@ -177,7 +177,7 @@ export const DesktopNavbar: React.FC<DesktopNavbarProps> = ({
             }`}
           >
             <Truck className="w-4 h-4 text-amber-500" />
-            <span>Charretes APA</span>
+            <span>Charretes da Ilha</span>
           </button>
 
           <button

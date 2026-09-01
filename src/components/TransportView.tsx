@@ -77,8 +77,8 @@ export const TransportView: React.FC<TransportViewProps> = ({
       <div className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-slate-950 rounded-3xl p-6 sm:p-8 shadow-md border border-amber-300 relative overflow-hidden">
         <div className="relative z-10 max-w-2xl">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-950 text-amber-300 text-xs font-black mb-3 shadow-2xs">
-            <ShieldCheck className="w-4 h-4 text-amber-300" />
-            <span>Condutores Credenciados e Tabela Oficial da APA</span>
+            <Compass className="w-4 h-4 text-amber-300" />
+            <span>Condutores Tradicionais da Ilha</span>
           </div>
           <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-950 font-heading">
             Transporte de Charrete & Bagagens
