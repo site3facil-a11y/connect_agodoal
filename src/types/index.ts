@@ -194,3 +194,21 @@ export interface IslandStory {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface WeatherData {
+  temperature: number; // in Celsius
+  apparent_temperature: number; // in Celsius
+  humidity: number; // %
+  wind_speed: number; // km/h
+  wind_direction?: number;
+  condition: string; // Ex: 'Ensolarado', 'Sol & Brisa', 'Parcialmente Nublado'
+  condition_code: number;
+  uv_index: number;
+  precipitation: number; // mm
+  is_day: boolean;
+  summary_short: string; // Ex: '31°C Sol & Brisa'
+  summary_full: string; // Ex: '31°C Sol com brisa atlântica moderada'
+  location_name: string; // 'Ilha de Algodoal / Maiandeua (PA)'
+  source: string;
+  updated_at: string;
+}

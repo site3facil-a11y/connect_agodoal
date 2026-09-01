@@ -32,7 +32,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 
-import { Advertisement, Partner, TideDayEntry, UserProfile } from './types/index.ts';
+import { Advertisement, Partner, TideDayEntry, UserProfile, WeatherData } from './types/index.ts';
 
 // Mobile & Responsive Components
 import { MobileTopBar } from './components/mobile/MobileTopBar.tsx';
@@ -44,6 +44,7 @@ import { MobileBottomNav, TabType } from './components/mobile/MobileBottomNav.ts
 import { AdminPanelModal } from './components/AdminPanelModal.tsx';
 import { TideScheduleModal } from './components/TideScheduleModal.tsx';
 import { AdDetailsModal } from './components/AdDetailsModal.tsx';
+import { WeatherDetailsModal } from './components/WeatherDetailsModal.tsx';
 import { DesktopNavbar } from './components/desktop/DesktopNavbar.tsx';
 
 // Fallback Initial Partners Data for Instant Prototype Rendering
@@ -175,20 +176,41 @@ export function App() {
   // Modals
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [isTidesModalOpen, setIsTidesModalOpen] = useState(false);
+  const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
   const [selectedAdForDetails, setSelectedAdForDetails] = useState<Advertisement | null>(null);
 
   // Data States
   const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
   const [partners, setPartners] = useState<Partner[]>(INITIAL_PROTOTYPE_PARTNERS);
   const [tideDays, setTideDays] = useState<TideDayEntry[]>([]);
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [isWeatherLoading, setIsWeatherLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     loadRealData();
+    loadWeatherData();
   }, []);
 
   const toggleTheme = () => {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
+  const loadWeatherData = async () => {
+    setIsWeatherLoading(true);
+    try {
+      const res = await fetch('/api/weather');
+      if (res.ok) {
+        const data = await res.json();
+        if (data) {
+          setWeather(data);
+        }
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar dados de clima ao vivo:', e);
+    } finally {
+      setIsWeatherLoading(false);
+    }
   };
 
   const loadRealData = async () => {
@@ -372,8 +394,10 @@ export function App() {
             onSelectCategory={setSelectedCategory}
             onOpenAdmin={() => setIsAdminModalOpen(true)}
             onOpenTides={() => setIsTidesModalOpen(true)}
+            onOpenWeather={() => setIsWeatherModalOpen(true)}
             currentUser={currentUser}
             currentTideSummary={dynamicTideSummary}
+            weather={weather}
           />
 
           {/* Desktop Grid Layout (Hero + Main Content + Side Column) */}
@@ -551,8 +575,10 @@ export function App() {
             onSearchChange={setSearchTerm}
             onOpenAdmin={() => setIsAdminModalOpen(true)}
             onOpenTides={() => setIsTidesModalOpen(true)}
+            onOpenWeather={() => setIsWeatherModalOpen(true)}
             currentUser={currentUser}
             currentTideSummary={dynamicTideSummary}
+            weather={weather}
           />
 
           {/* 2. Hero Carousel Commercial Banners */}
@@ -626,6 +652,19 @@ export function App() {
       {/* 4. MODALS SYSTEM                                         */}
       {/* ======================================================== */}
       
+      {/* Modal: Detalhes do Clima e Previsão Meteorológica da Ilha */}
+      <WeatherDetailsModal
+        isOpen={isWeatherModalOpen}
+        onClose={() => setIsWeatherModalOpen(false)}
+        weather={weather}
+        isLoading={isWeatherLoading}
+        onRefresh={loadWeatherData}
+        onOpenTides={() => {
+          setIsWeatherModalOpen(false);
+          setIsTidesModalOpen(true);
+        }}
+      />
+
       {/* Modal: Detalhes do Anúncio do Banner (Saiba Mais) */}
       <AdDetailsModal
         ad={selectedAdForDetails}

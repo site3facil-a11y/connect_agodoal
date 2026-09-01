@@ -1,6 +1,6 @@
 import React from 'react';
 import { Sparkles, Sun, Moon, Waves, Search, ShieldCheck, User, MapPin, Bell } from 'lucide-react';
-import { UserProfile } from '../../types/index.ts';
+import { UserProfile, WeatherData } from '../../types/index.ts';
 
 interface MobileTopBarProps {
   theme?: 'dark' | 'light';
@@ -9,8 +9,10 @@ interface MobileTopBarProps {
   onSearchChange: (term: string) => void;
   onOpenAdmin: () => void;
   onOpenTides: () => void;
+  onOpenWeather?: () => void;
   currentUser?: UserProfile | null;
   currentTideSummary?: string;
+  weather?: WeatherData | null;
 }
 
 export const MobileTopBar: React.FC<MobileTopBarProps> = ({
@@ -20,8 +22,10 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
   onSearchChange,
   onOpenAdmin,
   onOpenTides,
+  onOpenWeather,
   currentUser,
-  currentTideSummary = '🌊 Preamar 16:45 (4.2m) • Maré Enchendo'
+  currentTideSummary = '🌊 Preamar 16:45 (4.2m) • Maré Enchendo',
+  weather
 }) => {
   const isDark = theme === 'dark';
 
@@ -42,14 +46,27 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
           }`}
         >
           <Waves className="w-3.5 h-3.5 text-teal-400 animate-pulse" />
-          <span className="truncate max-w-[210px] sm:max-w-none">{currentTideSummary}</span>
+          <span className="truncate max-w-[200px] sm:max-w-none">{currentTideSummary}</span>
         </button>
 
         <div className="flex items-center gap-2 text-slate-400 shrink-0">
-          <span className="flex items-center gap-1 text-amber-500 font-bold">
-            <Sun className="w-3 h-3 text-amber-500 animate-spin-slow" />
-            31°C
-          </span>
+          <button
+            onClick={onOpenWeather}
+            title="Ver detalhes de clima e temperatura"
+            className="flex items-center gap-1 text-amber-500 hover:text-amber-600 dark:hover:text-amber-400 font-bold transition cursor-pointer"
+          >
+            {weather ? (
+              <>
+                <span className="text-xs">{weather.is_day ? '☀️' : '🌙'}</span>
+                <span>{weather.temperature}°C</span>
+              </>
+            ) : (
+              <>
+                <Sun className="w-3 h-3 text-amber-500 animate-spin-slow" />
+                <span>31°C</span>
+              </>
+            )}
+          </button>
           <span className="w-1 h-1 rounded-full bg-slate-400" />
           <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />

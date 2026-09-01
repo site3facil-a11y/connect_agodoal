@@ -15,9 +15,10 @@ import {
   PartyPopper,
   Calendar,
   Sparkles,
-  PhoneCall
+  PhoneCall,
+  CloudSun
 } from 'lucide-react';
-import { UserProfile } from '../../types/index.ts';
+import { UserProfile, WeatherData } from '../../types/index.ts';
 
 interface DesktopNavbarProps {
   theme: 'dark' | 'light';
@@ -28,8 +29,10 @@ interface DesktopNavbarProps {
   onSelectCategory: (cat: string) => void;
   onOpenAdmin: () => void;
   onOpenTides: () => void;
+  onOpenWeather?: () => void;
   currentUser?: UserProfile | null;
   currentTideSummary?: string;
+  weather?: WeatherData | null;
 }
 
 export const DesktopNavbar: React.FC<DesktopNavbarProps> = ({
@@ -41,8 +44,10 @@ export const DesktopNavbar: React.FC<DesktopNavbarProps> = ({
   onSelectCategory,
   onOpenAdmin,
   onOpenTides,
+  onOpenWeather,
   currentUser,
-  currentTideSummary = '🌊 Preamar 16:45 (4.4m) • Maré Alta'
+  currentTideSummary = '🌊 Preamar 16:45 (4.4m) • Maré Alta',
+  weather
 }) => {
   const isDark = theme === 'dark';
 
@@ -81,10 +86,26 @@ export const DesktopNavbar: React.FC<DesktopNavbarProps> = ({
 
           <span className="hidden md:inline text-slate-400">|</span>
 
-          <span className="hidden md:flex items-center gap-1 text-amber-500 font-bold">
-            <Sun className="w-3.5 h-3.5 animate-spin-slow" />
-            31°C Sol & Brisa do Atlântico
-          </span>
+          <button
+            onClick={onOpenWeather}
+            title="Ver detalhes de clima, vento e temperatura ao vivo"
+            className="hidden md:flex items-center gap-1.5 text-amber-500 hover:text-amber-600 dark:hover:text-amber-400 font-bold transition cursor-pointer hover:underline"
+          >
+            {weather ? (
+              <>
+                <span className="text-sm">{weather.is_day ? '☀️' : '🌙'}</span>
+                <span>{weather.summary_short || `${weather.temperature}°C Sol & Brisa`}</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 ml-1">
+                  Tempo Real
+                </span>
+              </>
+            ) : (
+              <>
+                <Sun className="w-3.5 h-3.5 animate-spin-slow" />
+                <span>31°C Sol & Brisa do Atlântico</span>
+              </>
+            )}
+          </button>
         </div>
 
         <div className="flex items-center gap-3">
