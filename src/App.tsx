@@ -43,6 +43,7 @@ import { MobileCategoryFeed } from './components/mobile/MobileCategoryFeed.tsx';
 import { MobileBottomNav, TabType } from './components/mobile/MobileBottomNav.tsx';
 import { AdminPanelModal } from './components/AdminPanelModal.tsx';
 import { TideScheduleModal } from './components/TideScheduleModal.tsx';
+import { AdDetailsModal } from './components/AdDetailsModal.tsx';
 import { DesktopNavbar } from './components/desktop/DesktopNavbar.tsx';
 
 // Fallback Initial Partners Data for Instant Prototype Rendering
@@ -174,6 +175,7 @@ export function App() {
   // Modals
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [isTidesModalOpen, setIsTidesModalOpen] = useState(false);
+  const [selectedAdForDetails, setSelectedAdForDetails] = useState<Advertisement | null>(null);
 
   // Data States
   const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
@@ -349,7 +351,9 @@ export function App() {
               <div className="lg:col-span-7 space-y-4">
                 <HeroBannersCarousel
                   advertisements={advertisements}
+                  onOpenDetails={(ad) => setSelectedAdForDetails(ad)}
                   onAdClick={(ad) => {
+                    setSelectedAdForDetails(ad);
                     if (ad.category) setSelectedCategory(ad.category);
                   }}
                 />
@@ -519,7 +523,9 @@ export function App() {
           {/* 2. Hero Carousel Commercial Banners */}
           <HeroBannersCarousel
             advertisements={advertisements}
+            onOpenDetails={(ad) => setSelectedAdForDetails(ad)}
             onAdClick={(ad) => {
+              setSelectedAdForDetails(ad);
               if (ad.category) setSelectedCategory(ad.category);
             }}
           />
@@ -584,6 +590,17 @@ export function App() {
       {/* 4. MODALS SYSTEM                                         */}
       {/* ======================================================== */}
       
+      {/* Modal: Detalhes do Anúncio do Banner (Saiba Mais) */}
+      <AdDetailsModal
+        ad={selectedAdForDetails}
+        isOpen={!!selectedAdForDetails}
+        onClose={() => setSelectedAdForDetails(null)}
+        onSelectCategory={(cat) => {
+          setSelectedCategory(cat);
+          setSelectedAdForDetails(null);
+        }}
+      />
+
       {/* Modal: Tábua de Marés Detalhada */}
       <TideScheduleModal
         isOpen={isTidesModalOpen}

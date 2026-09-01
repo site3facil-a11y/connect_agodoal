@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Advertisement } from '../../types/index.ts';
-import { MessageCircle, MapPin, Tag, ChevronLeft, ChevronRight, Sparkles, ExternalLink } from 'lucide-react';
+import { MapPin, ChevronLeft, ChevronRight, Sparkles, Info, ArrowRight } from 'lucide-react';
 
 interface HeroBannersCarouselProps {
   advertisements: Advertisement[];
   onAdClick?: (ad: Advertisement) => void;
+  onOpenDetails?: (ad: Advertisement) => void;
 }
 
 const DEFAULT_BANNER_FALLBACKS = [
@@ -100,7 +101,8 @@ const DEFAULT_BANNER_FALLBACKS = [
 
 export const HeroBannersCarousel: React.FC<HeroBannersCarouselProps> = ({
   advertisements,
-  onAdClick
+  onAdClick,
+  onOpenDetails
 }) => {
   const activeBanners = (advertisements && advertisements.length > 0)
     ? advertisements.filter(a => a.is_active)
@@ -129,8 +131,10 @@ export const HeroBannersCarousel: React.FC<HeroBannersCarouselProps> = ({
   };
 
   const handleBannerClick = () => {
-    if (onAdClick && current) {
-      onAdClick(current);
+    if (onOpenDetails && current) {
+      onOpenDetails(current as Advertisement);
+    } else if (onAdClick && current) {
+      onAdClick(current as Advertisement);
     }
   };
 
@@ -191,25 +195,15 @@ export const HeroBannersCarousel: React.FC<HeroBannersCarouselProps> = ({
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              {current.whatsapp ? (
-                <a
-                  href={`https://wa.me/${current.whatsapp.replace(/\D/g, '')}?text=Olá! Vi o anúncio de ${encodeURIComponent(current.title)} no Algodoal Connect.`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={handleBannerClick}
-                  className="py-1.5 px-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-lg transition"
-                >
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  <span>Chamar</span>
-                </a>
-              ) : (
-                <button
-                  onClick={handleBannerClick}
-                  className="py-1.5 px-3 rounded-xl bg-teal-500 text-slate-950 font-black text-xs"
-                >
-                  Ver Detalhes
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleBannerClick}
+                className="py-1.5 px-3.5 rounded-xl bg-teal-400 hover:bg-teal-300 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-lg transition transform active:scale-95 cursor-pointer"
+                title="Ver mais detalhes sobre este anúncio"
+              >
+                <Info className="w-3.5 h-3.5" />
+                <span>Saiba mais</span>
+              </button>
             </div>
           </div>
         </div>
