@@ -206,6 +206,14 @@ export const api = {
     return res.json();
   },
 
+  async deletePartner(id: string): Promise<boolean> {
+    const res = await fetch(`${API_BASE}/partners/${id}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Erro ao excluir parceiro');
+    return true;
+  },
+
   // Services
   async getServices(category?: string, partnerId?: string): Promise<ServiceProduct[]> {
     const params = new URLSearchParams();

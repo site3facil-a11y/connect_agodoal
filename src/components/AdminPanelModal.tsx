@@ -141,21 +141,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 
   // Partner Form Modal state
-  const [isAddingPartner, setIsAddingPartner] = useState(false);
-  const [newPartner, setNewPartner] = useState<Partial<Partner>>({
-    name: '',
-    category: 'pousadas',
-    subcategory: 'Hospedagem & Chalés',
-    phone: '',
-    whatsapp: '',
-    description: '',
-    location: 'Praia da Princesa, Ilha de Algodoal',
-    price_starting: 150,
-    opening_hours: 'Recepção 24h',
-    verified: true,
-    is_active: true,
-    amenities: ['Wi-Fi', 'Ar-Condicionado', 'Café da Manhã']
-  });
+  const [isEditingPartner, setIsEditingPartner] = useState(false);
+  const [currentPartner, setCurrentPartner] = useState<Partial<Partner>>({});
+  const [isUploadingPartnerImage, setIsUploadingPartnerImage] = useState(false);
+  const [isPartnerDragOver, setIsPartnerDragOver] = useState(false);
+  const [partnerSearchTerm, setPartnerSearchTerm] = useState('');
+  const [partnerCategoryFilter, setPartnerCategoryFilter] = useState('todos');
+  const [partnerStatusFilter, setPartnerStatusFilter] = useState<'todos' | 'ativos' | 'inativos'>('todos');
+  const [newAmenityInput, setNewAmenityInput] = useState('');
 
   const isAdmin = currentUser?.role === 'admin';
 
@@ -482,37 +475,217 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   };
 
   // ==========================
-  // PARTNER ACTIONS
+  // PARTNER ACTIONS (POUSADAS & CREDENCIADOS)
   // ==========================
-  const handleSavePartner = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newPartner.name || !newPartner.category) return;
+  const handleOpenAddPartner = () => {
+    setCurrentPartner({
+      name: '',
+      category: 'pousadas',
+      subcategory: 'Hospedagem & Chalés',
+      phone: '',
+      whatsapp: '',
+      description: '',
+      location: 'Praia da Princesa, Ilha de Algodoal',
+      price_starting: 150,
+      vehicle_badge: '',
+      opening_hours: 'Recepção 24h',
+      verified: true,
+      is_active: true,
+      photo_url: '',
+      amenities: ['Wi-Fi Starlink', 'Ar-Condicionado', 'Café da Manhã']
+    });
+    setIsEditingPartner(true);
+  };
+
+  const handleOpenEditPartner = (partner: Partner) => {
+    setCurrentPartner({
+      ...partner,
+      amenities: Array.isArray(partner.amenities) ? [...partner.amenities] : []
+    });
+    setIsEditingPartner(true);
+  };
+
+  const handleDeletePartner = async (id: string, name: string) => {
+    if (!window.confirm(`Tem certeza absoluta que deseja excluir o parceiro "${name}" do banco de dados? Esta ação não pode ser desfeita.`)) return;
     try {
-      const res = await fetch('/api/partners', {
-        method: 'POST',
+      const res = await fetch(`/api/partners/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setPartners(prev => prev.filter(p => p.id !== id));
+        showSuccess(`Parceiro/Pousada "${name}" excluído com sucesso do banco de dados!`);
+        if (onRefreshData) onRefreshData();
+      } else {
+        alert('Erro ao excluir parceiro no servidor.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao excluir parceiro.');
+    }
+  };
+
+  const handleTogglePartnerStatus = async (partner: Partner) => {
+    try {
+      const newStatus = !partner.is_active;
+      const res = await fetch(`/api/partners/${partner.id}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newPartner)
+        body: JSON.stringify({ is_active: newStatus })
       });
-      const created = await res.json();
-      setPartners(prev => [created, ...prev]);
-      showSuccess(`Parceiro/Pousada "${created.name}" cadastrado com sucesso!`);
-      setIsAddingPartner(false);
-      setNewPartner({
-        name: '',
-        category: 'pousadas',
-        subcategory: 'Hospedagem & Chalés',
-        location: 'Praia da Princesa, Ilha de Algodoal',
-        price_starting: 150,
-        opening_hours: 'Recepção 24h',
-        verified: true,
-        is_active: true,
-        amenities: ['Wi-Fi', 'Ar-Condicionado', 'Café da Manhã']
-      });
-      if (onRefreshData) onRefreshData();
+      if (res.ok) {
+        setPartners(prev => prev.map(p => p.id === partner.id ? { ...p, is_active: newStatus } : p));
+        showSuccess(`Status de "${partner.name}" alterado para ${newStatus ? 'Ativo' : 'Inativo/Pausado'}`);
+        if (onRefreshData) onRefreshData();
+      }
     } catch (err) {
       console.error(err);
     }
   };
+
+  const handleTogglePartnerVerified = async (partner: Partner) => {
+    try {
+      const newVerified = !partner.verified;
+      const res = await fetch(`/api/partners/${partner.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verified: newVerified })
+      });
+      if (res.ok) {
+        setPartners(prev => prev.map(p => p.id === partner.id ? { ...p, verified: newVerified } : p));
+        showSuccess(`Selo de "${partner.name}" alterado para ${newVerified ? 'Credenciado Oficial APA' : 'Sem Selo'}`);
+        if (onRefreshData) onRefreshData();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handlePartnerImageUpload = async (file: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione um arquivo de imagem válido (JPG, PNG, WebP).');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert('A imagem deve ter no máximo 10MB.');
+      return;
+    }
+
+    setIsUploadingPartnerImage(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64Data = reader.result as string;
+        try {
+          const res = await api.uploadImage(base64Data, file.name);
+          if (res.success && res.url) {
+            setCurrentPartner(prev => ({ ...prev, photo_url: res.url }));
+            showSuccess(`Foto "${file.name}" enviada com sucesso!`);
+          } else {
+            setCurrentPartner(prev => ({ ...prev, photo_url: base64Data }));
+            showSuccess(`Foto pronta!`);
+          }
+        } catch (err) {
+          console.warn('Fallback base64 para foto do parceiro:', err);
+          setCurrentPartner(prev => ({ ...prev, photo_url: base64Data }));
+          showSuccess(`Foto carregada!`);
+        } finally {
+          setIsUploadingPartnerImage(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+      setIsUploadingPartnerImage(false);
+      alert('Erro ao processar imagem.');
+    }
+  };
+
+  const handleAddPartnerAmenity = (amenity: string) => {
+    const trimmed = amenity.trim();
+    if (!trimmed) return;
+    const current = currentPartner.amenities || [];
+    if (!current.includes(trimmed)) {
+      setCurrentPartner(prev => ({ ...prev, amenities: [...current, trimmed] }));
+    }
+    setNewAmenityInput('');
+  };
+
+  const handleRemovePartnerAmenity = (amenity: string) => {
+    const current = currentPartner.amenities || [];
+    setCurrentPartner(prev => ({ ...prev, amenities: current.filter(a => a !== amenity) }));
+  };
+
+  const handleSavePartner = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPartner.name || !currentPartner.category) {
+      alert('Preencha pelo menos o nome e a categoria do estabelecimento.');
+      return;
+    }
+
+    try {
+      if (currentPartner.id) {
+        // Edit existing in DB
+        const res = await fetch(`/api/partners/${currentPartner.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(currentPartner)
+        });
+        const updated = await res.json();
+        setPartners(prev => prev.map(p => p.id === updated.id ? updated : p));
+        showSuccess(`Pousada/Parceiro "${updated.name}" atualizado e salvo com sucesso!`);
+      } else {
+        // Create new in DB
+        const res = await fetch('/api/partners', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(currentPartner)
+        });
+        const created = await res.json();
+        setPartners(prev => [created, ...prev]);
+        showSuccess(`Pousada/Parceiro "${created.name}" cadastrado com sucesso!`);
+      }
+      setIsEditingPartner(false);
+      setCurrentPartner({});
+      if (onRefreshData) onRefreshData();
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao salvar parceiro no servidor.');
+    }
+  };
+
+  // Filtered Partners Computation
+  const filteredPartners = useMemo(() => {
+    return partners.filter(p => {
+      // Category filter
+      if (partnerCategoryFilter !== 'todos') {
+        const cat = (p.category || '').toLowerCase();
+        if (partnerCategoryFilter === 'pousadas' && cat !== 'pousadas' && cat !== 'pousada') return false;
+        if (partnerCategoryFilter === 'transporte' && cat !== 'transporte') return false;
+        if (partnerCategoryFilter === 'alimentacao' && cat !== 'alimentacao' && cat !== 'restaurante') return false;
+        if (partnerCategoryFilter === 'passeios' && cat !== 'passeios' && cat !== 'passeio') return false;
+        if (partnerCategoryFilter === 'compras' && cat !== 'compras') return false;
+        if (partnerCategoryFilter === 'eventos' && cat !== 'eventos' && cat !== 'evento') return false;
+        if (partnerCategoryFilter === 'informacoes' && cat !== 'informacoes' && cat !== 'guia') return false;
+      }
+
+      // Status filter
+      if (partnerStatusFilter === 'ativos' && !p.is_active) return false;
+      if (partnerStatusFilter === 'inativos' && p.is_active) return false;
+
+      // Search term
+      if (partnerSearchTerm.trim()) {
+        const term = partnerSearchTerm.toLowerCase();
+        const matchName = (p.name || '').toLowerCase().includes(term);
+        const matchSub = (p.subcategory || '').toLowerCase().includes(term);
+        const matchLoc = (p.location || '').toLowerCase().includes(term);
+        const matchDesc = (p.description || '').toLowerCase().includes(term);
+        const matchBadge = (p.vehicle_badge || '').toLowerCase().includes(term);
+        const matchPhone = (p.phone || '').includes(term) || (p.whatsapp || '').includes(term);
+        if (!matchName && !matchSub && !matchLoc && !matchDesc && !matchBadge && !matchPhone) return false;
+      }
+
+      return true;
+    });
+  }, [partners, partnerCategoryFilter, partnerStatusFilter, partnerSearchTerm]);
 
   // Filtered Ads Computation
   const filteredAds = useMemo(() => {
@@ -1170,44 +1343,289 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               {/* TAB 3: POUSADAS & PARCEIROS */}
               {activeMainTab === 'parceiros' && (
                 <div className="space-y-6 max-w-6xl mx-auto">
-                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+                  {/* Top Summary & Action Card */}
+                  <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <h3 className="text-base font-black text-slate-900 font-serif">
-                        Parceiros Credenciados e Pousadas
-                      </h3>
-                      <p className="text-xs text-slate-500">
-                        {partners.length} estabelecimentos cadastrados na base de dados.
+                      <div className="flex items-center gap-2">
+                        <Hotel className="w-5 h-5 text-emerald-600" />
+                        <h3 className="text-base font-black text-slate-900 font-serif">
+                          Parceiros Credenciados e Pousadas
+                        </h3>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Gerencie pousadas, chalés, charretes APA, restaurantes, passeios de rabeta e comércios da Ilha.
                       </p>
+                      <div className="flex items-center gap-3 mt-2 text-xs font-bold text-slate-600">
+                        <span className="bg-slate-100 px-2.5 py-0.5 rounded-lg border border-slate-200">
+                          Total: <strong className="text-slate-900">{partners.length}</strong>
+                        </span>
+                        <span className="bg-emerald-50 px-2.5 py-0.5 rounded-lg text-emerald-700 border border-emerald-200">
+                          Ativos: <strong className="text-emerald-900">{partners.filter(p => p.is_active).length}</strong>
+                        </span>
+                        <span className="bg-amber-50 px-2.5 py-0.5 rounded-lg text-amber-700 border border-amber-200">
+                          Credenciados APA: <strong className="text-amber-900">{partners.filter(p => p.verified).length}</strong>
+                        </span>
+                      </div>
                     </div>
 
                     <button
-                      onClick={() => setIsAddingPartner(true)}
-                      className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center gap-2 transition cursor-pointer"
+                      onClick={handleOpenAddPartner}
+                      className="py-3 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center justify-center gap-2 transition shadow-md shadow-emerald-700/20 cursor-pointer shrink-0"
                     >
                       <Plus className="w-4 h-4" />
                       <span>Cadastrar Pousada / Parceiro</span>
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {partners.map((p) => (
-                      <div key={p.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex gap-3">
-                        <img
-                          src={p.photo_url || '/assets/images/rabeta_barco_mar_1787985502030.jpg'}
-                          alt={p.name}
-                          className="w-16 h-16 rounded-xl object-cover border border-slate-200 shrink-0"
+                  {/* Search and Filter Controls */}
+                  <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-xs space-y-3">
+                    <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+                      {/* Search Bar */}
+                      <div className="relative w-full sm:w-80">
+                        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="Buscar por nome, local, badge, whatsapp..."
+                          value={partnerSearchTerm}
+                          onChange={(e) => setPartnerSearchTerm(e.target.value)}
+                          className="w-full pl-9 pr-8 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                         />
-                        <div className="min-w-0 flex-1">
-                          <h4 className="text-xs font-black text-slate-900 truncate">{p.name}</h4>
-                          <span className="text-[10px] font-bold uppercase text-emerald-700 block">{p.subcategory || p.category}</span>
-                          <span className="text-[11px] text-slate-500 block truncate mt-0.5">{p.location}</span>
-                          <span className="text-[11px] font-bold text-slate-900 block mt-1">
-                            A partir de R$ {p.price_starting?.toFixed(2)}
-                          </span>
-                        </div>
+                        {partnerSearchTerm && (
+                          <button
+                            onClick={() => setPartnerSearchTerm('')}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
-                    ))}
+
+                      {/* Status Filter Toggle */}
+                      <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200 self-stretch sm:self-auto justify-center">
+                        <button
+                          type="button"
+                          onClick={() => setPartnerStatusFilter('todos')}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                            partnerStatusFilter === 'todos'
+                              ? 'bg-white text-slate-900 shadow-xs'
+                              : 'text-slate-500 hover:text-slate-800'
+                          }`}
+                        >
+                          Todos ({partners.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPartnerStatusFilter('ativos')}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                            partnerStatusFilter === 'ativos'
+                              ? 'bg-emerald-600 text-white shadow-xs'
+                              : 'text-slate-500 hover:text-slate-800'
+                          }`}
+                        >
+                          Ativos ({partners.filter(p => p.is_active).length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPartnerStatusFilter('inativos')}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                            partnerStatusFilter === 'inativos'
+                              ? 'bg-rose-600 text-white shadow-xs'
+                              : 'text-slate-500 hover:text-slate-800'
+                          }`}
+                        >
+                          Pausados ({partners.filter(p => !p.is_active).length})
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Category Filter Pills */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-bold scrollbar-none pt-1">
+                      {[
+                        { id: 'todos', label: 'Todas as Categorias', icon: Sparkles },
+                        { id: 'pousadas', label: 'Pousadas & Chalés', icon: Hotel },
+                        { id: 'transporte', label: 'Charretes APA', icon: Truck },
+                        { id: 'alimentacao', label: 'Gastronomia', icon: Utensils },
+                        { id: 'passeios', label: 'Rabetas & Lago', icon: Compass },
+                        { id: 'compras', label: 'Disk Gelo & Compras', icon: ShoppingBag },
+                        { id: 'eventos', label: 'Eventos & Luaus', icon: PartyPopper }
+                      ].map((cat) => {
+                        const Icon = cat.icon;
+                        const isSelected = partnerCategoryFilter === cat.id;
+                        return (
+                          <button
+                            key={cat.id}
+                            onClick={() => setPartnerCategoryFilter(cat.id)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl whitespace-nowrap transition cursor-pointer border ${
+                              isSelected
+                                ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
+                                : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                            }`}
+                          >
+                            <Icon className="w-3.5 h-3.5" />
+                            <span>{cat.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
+
+                  {/* Partner Cards Grid */}
+                  {filteredPartners.length === 0 ? (
+                    <div className="bg-white rounded-3xl p-10 text-center border border-slate-200 space-y-3">
+                      <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                        <Search className="w-6 h-6" />
+                      </div>
+                      <h4 className="text-sm font-black text-slate-800">Nenhum parceiro ou pousada encontrado</h4>
+                      <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                        Nenhum estabelecimento corresponde aos filtros de busca atuais. Tente limpar os filtros ou cadastrar um novo.
+                      </p>
+                      <button
+                        onClick={handleOpenAddPartner}
+                        className="py-2 px-4 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-500 transition cursor-pointer"
+                      >
+                        + Cadastrar Parceiro Agora
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filteredPartners.map((p) => (
+                        <div
+                          key={p.id}
+                          className={`bg-white rounded-3xl border transition shadow-xs hover:shadow-md flex flex-col justify-between overflow-hidden ${
+                            p.is_active ? 'border-slate-200' : 'border-slate-300 opacity-80 bg-slate-50/50'
+                          }`}
+                        >
+                          <div>
+                            {/* Card Media Header */}
+                            <div className="relative h-36 bg-slate-100">
+                              <img
+                                src={p.photo_url || '/imagens/vila2.jpg'}
+                                alt={p.name}
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
+                              
+                              {/* Verified Badge */}
+                              {p.verified && (
+                                <span className="absolute top-2.5 left-2.5 bg-emerald-500 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md">
+                                  <ShieldCheck className="w-3 h-3" />
+                                  <span>Oficial APA</span>
+                                </span>
+                              )}
+
+                              {/* Vehicle Badge if any */}
+                              {p.vehicle_badge && (
+                                <span className="absolute top-2.5 right-2.5 bg-amber-400 text-slate-950 text-[10px] font-black uppercase px-2 py-0.5 rounded-full shadow-md">
+                                  {p.vehicle_badge}
+                                </span>
+                              )}
+
+                              {/* Status Toggle on image corner */}
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePartnerStatus(p)}
+                                title={p.is_active ? 'Clique para desativar' : 'Clique para ativar'}
+                                className={`absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-black uppercase flex items-center gap-1 shadow-md transition cursor-pointer ${
+                                  p.is_active 
+                                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white' 
+                                    : 'bg-rose-600 hover:bg-rose-500 text-white'
+                                }`}
+                              >
+                                <span className={`w-1.5 h-1.5 rounded-full ${p.is_active ? 'bg-white animate-pulse' : 'bg-white'}`} />
+                                {p.is_active ? 'Ativo no Site' : 'Pausado'}
+                              </button>
+                            </div>
+
+                            {/* Body Content */}
+                            <div className="p-4 space-y-2.5">
+                              <div>
+                                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 block">
+                                  {p.subcategory || p.category}
+                                </span>
+                                <h4 className="text-sm font-black text-slate-900 line-clamp-1 mt-0.5" title={p.name}>
+                                  {p.name}
+                                </h4>
+                              </div>
+
+                              {p.description && (
+                                <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                                  {p.description}
+                                </p>
+                              )}
+
+                              {/* Location & Price */}
+                              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                                <span className="text-slate-500 font-medium flex items-center gap-1 truncate max-w-[150px]" title={p.location}>
+                                  <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                  <span className="truncate">{p.location || 'Ilha de Algodoal'}</span>
+                                </span>
+                                <span className="font-black text-slate-900 shrink-0">
+                                  {p.price_starting ? `A partir de R$ ${p.price_starting.toFixed(2)}` : 'Sob Consulta'}
+                                </span>
+                              </div>
+
+                              {/* Contacts */}
+                              <div className="flex items-center gap-2 text-[11px] font-bold text-slate-600">
+                                {p.whatsapp && (
+                                  <a
+                                    href={`https://wa.me/${p.whatsapp.replace(/\D/g, '')}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-emerald-700 hover:underline flex items-center gap-1 truncate"
+                                  >
+                                    <MessageCircle className="w-3 h-3 text-emerald-600" />
+                                    <span>WhatsApp: {p.whatsapp}</span>
+                                  </a>
+                                )}
+                              </div>
+
+                              {/* Amenities Tags */}
+                              {p.amenities && p.amenities.length > 0 && (
+                                <div className="flex flex-wrap gap-1 pt-1">
+                                  {p.amenities.slice(0, 3).map((amenity, idx) => (
+                                    <span
+                                      key={idx}
+                                      className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200"
+                                    >
+                                      {amenity}
+                                    </span>
+                                  ))}
+                                  {p.amenities.length > 3 && (
+                                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-400">
+                                      +{p.amenities.length - 3}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Action Buttons: Editar & Excluir */}
+                          <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditPartner(p)}
+                              className="flex-1 py-2 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center gap-1.5 transition cursor-pointer border border-indigo-200/60"
+                              title="Editar dados desta pousada/parceiro"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                              <span>Editar</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePartner(p.id, p.name)}
+                              className="py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-black text-xs flex items-center justify-center gap-1.5 transition cursor-pointer border border-rose-200/60"
+                              title="Excluir permanentemente do banco de dados"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Excluir</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1297,7 +1715,501 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
         )}
 
         {/* ======================================================== */}
-        {/* 5. MODAL FORM: CRIAR / EDITAR ANÚNCIO (LIVE PREVIEW)     */}
+        {/* 6. MODAL FORM: CRIAR / EDITAR PARCEIRO & POUSADA        */}
+        {/* ======================================================== */}
+        {isEditingPartner && (
+          <div className="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
+            <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-emerald-300 overflow-hidden animate-in zoom-in-95 duration-200">
+              
+              {/* Header */}
+              <div className="px-6 py-4 bg-emerald-950 text-white flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <Hotel className="w-5 h-5 text-emerald-400" />
+                  <h3 className="text-base font-black font-serif">
+                    {currentPartner.id ? 'Editar Pousada / Parceiro no Banco de Dados' : 'Cadastrar Novo Parceiro ou Pousada'}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setIsEditingPartner(false)}
+                  className="p-1 rounded-full text-slate-400 hover:text-white cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Form & Live Preview Grid */}
+              <form onSubmit={handleSavePartner} className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 bg-slate-50">
+                
+                {/* Form Fields (Col 7) */}
+                <div className="lg:col-span-7 space-y-4">
+                  <div>
+                    <label className="block text-xs font-black uppercase text-slate-800 mb-1">
+                      Nome do Estabelecimento / Pousada *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: Pousada & Chalés Princesa do Mar"
+                      value={currentPartner.name || ''}
+                      onChange={(e) => setCurrentPartner(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-800 mb-1">
+                        Categoria do Site *
+                      </label>
+                      <select
+                        value={currentPartner.category || 'pousadas'}
+                        onChange={(e) => setCurrentPartner(prev => ({ ...prev, category: e.target.value as any }))}
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 bg-white"
+                      >
+                        <option value="pousadas">🏨 Pousadas & Chalés</option>
+                        <option value="transporte">🚖 Transporte & Charretes</option>
+                        <option value="alimentacao">🍲 Gastronomia & Restaurantes</option>
+                        <option value="passeios">⛵ Passeios & Rabetas</option>
+                        <option value="compras">🛍️ Compras & Disk Gelo/Água</option>
+                        <option value="eventos">🎉 Eventos & Cultura</option>
+                        <option value="informacoes">ℹ️ Guia da Ilha</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-800 mb-1">
+                        Subcategoria / Especialidade
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Chalés Beira-Mar, Peixada Regional"
+                        value={currentPartner.subcategory || ''}
+                        onChange={(e) => setCurrentPartner(prev => ({ ...prev, subcategory: e.target.value }))}
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-800 mb-1">
+                        WhatsApp (apenas números com DDD)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="5591981234567"
+                        value={currentPartner.whatsapp || ''}
+                        onChange={(e) => setCurrentPartner(prev => ({ ...prev, whatsapp: e.target.value.replace(/\D/g, '') }))}
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-800 mb-1">
+                        Telefone Comercial
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="(91) 98123-4567"
+                        value={currentPartner.phone || ''}
+                        onChange={(e) => setCurrentPartner(prev => ({ ...prev, phone: e.target.value }))}
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-800 mb-1">
+                        Preço Inicial (R$)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="150.00"
+                        value={currentPartner.price_starting || 0}
+                        onChange={(e) => setCurrentPartner(prev => ({ ...prev, price_starting: Number(e.target.value) }))}
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-800 mb-1">
+                        Identificação / Veículo / Placa
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Charrete #14, Rabeta Estrela"
+                        value={currentPartner.vehicle_badge || ''}
+                        onChange={(e) => setCurrentPartner(prev => ({ ...prev, vehicle_badge: e.target.value }))}
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-800 mb-1">
+                        Localização na Ilha
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Praia da Princesa (Beira-mar)"
+                        value={currentPartner.location || ''}
+                        onChange={(e) => setCurrentPartner(prev => ({ ...prev, location: e.target.value }))}
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-800 mb-1">
+                        Horário de Funcionamento
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Recepção 24h, 08h às 22h"
+                        value={currentPartner.opening_hours || ''}
+                        onChange={(e) => setCurrentPartner(prev => ({ ...prev, opening_hours: e.target.value }))}
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black uppercase text-slate-800 mb-1">
+                      Descrição do Estabelecimento / Serviços
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="Detalhes sobre comodidades, quartos, cardápio, passeios e diferenciais..."
+                      value={currentPartner.description || ''}
+                      onChange={(e) => setCurrentPartner(prev => ({ ...prev, description: e.target.value }))}
+                      className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                    />
+                  </div>
+
+                  {/* Amenities / Tags Selector */}
+                  <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-2.5">
+                    <label className="block text-xs font-black uppercase text-slate-800">
+                      Comodidades e Diferenciais
+                    </label>
+                    
+                    {/* Quick Add Pills */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        'Wi-Fi Starlink',
+                        'Ar-Condicionado',
+                        'Café da Manhã',
+                        'Frente ao Mar',
+                        'Pé na Areia',
+                        'Piscina',
+                        'Frigobar',
+                        'Aceita PIX',
+                        'Coletes Salva-Vidas',
+                        'Guia Local',
+                        'Ducha de Água Doce',
+                        'Capacidade 4 pax'
+                      ].map((amenity) => {
+                        const isSelected = (currentPartner.amenities || []).includes(amenity);
+                        return (
+                          <button
+                            type="button"
+                            key={amenity}
+                            onClick={() => {
+                              if (isSelected) {
+                                handleRemovePartnerAmenity(amenity);
+                              } else {
+                                handleAddPartnerAmenity(amenity);
+                              }
+                            }}
+                            className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition cursor-pointer ${
+                              isSelected
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                            }`}
+                          >
+                            {isSelected ? `✓ ${amenity}` : `+ ${amenity}`}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Custom Amenity Input */}
+                    <div className="flex gap-2 pt-1">
+                      <input
+                        type="text"
+                        placeholder="Outra comodidade..."
+                        value={newAmenityInput}
+                        onChange={(e) => setNewAmenityInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddPartnerAmenity(newAmenityInput);
+                          }
+                        }}
+                        className="flex-1 p-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-slate-50"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAddPartnerAmenity(newAmenityInput)}
+                        className="px-3 py-2 bg-slate-800 text-white text-xs font-bold rounded-xl hover:bg-slate-700 transition cursor-pointer"
+                      >
+                        Adicionar
+                      </button>
+                    </div>
+
+                    {/* Selected List */}
+                    {currentPartner.amenities && currentPartner.amenities.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {currentPartner.amenities.map((item) => (
+                          <span
+                            key={item}
+                            className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200"
+                          >
+                            <span>{item}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemovePartnerAmenity(item)}
+                              className="text-emerald-700 hover:text-rose-600 ml-0.5 cursor-pointer"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Image Upload Section */}
+                  <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                    <label className="block text-xs font-black uppercase text-slate-800">
+                      Foto Principal do Estabelecimento
+                    </label>
+
+                    <div className="space-y-2">
+                      <div
+                        onDragOver={(e) => { e.preventDefault(); setIsPartnerDragOver(true); }}
+                        onDragLeave={() => setIsPartnerDragOver(false)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsPartnerDragOver(false);
+                          if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                            handlePartnerImageUpload(e.dataTransfer.files[0]);
+                          }
+                        }}
+                        onClick={() => {
+                          const input = document.getElementById('partner-image-file-input') as HTMLInputElement;
+                          if (input) input.click();
+                        }}
+                        className={`border-2 border-dashed rounded-2xl p-5 text-center cursor-pointer transition ${
+                          isPartnerDragOver
+                            ? 'border-emerald-500 bg-emerald-50/80 scale-[1.01]'
+                            : 'border-slate-300 hover:border-emerald-400 bg-slate-50/70 hover:bg-emerald-50/30'
+                        }`}
+                      >
+                        <input
+                          type="file"
+                          id="partner-image-file-input"
+                          accept="image/*"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              handlePartnerImageUpload(e.target.files[0]);
+                            }
+                          }}
+                          className="hidden"
+                        />
+
+                        {isUploadingPartnerImage ? (
+                          <div className="py-4 flex flex-col items-center justify-center gap-2">
+                            <RefreshCw className="w-7 h-7 text-emerald-500 animate-spin" />
+                            <span className="text-xs font-black text-slate-800">Enviando e processando foto...</span>
+                          </div>
+                        ) : (
+                          <div className="py-2 flex flex-col items-center justify-center gap-2">
+                            <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-xs">
+                              <UploadCloud className="w-6 h-6" />
+                            </div>
+                            <div className="text-sm font-black text-slate-800">
+                              Clique para escolher uma foto ou arraste o arquivo aqui
+                            </div>
+                            <p className="text-xs text-slate-500">
+                              JPG, PNG, WebP do seu dispositivo (Máx: 10MB)
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {currentPartner.photo_url && (
+                        <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-xs">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <img
+                              src={currentPartner.photo_url}
+                              alt="Miniatura"
+                              className="w-10 h-10 rounded-lg object-cover border border-slate-300 shrink-0"
+                            />
+                            <span className="text-xs font-bold text-slate-700 truncate">
+                              Foto carregada: {currentPartner.photo_url.split('/').pop()}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const input = document.getElementById('partner-image-file-input') as HTMLInputElement;
+                              if (input) input.click();
+                            }}
+                            className="text-xs font-black text-emerald-700 hover:text-emerald-800 underline ml-2 shrink-0 cursor-pointer"
+                          >
+                            Trocar foto
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Direct URL input fallback */}
+                      <div className="pt-1">
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1">
+                          Ou digite o link direto da imagem:
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="https://exemplo.com/foto.jpg ou /imagens/vila2.jpg"
+                          value={currentPartner.photo_url || ''}
+                          onChange={(e) => setCurrentPartner(prev => ({ ...prev, photo_url: e.target.value }))}
+                          className="w-full p-2 rounded-xl border border-slate-200 text-xs text-slate-800 bg-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Status checkboxes */}
+                  <div className="space-y-2 pt-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="partner_active_toggle"
+                        checked={currentPartner.is_active ?? true}
+                        onChange={(e) => setCurrentPartner(prev => ({ ...prev, is_active: e.target.checked }))}
+                        className="w-4 h-4 text-emerald-600 rounded cursor-pointer"
+                      />
+                      <label htmlFor="partner_active_toggle" className="text-xs font-black text-slate-900 cursor-pointer">
+                        Estabelecimento Ativo e Visível no Site
+                      </label>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="partner_verified_toggle"
+                        checked={currentPartner.verified ?? true}
+                        onChange={(e) => setCurrentPartner(prev => ({ ...prev, verified: e.target.checked }))}
+                        className="w-4 h-4 text-emerald-600 rounded cursor-pointer"
+                      />
+                      <label htmlFor="partner_verified_toggle" className="text-xs font-black text-slate-900 cursor-pointer flex items-center gap-1">
+                        <span>Selo de Credenciado / Verificado Oficial APA</span>
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 inline" />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live Preview Column (Col 5) */}
+                <div className="lg:col-span-5 bg-white p-5 rounded-3xl border border-slate-200 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
+                      <Eye className="w-4 h-4 text-emerald-600" />
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                        Prévia em Tempo Real
+                      </h4>
+                    </div>
+
+                    {/* Preview Card */}
+                    <div className="rounded-3xl border border-slate-200 overflow-hidden shadow-sm bg-white">
+                      <div className="relative h-44 bg-slate-100">
+                        <img
+                          src={currentPartner.photo_url || '/imagens/vila2.jpg'}
+                          alt="Prévia"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
+                        
+                        {currentPartner.verified && (
+                          <span className="absolute top-2.5 left-2.5 bg-emerald-500 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md">
+                            <ShieldCheck className="w-3 h-3" />
+                            <span>Oficial APA</span>
+                          </span>
+                        )}
+
+                        {currentPartner.vehicle_badge && (
+                          <span className="absolute top-2.5 right-2.5 bg-amber-400 text-slate-950 text-[10px] font-black uppercase px-2 py-0.5 rounded-full shadow-md">
+                            {currentPartner.vehicle_badge}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="p-4 space-y-2.5">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 block">
+                          {currentPartner.subcategory || currentPartner.category || 'Categoria'}
+                        </span>
+                        <h5 className="text-sm font-black text-slate-900">
+                          {currentPartner.name || 'Nome da Pousada / Parceiro'}
+                        </h5>
+                        <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                          {currentPartner.description || 'Descrição detalhada dos serviços e estrutura oferecidos aos visitantes...'}
+                        </p>
+
+                        <div className="pt-2 flex items-center justify-between border-t border-slate-100 text-xs">
+                          <span className="font-black text-slate-900">
+                            {currentPartner.price_starting ? `A partir de R$ ${Number(currentPartner.price_starting).toFixed(2)}` : 'Sob Consulta'}
+                          </span>
+                          <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                            📍 {currentPartner.location || 'Algodoal'}
+                          </span>
+                        </div>
+
+                        {currentPartner.whatsapp && (
+                          <div className="pt-1 text-[11px] font-bold text-emerald-700 flex items-center gap-1">
+                            <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>WhatsApp: {currentPartner.whatsapp}</span>
+                          </div>
+                        )}
+
+                        {currentPartner.amenities && currentPartner.amenities.length > 0 && (
+                          <div className="flex flex-wrap gap-1 pt-1">
+                            {currentPartner.amenities.map((item, idx) => (
+                              <span
+                                key={idx}
+                                className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200"
+                              >
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingPartner(false)}
+                      className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+
+                    <button
+                      type="submit"
+                      className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition shadow-md cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span>Salvar Pousada / Parceiro</span>
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
         {/* ======================================================== */}
         {isEditingAd && (
           <div className="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
