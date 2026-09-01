@@ -161,8 +161,8 @@ const INITIAL_PROTOTYPE_PARTNERS: Partner[] = [
 ];
 
 export function App() {
-  // Theme Mode ('dark' | 'light')
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  // Theme Mode ('dark' | 'light') - Light Theme Default
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
 
   // Device Frame View State ('mobile-frame' | 'desktop-view')
   const [deviceView, setDeviceView] = useState<'mobile-frame' | 'desktop-view'>('desktop-view');
@@ -241,8 +241,42 @@ export function App() {
     }
   };
 
-  const todayTide = tideDays && tideDays.length > 0 ? tideDays[0] : null;
+  // Find today's tide or closest available day
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayTide = tideDays.find(t => t.date === todayStr) || (tideDays.length > 0 ? tideDays[0] : null);
   const isDark = theme === 'dark';
+
+  // Calculate dynamic tide summary according to real-time clock
+  const getDynamicTideSummary = (): string => {
+    if (!todayTide) {
+      return '🌊 Preamar 16:38 (4.4m) • Maré Cheia';
+    }
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const events: { timeStr: string; minutes: number; type: 'Preamar' | 'Baixa-mar'; height: string }[] = [];
+    (todayTide.high_tides || []).forEach(h => {
+      const parts = (h.time || '').split(':').map(Number);
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        events.push({ timeStr: h.time, minutes: parts[0] * 60 + parts[1], type: 'Preamar', height: h.height });
+      }
+    });
+    (todayTide.low_tides || []).forEach(l => {
+      const parts = (l.time || '').split(':').map(Number);
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        events.push({ timeStr: l.time, minutes: parts[0] * 60 + parts[1], type: 'Baixa-mar', height: l.height });
+      }
+    });
+
+    events.sort((a, b) => a.minutes - b.minutes);
+    if (events.length === 0) return '🌊 Preamar 16:38 (4.4m) • Maré Cheia';
+
+    const nextEvent = events.find(e => e.minutes >= currentMinutes) || events[0];
+    const isRising = nextEvent.type === 'Preamar';
+    return `🌊 ${nextEvent.type} ${nextEvent.timeStr} (${nextEvent.height}) • Maré ${isRising ? 'Enchendo' : 'Vazando'}`;
+  };
+
+  const dynamicTideSummary = getDynamicTideSummary();
 
   return (
     <div className={`min-h-screen flex flex-col items-center justify-start selection:bg-teal-500 selection:text-white transition-colors duration-200 ${
@@ -339,7 +373,7 @@ export function App() {
             onOpenAdmin={() => setIsAdminModalOpen(true)}
             onOpenTides={() => setIsTidesModalOpen(true)}
             currentUser={currentUser}
-            currentTideSummary="🌊 Preamar 16:45 (4.4m) • Maré Alta"
+            currentTideSummary={dynamicTideSummary}
           />
 
           {/* Desktop Grid Layout (Hero + Main Content + Side Column) */}
@@ -350,6 +384,7 @@ export function App() {
               {/* Left Column: Commercial Hero Banners (7 Cols) */}
               <div className="lg:col-span-7 space-y-4">
                 <HeroBannersCarousel
+                  theme={theme}
                   advertisements={advertisements}
                   onOpenDetails={(ad) => setSelectedAdForDetails(ad)}
                   onAdClick={(ad) => {
@@ -517,11 +552,12 @@ export function App() {
             onOpenAdmin={() => setIsAdminModalOpen(true)}
             onOpenTides={() => setIsTidesModalOpen(true)}
             currentUser={currentUser}
-            currentTideSummary="🌊 Preamar 16:45 (4.4m) • Maré Alta"
+            currentTideSummary={dynamicTideSummary}
           />
 
           {/* 2. Hero Carousel Commercial Banners */}
           <HeroBannersCarousel
+            theme={theme}
             advertisements={advertisements}
             onOpenDetails={(ad) => setSelectedAdForDetails(ad)}
             onAdClick={(ad) => {

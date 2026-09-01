@@ -6,6 +6,7 @@ interface HeroBannersCarouselProps {
   advertisements: Advertisement[];
   onAdClick?: (ad: Advertisement) => void;
   onOpenDetails?: (ad: Advertisement) => void;
+  theme?: 'dark' | 'light';
 }
 
 const DEFAULT_BANNER_FALLBACKS = [
@@ -102,8 +103,10 @@ const DEFAULT_BANNER_FALLBACKS = [
 export const HeroBannersCarousel: React.FC<HeroBannersCarouselProps> = ({
   advertisements,
   onAdClick,
-  onOpenDetails
+  onOpenDetails,
+  theme = 'light'
 }) => {
+  const isDark = theme === 'dark';
   const activeBanners = (advertisements && advertisements.length > 0)
     ? advertisements.filter(a => a.is_active)
     : DEFAULT_BANNER_FALLBACKS;
@@ -139,8 +142,10 @@ export const HeroBannersCarousel: React.FC<HeroBannersCarouselProps> = ({
   };
 
   return (
-    <section className="px-4 py-3 bg-slate-950">
-      <div className="relative rounded-3xl overflow-hidden shadow-xl border border-teal-500/30 bg-slate-900 group">
+    <section className={`px-4 py-3 transition-colors ${isDark ? 'bg-slate-950' : 'bg-transparent'}`}>
+      <div className={`relative rounded-3xl overflow-hidden shadow-xl border group transition-colors ${
+        isDark ? 'bg-slate-900 border-teal-500/30 shadow-black/40' : 'bg-slate-900 border-slate-700/60 shadow-slate-200/80'
+      }`}>
         {/* Banner Image with subtle zoom */}
         <div className="relative h-48 sm:h-56 w-full overflow-hidden">
           <img
@@ -237,7 +242,7 @@ export const HeroBannersCarousel: React.FC<HeroBannersCarouselProps> = ({
               key={idx}
               onClick={() => setCurrentIndex(idx)}
               className={`h-1.5 rounded-full transition-all duration-300 ${
-                idx === currentIndex ? 'w-5 bg-teal-400' : 'w-1.5 bg-slate-700'
+                idx === currentIndex ? 'w-5 bg-teal-400' : isDark ? 'w-1.5 bg-slate-700' : 'w-1.5 bg-slate-400'
               }`}
             />
           ))}

@@ -92,31 +92,6 @@ export const DesktopNavbar: React.FC<DesktopNavbarProps> = ({
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
             APA Ilha de Maiandeua • Comunidade Ativa
           </span>
-
-          <div className="h-3 w-px bg-slate-400/30" />
-
-          {/* Theme Switcher Button */}
-          <button
-            onClick={onToggleTheme}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
-              isDark 
-                ? 'bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700' 
-                : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300'
-            }`}
-            title={isDark ? 'Mudar para Tema Claro' : 'Mudar para Tema Escuro'}
-          >
-            {isDark ? (
-              <>
-                <Sun className="w-3.5 h-3.5 text-amber-400" />
-                <span>Modo Claro</span>
-              </>
-            ) : (
-              <>
-                <Moon className="w-3.5 h-3.5 text-slate-700" />
-                <span>Modo Escuro</span>
-              </>
-            )}
-          </button>
         </div>
       </div>
 

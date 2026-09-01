@@ -322,8 +322,8 @@ const SEED_ADVERTISEMENTS: Advertisement[] = [
 // Seed Tide Days (Source: Tabua de Mares Marapanim / Marinha do Brasil)
 const SEED_TIDE_DAYS: TideDayEntry[] = [
   {
-    id: 'tide_2026_08_27',
-    date: '2026-08-27',
+    id: 'tide_2026_09_01',
+    date: '2026-09-01',
     moon_phase: 'Cheia',
     coefficient: 88,
     high_tides: [
@@ -335,11 +335,11 @@ const SEED_TIDE_DAYS: TideDayEntry[] = [
       { time: '22:50', height: '0.5m' }
     ],
     source: 'tabuademares_marapanim',
-    recommendations: 'Maré de sizígia (maré viva). Faixa de areia muito ampla na baixa-mar (ótimo para charretes). Maré cheia encosta perto dos quiosques.'
+    recommendations: 'Maré de sizígia (maré viva). Faixa de areia muito ampla na baixa-mar (ótimo para charretes). Maré cheia encosta perto dos quiosques na Princesa.'
   },
   {
-    id: 'tide_2026_08_28',
-    date: '2026-08-28',
+    id: 'tide_2026_09_02',
+    date: '2026-09-02',
     moon_phase: 'Cheia',
     coefficient: 92,
     high_tides: [
@@ -354,10 +354,10 @@ const SEED_TIDE_DAYS: TideDayEntry[] = [
     recommendations: 'Excelente dia para passeios de rabeta no Furo Velho e banho no Lago da Princesa entre 14h e 17h.'
   },
   {
-    id: 'tide_2026_08_29',
-    date: '2026-08-29',
+    id: 'tide_2026_09_03',
+    date: '2026-09-03',
     moon_phase: 'Minguante',
-    coefficient: 82,
+    coefficient: 84,
     high_tides: [
       { time: '05:38', height: '4.1m' },
       { time: '18:02', height: '4.2m' }
@@ -369,10 +369,10 @@ const SEED_TIDE_DAYS: TideDayEntry[] = [
     recommendations: 'Maré favorável para travessia tranquila de barco de Marudá para Algodoal durante todo o dia.'
   },
   {
-    id: 'tide_2026_08_30',
-    date: '2026-08-30',
+    id: 'tide_2026_09_04',
+    date: '2026-09-04',
     moon_phase: 'Minguante',
-    coefficient: 74,
+    coefficient: 76,
     high_tides: [
       { time: '06:22', height: '3.9m' },
       { time: '18:48', height: '4.0m' }
@@ -383,6 +383,38 @@ const SEED_TIDE_DAYS: TideDayEntry[] = [
     ],
     source: 'marinha_brasil',
     recommendations: 'Maré intermediária. Condições ideais para caminhada entre a Vila de Maiandeua e a Praia da Princesa.'
+  },
+  {
+    id: 'tide_2026_09_05',
+    date: '2026-09-05',
+    moon_phase: 'Minguante',
+    coefficient: 70,
+    high_tides: [
+      { time: '07:10', height: '3.7m' },
+      { time: '19:35', height: '3.8m' }
+    ],
+    low_tides: [
+      { time: '01:02', height: '0.7m' },
+      { time: '13:25', height: '0.9m' }
+    ],
+    source: 'tabuademares_marapanim',
+    recommendations: 'Maré de quadratura (maré morta). Variação de maré mais branda ao longo de todo o sábado.'
+  },
+  {
+    id: 'tide_2026_09_06',
+    date: '2026-09-06',
+    moon_phase: 'Nova',
+    coefficient: 68,
+    high_tides: [
+      { time: '08:05', height: '3.6m' },
+      { time: '20:30', height: '3.7m' }
+    ],
+    low_tides: [
+      { time: '01:55', height: '0.8m' },
+      { time: '14:20', height: '1.0m' }
+    ],
+    source: 'tabuademares_marapanim',
+    recommendations: 'Ótimas condições para banho de mar calmo nas praias do Farol e da Princesa.'
   }
 ];
 
@@ -820,7 +852,17 @@ function loadLocalDB(): LocalDatabaseState {
       const parsed = JSON.parse(data);
       // Backwards compatibility ensuring all arrays exist
       if (!parsed.advertisements || parsed.advertisements.length === 0) parsed.advertisements = SEED_ADVERTISEMENTS;
-      if (!parsed.tide_days || parsed.tide_days.length === 0) parsed.tide_days = SEED_TIDE_DAYS;
+      if (!parsed.tide_days || parsed.tide_days.length === 0) {
+        parsed.tide_days = SEED_TIDE_DAYS;
+      } else {
+        // Merge missing seed days
+        for (const seedDay of SEED_TIDE_DAYS) {
+          if (!parsed.tide_days.some((t: TideDayEntry) => t.date === seedDay.date)) {
+            parsed.tide_days.push(seedDay);
+          }
+        }
+        parsed.tide_days.sort((a: TideDayEntry, b: TideDayEntry) => a.date.localeCompare(b.date));
+      }
       if (!parsed.users || parsed.users.length === 0) parsed.users = SEED_USERS;
       if (!parsed.stories || parsed.stories.length === 0) parsed.stories = SEED_STORIES;
       if (!parsed.partners.some((p: Partner) => p.category === 'pousadas')) {
