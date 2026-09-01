@@ -11,7 +11,8 @@ import {
   Advertisement,
   TideDayEntry,
   UserProfile,
-  AuthProvider
+  AuthProvider,
+  IslandStory
 } from '../types/index.ts';
 
 const API_BASE = '/api';
@@ -320,5 +321,47 @@ export const api = {
     });
     if (!res.ok) throw new Error('Erro ao enviar avaliação');
     return res.json();
+  },
+
+  // Stories & Destaques da Ilha (Painel Admin & Feed)
+  async getStories(onlyActive = false): Promise<IslandStory[]> {
+    const url = onlyActive ? `${API_BASE}/stories?only_active=true` : `${API_BASE}/stories`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Falha ao carregar stories da ilha');
+    return res.json();
+  },
+
+  async getStoryById(id: string): Promise<IslandStory> {
+    const res = await fetch(`${API_BASE}/stories/${id}`);
+    if (!res.ok) throw new Error('Story não encontrado');
+    return res.json();
+  },
+
+  async createStory(data: Partial<IslandStory>): Promise<IslandStory> {
+    const res = await fetch(`${API_BASE}/stories`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Falha ao criar destaque/story');
+    return res.json();
+  },
+
+  async updateStory(id: string, data: Partial<IslandStory>): Promise<IslandStory> {
+    const res = await fetch(`${API_BASE}/stories/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Falha ao atualizar destaque/story');
+    return res.json();
+  },
+
+  async deleteStory(id: string): Promise<boolean> {
+    const res = await fetch(`${API_BASE}/stories/${id}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Falha ao excluir destaque/story');
+    return true;
   }
 };

@@ -4,6 +4,7 @@ import {
   Plus, 
   Trash2, 
   Edit, 
+  Edit2,
   Eye, 
   MousePointerClick, 
   Calendar, 
@@ -41,7 +42,7 @@ import {
   Image as ImageIcon,
   Info
 } from 'lucide-react';
-import { Advertisement, AdCategory, TideDayEntry, Partner, UserProfile, ServiceCategory } from '../types/index.ts';
+import { Advertisement, AdCategory, TideDayEntry, Partner, UserProfile, ServiceCategory, IslandStory } from '../types/index.ts';
 import { api } from '../services/api.ts';
 
 interface AdminPanelModalProps {
@@ -73,7 +74,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   onLoginSuccess,
   onLogout
 }) => {
-  const [activeMainTab, setActiveMainTab] = useState<'anuncios' | 'mares' | 'parceiros' | 'seguranca'>('anuncios');
+  const [activeMainTab, setActiveMainTab] = useState<'anuncios' | 'stories' | 'mares' | 'parceiros' | 'seguranca'>('anuncios');
   
   // Auth Form State (when not authenticated as admin)
   const [loginUsername, setLoginUsername] = useState('admin');
@@ -150,6 +151,16 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [partnerStatusFilter, setPartnerStatusFilter] = useState<'todos' | 'ativos' | 'inativos'>('todos');
   const [newAmenityInput, setNewAmenityInput] = useState('');
 
+  // Stories (Destaques da Ilha) Form & List states
+  const [stories, setStories] = useState<IslandStory[]>([]);
+  const [isEditingStory, setIsEditingStory] = useState(false);
+  const [currentStory, setCurrentStory] = useState<Partial<IslandStory>>({});
+  const [storySearchTerm, setStorySearchTerm] = useState('');
+  const [isUploadingStoryCover, setIsUploadingStoryCover] = useState(false);
+  const [isUploadingStoryFull, setIsUploadingStoryFull] = useState(false);
+  const [isStoryDragOverCover, setIsStoryDragOverCover] = useState(false);
+  const [isStoryDragOverFull, setIsStoryDragOverFull] = useState(false);
+
   const isAdmin = currentUser?.role === 'admin';
 
   useEffect(() => {
@@ -166,6 +177,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       const resAds = await fetch('/api/advertisements?only_active=false');
       const dataAds = await resAds.json();
       setAds(dataAds || []);
+
+      // Load Stories
+      const resStories = await fetch('/api/stories');
+      const dataStories = await resStories.json();
+      setStories(dataStories || []);
 
       // Load Tide Days
       const resTides = await fetch('/api/tides/days');
@@ -652,6 +668,152 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     }
   };
 
+  // Story Handlers
+  const handleToggleStoryActive = async (story: IslandStory) => {
+    try {
+      const nextActive = !story.active;
+      const updated = await api.updateStory(story.id, { active: nextActive });
+      if (updated) {
+        setStories(prev => prev.map(s => s.id === story.id ? { ...s, active: nextActive } : s));
+        showSuccess(`Destaque "${story.title}" ${nextActive ? 'ativado' : 'pausado'}!`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao atualizar status do destaque.');
+    }
+  };
+
+  const handleDeleteStory = async (id: string, title: string) => {
+    if (!confirm(`Deseja realmente excluir o destaque "${title}"?`)) return;
+    try {
+      const success = await api.deleteStory(id);
+      if (success) {
+        setStories(prev => prev.filter(s => s.id !== id));
+        showSuccess(`Destaque "${title}" excluído com sucesso!`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao excluir destaque.');
+    }
+  };
+
+  const handleMoveStory = async (story: IslandStory, direction: 'up' | 'down') => {
+    const sorted = [...stories].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+    const currentIndex = sorted.findIndex(s => s.id === story.id);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= sorted.length) return;
+
+    const targetStory = sorted[targetIndex];
+    const currentOrder = story.orderIndex ?? currentIndex + 1;
+    const targetOrder = targetStory.orderIndex ?? targetIndex + 1;
+
+    try {
+      await api.updateStory(story.id, { orderIndex: targetOrder });
+      await api.updateStory(targetStory.id, { orderIndex: currentOrder });
+      setStories(prev => prev.map(s => {
+        if (s.id === story.id) return { ...s, orderIndex: targetOrder };
+        if (s.id === targetStory.id) return { ...s, orderIndex: currentOrder };
+        return s;
+      }));
+      showSuccess(`Ordem de exibição dos destaques atualizada!`);
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao reordenar destaques.');
+    }
+  };
+
+  const handleStoryImageUpload = async (file: File, field: 'coverImage' | 'fullImage') => {
+    if (field === 'coverImage') setIsUploadingStoryCover(true);
+    else setIsUploadingStoryFull(true);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64Data = reader.result as string;
+        try {
+          const res = await api.uploadImage(base64Data, file.name);
+          const finalUrl = (res.success && res.url) ? res.url : base64Data;
+          setCurrentStory(prev => ({ ...prev, [field]: finalUrl }));
+          showSuccess(`Imagem "${file.name}" processada com sucesso!`);
+        } catch (err) {
+          console.warn('Fallback base64 para imagem:', err);
+          setCurrentStory(prev => ({ ...prev, [field]: base64Data }));
+          showSuccess(`Imagem "${file.name}" carregada!`);
+        } finally {
+          if (field === 'coverImage') setIsUploadingStoryCover(false);
+          else setIsUploadingStoryFull(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+      if (field === 'coverImage') setIsUploadingStoryCover(false);
+      else setIsUploadingStoryFull(false);
+      alert('Erro ao ler arquivo de imagem.');
+    }
+  };
+
+  const handleSaveStory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentStory.title || !currentStory.subtitle) {
+      alert('Preencha pelo menos o título e o subtítulo do destaque.');
+      return;
+    }
+
+    try {
+      if (currentStory.id) {
+        const updated = await api.updateStory(currentStory.id, currentStory);
+        if (updated) {
+          setStories(prev => prev.map(s => s.id === updated.id ? updated : s));
+          showSuccess(`Destaque "${updated.title}" atualizado com sucesso!`);
+        }
+      } else {
+        const payload: Omit<IslandStory, 'id'> = {
+          title: currentStory.title || 'Novo Story',
+          subtitle: currentStory.subtitle || '',
+          coverImage: currentStory.coverImage || '/imagens/vila2.jpg',
+          fullImage: currentStory.fullImage || currentStory.coverImage || '/imagens/vila2.jpg',
+          tag: currentStory.tag || 'Destaque da Ilha',
+          description: currentStory.description || '',
+          icon: currentStory.icon || '🏝️',
+          category: currentStory.category || 'todos',
+          location: currentStory.location || 'Ilha de Algodoal',
+          whatsapp: currentStory.whatsapp || '',
+          active: currentStory.active ?? true,
+          orderIndex: currentStory.orderIndex ?? (stories.length + 1)
+        };
+        const created = await api.createStory(payload);
+        if (created) {
+          setStories(prev => [...prev, created]);
+          showSuccess(`Destaque "${created.title}" criado com sucesso!`);
+        }
+      }
+      setIsEditingStory(false);
+      setCurrentStory({});
+      if (onRefreshData) onRefreshData();
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao salvar story no servidor.');
+    }
+  };
+
+  // Filtered Stories Computation
+  const filteredStories = useMemo(() => {
+    return [...stories]
+      .filter(s => {
+        if (!storySearchTerm.trim()) return true;
+        const term = storySearchTerm.toLowerCase();
+        const matchTitle = (s.title || '').toLowerCase().includes(term);
+        const matchSub = (s.subtitle || '').toLowerCase().includes(term);
+        const matchTag = (s.tag || '').toLowerCase().includes(term);
+        const matchLoc = (s.location || '').toLowerCase().includes(term);
+        const matchDesc = (s.description || '').toLowerCase().includes(term);
+        return matchTitle || matchSub || matchTag || matchLoc || matchDesc;
+      })
+      .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+  }, [stories, storySearchTerm]);
+
   // Filtered Partners Computation
   const filteredPartners = useMemo(() => {
     return partners.filter(p => {
@@ -904,6 +1066,18 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               >
                 <Megaphone className="w-4 h-4 text-amber-600" />
                 <span>🎯 Gerenciador de Anúncios & Banners ({ads.length})</span>
+              </button>
+
+              <button
+                onClick={() => setActiveMainTab('stories')}
+                className={`py-3 px-4 rounded-t-xl border-b-2 flex items-center gap-2 transition cursor-pointer ${
+                  activeMainTab === 'stories'
+                    ? 'border-purple-500 bg-white text-purple-950 shadow-xs'
+                    : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                }`}
+              >
+                <Sparkles className="w-4 h-4 text-purple-600" />
+                <span>🏝️ Destaques da Ilha (Stories) ({stories.length})</span>
               </button>
 
               <button
@@ -1708,6 +1882,225 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       {isChangingPass ? 'Atualizando Banco de Dados...' : 'Salvar Novas Credenciais no Banco'}
                     </button>
                   </form>
+                </div>
+              )}
+
+              {/* TAB 5: GERENCIADOR DE DESTAQUES & STORIES DA ILHA */}
+              {activeMainTab === 'stories' && (
+                <div className="space-y-6 max-w-7xl mx-auto">
+                  
+                  {/* Top Bar / Header Card */}
+                  <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="p-2 rounded-xl bg-purple-100 text-purple-700">
+                          <Sparkles className="w-5 h-5" />
+                        </span>
+                        <h3 className="text-base font-black text-slate-900 font-serif">
+                          Destaques da Ilha (Stories do Feed)
+                        </h3>
+                        <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                          {stories.length} cadastrados
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        Gerencie os círculos interativos no topo do feed. Adicione fotos, ordene a sequência e configure botões de WhatsApp.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      <div className="relative flex-1 sm:w-64">
+                        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="Buscar por título, tag, local..."
+                          value={storySearchTerm}
+                          onChange={(e) => setStorySearchTerm(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 bg-slate-50 focus:bg-white"
+                        />
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setCurrentStory({
+                            title: '',
+                            subtitle: '',
+                            icon: '🏝️',
+                            tag: 'Destaque',
+                            category: 'todos',
+                            location: 'Ilha de Algodoal',
+                            coverImage: '/imagens/vila2.jpg',
+                            fullImage: '/imagens/vila2.jpg',
+                            description: '',
+                            whatsapp: '',
+                            active: true,
+                            orderIndex: stories.length + 1
+                          });
+                          setIsEditingStory(true);
+                        }}
+                        className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs transition shadow-md flex items-center gap-1.5 shrink-0 cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Novo Story</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Stories Grid */}
+                  {filteredStories.length === 0 ? (
+                    <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center">
+                      <Sparkles className="w-12 h-12 text-purple-300 mx-auto mb-3" />
+                      <h4 className="text-sm font-black text-slate-800">Nenhum story ou destaque encontrado</h4>
+                      <p className="text-xs text-slate-500 mt-1 mb-4">
+                        {storySearchTerm ? 'Tente buscar com outros termos.' : 'Clique no botão acima para adicionar o primeiro destaque.'}
+                      </p>
+                      <button
+                        onClick={() => {
+                          setCurrentStory({
+                            title: '',
+                            subtitle: '',
+                            icon: '🏝️',
+                            tag: 'Destaque',
+                            category: 'todos',
+                            location: 'Ilha de Algodoal',
+                            coverImage: '/imagens/vila2.jpg',
+                            fullImage: '/imagens/vila2.jpg',
+                            description: '',
+                            whatsapp: '',
+                            active: true,
+                            orderIndex: stories.length + 1
+                          });
+                          setIsEditingStory(true);
+                        }}
+                        className="px-5 py-2 rounded-xl bg-purple-600 text-white font-bold text-xs"
+                      >
+                        Criar Novo Story
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filteredStories.map((story, index) => (
+                        <div
+                          key={story.id}
+                          className={`bg-white rounded-3xl border transition shadow-xs hover:shadow-md flex flex-col justify-between overflow-hidden ${
+                            story.active ? 'border-slate-200' : 'border-slate-200 opacity-60 bg-slate-50/70'
+                          }`}
+                        >
+                          {/* Card Header & Preview */}
+                          <div className="p-4 space-y-3">
+                            <div className="flex items-start justify-between gap-3">
+                              {/* Circle Avatar Ring Preview */}
+                              <div className="flex items-center gap-3">
+                                <div className="relative">
+                                  <div className="w-14 h-14 rounded-full p-[2.5px] bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 shadow-sm shrink-0">
+                                    <img
+                                      src={story.coverImage || '/imagens/vila2.jpg'}
+                                      alt={story.title}
+                                      className="w-full h-full rounded-full object-cover border-2 border-white bg-slate-100"
+                                    />
+                                  </div>
+                                  <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white shadow-xs border border-slate-200 flex items-center justify-center text-xs">
+                                    {story.icon || '🏝️'}
+                                  </span>
+                                </div>
+
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 truncate">
+                                      {story.tag || 'Destaque'}
+                                    </span>
+                                    <span className="text-[10px] font-black text-slate-400">
+                                      #{story.orderIndex ?? (index + 1)}
+                                    </span>
+                                  </div>
+                                  <h4 className="text-sm font-black text-slate-900 truncate mt-0.5">
+                                    {story.title}
+                                  </h4>
+                                  <p className="text-xs text-slate-500 truncate">
+                                    {story.subtitle}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Active Status Badge */}
+                              <button
+                                onClick={() => handleToggleStoryActive(story)}
+                                className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full border transition cursor-pointer shrink-0 ${
+                                  story.active
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                    : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
+                                }`}
+                              >
+                                {story.active ? '● Ativo' : '○ Pausado'}
+                              </button>
+                            </div>
+
+                            {/* Story Description & Meta */}
+                            <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
+                              {story.description || 'Sem descrição cadastrada...'}
+                            </p>
+
+                            <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 pt-1">
+                              {story.location && (
+                                <span className="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-md font-medium text-slate-700">
+                                  📍 {story.location}
+                                </span>
+                              )}
+                              {story.whatsapp && (
+                                <span className="flex items-center gap-1 bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-md font-bold">
+                                  💬 {story.whatsapp}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Card Footer Actions */}
+                          <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
+                            {/* Reordering Up/Down */}
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleMoveStory(story, 'up')}
+                                disabled={index === 0}
+                                title="Mover para frente"
+                                className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed text-xs font-bold"
+                              >
+                                ◀
+                              </button>
+                              <button
+                                onClick={() => handleMoveStory(story, 'down')}
+                                disabled={index === filteredStories.length - 1}
+                                title="Mover para trás"
+                                className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed text-xs font-bold"
+                              >
+                                ▶
+                              </button>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  setCurrentStory(story);
+                                  setIsEditingStory(true);
+                                }}
+                                className="px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-bold text-xs transition cursor-pointer flex items-center gap-1"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                                <span>Editar</span>
+                              </button>
+
+                              <button
+                                onClick={() => handleDeleteStory(story.id, story.title)}
+                                className="p-1.5 rounded-xl text-rose-500 hover:bg-rose-50 transition cursor-pointer"
+                                title="Excluir Story"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -2609,6 +3002,428 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 >
                   Salvar Maré no Banco
                 </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* 7. MODAL FORM: CRIAR / EDITAR STORY & DESTAQUE DA ILHA   */}
+        {/* ======================================================== */}
+        {isEditingStory && (
+          <div className="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
+            <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-purple-300 overflow-hidden animate-in zoom-in-95 duration-200">
+              
+              {/* Header */}
+              <div className="px-6 py-4 bg-purple-950 text-white flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <Sparkles className="w-5 h-5 text-purple-400" />
+                  <h3 className="text-base font-black font-serif">
+                    {currentStory.id ? 'Editar Destaque (Story) no Banco de Dados' : 'Cadastrar Novo Story / Destaque'}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setIsEditingStory(false)}
+                  className="p-1 rounded-full text-slate-400 hover:text-white cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Form & Live Preview Grid */}
+              <form onSubmit={handleSaveStory} className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 bg-slate-50">
+                
+                {/* Form Fields (Col 7) */}
+                <div className="lg:col-span-7 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-black uppercase text-slate-800 mb-1">
+                        Título do Story *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ex: Trapiche de Chegada"
+                        value={currentStory.title || ''}
+                        onChange={(e) => setCurrentStory(prev => ({ ...prev, title: e.target.value }))}
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-800 mb-1">
+                        Emoji do Ícone
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="🏝️"
+                        value={currentStory.icon || '🏝️'}
+                        onChange={(e) => setCurrentStory(prev => ({ ...prev, icon: e.target.value }))}
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white text-center"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Quick Emoji Pickers */}
+                  <div className="flex flex-wrap gap-1.5 items-center bg-white p-2 rounded-xl border border-slate-200">
+                    <span className="text-[10px] font-bold text-slate-400 mr-1">Sugestões:</span>
+                    {['🏝️', '🌅', '⛵', '🐎', '🌊', '🍹', '🦀', '🌴', '🔥', '🌸', '🏨', '🍲', '🛍️', '🎉', 'ℹ️'].map((emoji) => (
+                      <button
+                        type="button"
+                        key={emoji}
+                        onClick={() => setCurrentStory(prev => ({ ...prev, icon: emoji }))}
+                        className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-sm transition cursor-pointer"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-800 mb-1">
+                        Subtítulo Curto *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ex: Porto de Algodoal"
+                        value={currentStory.subtitle || ''}
+                        onChange={(e) => setCurrentStory(prev => ({ ...prev, subtitle: e.target.value }))}
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-800 mb-1">
+                        Tag / Selo do Story
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Chegada na Ilha"
+                        value={currentStory.tag || ''}
+                        onChange={(e) => setCurrentStory(prev => ({ ...prev, tag: e.target.value }))}
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-800 mb-1">
+                        Categoria Relacionada
+                      </label>
+                      <select
+                        value={currentStory.category || 'todos'}
+                        onChange={(e) => setCurrentStory(prev => ({ ...prev, category: e.target.value }))}
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 bg-white"
+                      >
+                        <option value="todos">🌐 Geral (Todas)</option>
+                        <option value="transporte">🚖 Transporte & Chegada</option>
+                        <option value="pousadas">🏨 Pousadas & Hospedagem</option>
+                        <option value="passeios">⛵ Passeios & Praias</option>
+                        <option value="alimentacao">🍲 Gastronomia & Bares</option>
+                        <option value="compras">🛍️ Compras & Utilitários</option>
+                        <option value="eventos">🎉 Eventos & Noite</option>
+                        <option value="informacoes">ℹ️ Dicas & Guia</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-800 mb-1">
+                        Ordem de Exibição
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        placeholder="1"
+                        value={currentStory.orderIndex || 1}
+                        onChange={(e) => setCurrentStory(prev => ({ ...prev, orderIndex: Number(e.target.value) }))}
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-800 mb-1">
+                        Localização na Ilha
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Porto de Algodoal / Vila de Maiandeua"
+                        value={currentStory.location || ''}
+                        onChange={(e) => setCurrentStory(prev => ({ ...prev, location: e.target.value }))}
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-800 mb-1">
+                        WhatsApp de Contato Direto
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="5591981234567"
+                        value={currentStory.whatsapp || ''}
+                        onChange={(e) => setCurrentStory(prev => ({ ...prev, whatsapp: e.target.value.replace(/\D/g, '') }))}
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black uppercase text-slate-800 mb-1">
+                      Descrição Detalhada do Story
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="Texto que o turista lê quando o story é aberto em tela cheia..."
+                      value={currentStory.description || ''}
+                      onChange={(e) => setCurrentStory(prev => ({ ...prev, description: e.target.value }))}
+                      className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                    />
+                  </div>
+
+                  {/* 1. Cover / Avatar Image Uploader */}
+                  <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+                    <label className="block text-xs font-black uppercase text-slate-800">
+                      Foto de Capa (Avatar Redondo do Feed)
+                    </label>
+
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setIsStoryDragOverCover(true); }}
+                      onDragLeave={() => setIsStoryDragOverCover(false)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsStoryDragOverCover(false);
+                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                          handleStoryImageUpload(e.dataTransfer.files[0], 'coverImage');
+                        }
+                      }}
+                      onClick={() => {
+                        const input = document.getElementById('story-cover-file-input') as HTMLInputElement;
+                        if (input) input.click();
+                      }}
+                      className={`border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition ${
+                        isStoryDragOverCover
+                          ? 'border-purple-500 bg-purple-50/80'
+                          : 'border-slate-300 hover:border-purple-400 bg-slate-50/70 hover:bg-purple-50/30'
+                      }`}
+                    >
+                      <input
+                        type="file"
+                        id="story-cover-file-input"
+                        accept="image/*"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            handleStoryImageUpload(e.target.files[0], 'coverImage');
+                          }
+                        }}
+                        className="hidden"
+                      />
+
+                      {isUploadingStoryCover ? (
+                        <div className="py-2 flex flex-col items-center justify-center gap-1.5">
+                          <RefreshCw className="w-6 h-6 text-purple-500 animate-spin" />
+                          <span className="text-xs font-black text-slate-800">Enviando foto de capa...</span>
+                        </div>
+                      ) : (
+                        <div className="py-1 flex flex-col items-center justify-center gap-1">
+                          <UploadCloud className="w-5 h-5 text-purple-600" />
+                          <div className="text-xs font-black text-slate-800">
+                            Clique ou arraste a foto redonda de capa
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <input
+                      type="text"
+                      placeholder="Ou digite o link direto: /imagens/porto.jpg ou https://..."
+                      value={currentStory.coverImage || ''}
+                      onChange={(e) => setCurrentStory(prev => ({ ...prev, coverImage: e.target.value }))}
+                      className="w-full p-2 rounded-xl border border-slate-200 text-xs text-slate-800 bg-slate-50"
+                    />
+                  </div>
+
+                  {/* 2. Full Background Image Uploader */}
+                  <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+                    <label className="block text-xs font-black uppercase text-slate-800">
+                      Foto de Fundo em Tela Cheia (Story Aberto)
+                    </label>
+
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setIsStoryDragOverFull(true); }}
+                      onDragLeave={() => setIsStoryDragOverFull(false)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsStoryDragOverFull(false);
+                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                          handleStoryImageUpload(e.dataTransfer.files[0], 'fullImage');
+                        }
+                      }}
+                      onClick={() => {
+                        const input = document.getElementById('story-full-file-input') as HTMLInputElement;
+                        if (input) input.click();
+                      }}
+                      className={`border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition ${
+                        isStoryDragOverFull
+                          ? 'border-purple-500 bg-purple-50/80'
+                          : 'border-slate-300 hover:border-purple-400 bg-slate-50/70 hover:bg-purple-50/30'
+                      }`}
+                    >
+                      <input
+                        type="file"
+                        id="story-full-file-input"
+                        accept="image/*"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            handleStoryImageUpload(e.target.files[0], 'fullImage');
+                          }
+                        }}
+                        className="hidden"
+                      />
+
+                      {isUploadingStoryFull ? (
+                        <div className="py-2 flex flex-col items-center justify-center gap-1.5">
+                          <RefreshCw className="w-6 h-6 text-purple-500 animate-spin" />
+                          <span className="text-xs font-black text-slate-800">Enviando foto de fundo...</span>
+                        </div>
+                      ) : (
+                        <div className="py-1 flex flex-col items-center justify-center gap-1">
+                          <UploadCloud className="w-5 h-5 text-purple-600" />
+                          <div className="text-xs font-black text-slate-800">
+                            Clique ou arraste a foto de fundo vertical
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <input
+                      type="text"
+                      placeholder="Ou digite o link direto: /imagens/vila2.jpg ou https://..."
+                      value={currentStory.fullImage || ''}
+                      onChange={(e) => setCurrentStory(prev => ({ ...prev, fullImage: e.target.value }))}
+                      className="w-full p-2 rounded-xl border border-slate-200 text-xs text-slate-800 bg-slate-50"
+                    />
+                  </div>
+
+                  {/* Active Toggle */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      type="checkbox"
+                      id="story_active_toggle"
+                      checked={currentStory.active ?? true}
+                      onChange={(e) => setCurrentStory(prev => ({ ...prev, active: e.target.checked }))}
+                      className="w-4 h-4 text-purple-600 rounded cursor-pointer"
+                    />
+                    <label htmlFor="story_active_toggle" className="text-xs font-black text-slate-900 cursor-pointer">
+                      Story Ativo e Visível no Feed Principal
+                    </label>
+                  </div>
+                </div>
+
+                {/* Live Preview Column (Col 5) */}
+                <div className="lg:col-span-5 bg-white p-5 rounded-3xl border border-slate-200 flex flex-col justify-between">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                      <Eye className="w-4 h-4 text-purple-600" />
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                        Prévia em Tempo Real
+                      </h4>
+                    </div>
+
+                    {/* 1. Feed Avatar Ring Preview */}
+                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+                      <span className="text-[10px] font-bold uppercase text-slate-400 block mb-2">
+                        Como aparece no topo do feed:
+                      </span>
+                      <div className="inline-flex flex-col items-center">
+                        <div className="relative">
+                          <div className="w-16 h-16 rounded-full p-[2.5px] bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 shadow-md">
+                            <img
+                              src={currentStory.coverImage || '/imagens/vila2.jpg'}
+                              alt="Prévia Avatar"
+                              className="w-full h-full rounded-full object-cover border-2 border-white bg-slate-100"
+                            />
+                          </div>
+                          <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white shadow-xs border border-slate-200 flex items-center justify-center text-xs">
+                            {currentStory.icon || '🏝️'}
+                          </span>
+                        </div>
+                        <span className="text-xs font-black text-slate-900 mt-1 max-w-[80px] truncate">
+                          {currentStory.title || 'Título'}
+                        </span>
+                        <span className="text-[9px] font-bold text-slate-400 max-w-[80px] truncate">
+                          {currentStory.subtitle || 'Subtítulo'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 2. Full Story Card Modal Preview */}
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold uppercase text-slate-400 block">
+                        Como aparece quando o turista clica:
+                      </span>
+                      <div className="relative h-64 rounded-3xl overflow-hidden shadow-lg border border-slate-300 bg-slate-950 flex flex-col justify-between p-4 text-white">
+                        <img
+                          src={currentStory.fullImage || currentStory.coverImage || '/imagens/vila2.jpg'}
+                          alt="Prévia Fundo"
+                          className="absolute inset-0 w-full h-full object-cover opacity-80"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/60" />
+
+                        {/* Top Story Header */}
+                        <div className="relative z-10 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">{currentStory.icon || '🏝️'}</span>
+                            <div>
+                              <h5 className="text-xs font-black">{currentStory.title || 'Título do Story'}</h5>
+                              <p className="text-[10px] text-white/70">{currentStory.location || 'Ilha de Algodoal'}</p>
+                            </div>
+                          </div>
+                          {currentStory.tag && (
+                            <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md border border-white/30">
+                              {currentStory.tag}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Bottom Story Content */}
+                        <div className="relative z-10 space-y-2">
+                          <p className="text-xs text-white/90 line-clamp-3 leading-relaxed">
+                            {currentStory.description || 'Aqui aparecerá a descrição e dicas sobre o local selecionado...'}
+                          </p>
+                          {currentStory.whatsapp && (
+                            <div className="w-full py-2 rounded-xl bg-emerald-500 text-white font-black text-[11px] flex items-center justify-center gap-1.5 shadow-md">
+                              <MessageCircle className="w-3.5 h-3.5" />
+                              <span>Saber Mais no WhatsApp</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingStory(false)}
+                      className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+
+                    <button
+                      type="submit"
+                      className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs transition shadow-md cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span>Salvar Story</span>
+                    </button>
+                  </div>
+                </div>
               </form>
             </div>
           </div>

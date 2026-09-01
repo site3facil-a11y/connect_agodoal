@@ -173,3 +173,24 @@ export interface Review {
   comment: string;
   created_at: string;
 }
+
+export interface IslandStory {
+  id: string;
+  title: string;
+  subtitle: string;
+  emoji?: string;
+  icon?: string;
+  coverImage: string;
+  fullImage: string;
+  description: string;
+  location: string;
+  tag: string;
+  category?: string;
+  whatsapp?: string;
+  is_active?: boolean;
+  active?: boolean;
+  order_index?: number;
+  orderIndex?: number;
+  created_at?: string;
+  updated_at?: string;
+}

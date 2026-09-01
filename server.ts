@@ -45,7 +45,12 @@ import {
   findOrCreateUser,
   getAdminSettings,
   validateAdminCredentials,
-  updateAdminSettings
+  updateAdminSettings,
+  getStories,
+  getStoryById,
+  createStory,
+  updateStory,
+  deleteStory
 } from './src/db/database';
 
 async function startServer() {
@@ -327,6 +332,59 @@ async function startServer() {
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: 'Erro ao atualizar métricas do anúncio', details: err.message });
+    }
+  });
+
+  // =====================================
+  // ISLAND STORIES / DESTAQUES DA ILHA
+  // =====================================
+  app.get('/api/stories', async (req, res) => {
+    try {
+      const onlyActive = req.query.only_active === 'true';
+      const stories = await getStories(onlyActive);
+      res.json(stories);
+    } catch (err: any) {
+      res.status(500).json({ error: 'Erro ao buscar histórias/destaques da ilha', details: err.message });
+    }
+  });
+
+  app.get('/api/stories/:id', async (req, res) => {
+    try {
+      const story = await getStoryById(req.params.id);
+      if (!story) return res.status(404).json({ error: 'Destaque não encontrado' });
+      res.json(story);
+    } catch (err: any) {
+      res.status(500).json({ error: 'Erro ao buscar destaque', details: err.message });
+    }
+  });
+
+  app.post('/api/stories', async (req, res) => {
+    try {
+      const data = req.body;
+      const created = await createStory(data);
+      res.status(201).json(created);
+    } catch (err: any) {
+      res.status(500).json({ error: 'Erro ao criar destaque/story', details: err.message });
+    }
+  });
+
+  app.patch('/api/stories/:id', async (req, res) => {
+    try {
+      const updated = await updateStory(req.params.id, req.body);
+      if (!updated) return res.status(404).json({ error: 'Destaque não encontrado' });
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ error: 'Erro ao atualizar destaque/story', details: err.message });
+    }
+  });
+
+  app.delete('/api/stories/:id', async (req, res) => {
+    try {
+      const ok = await deleteStory(req.params.id);
+      if (!ok) return res.status(404).json({ error: 'Destaque não encontrado' });
+      res.json({ success: true, message: 'Destaque removido com sucesso' });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Erro ao excluir destaque', details: err.message });
     }
   });
 

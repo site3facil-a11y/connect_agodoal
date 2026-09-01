@@ -14,7 +14,8 @@ import {
   Advertisement,
   TideDayEntry,
   UserProfile,
-  AdCategory
+  AdCategory,
+  IslandStory
 } from '../types/index';
 
 const DB_FILE = path.join(process.cwd(), 'data', 'algodoal_db.json');
@@ -639,6 +640,137 @@ const SEED_REVIEWS: Review[] = [
   }
 ];
 
+const SEED_STORIES: IslandStory[] = [
+  {
+    id: 'story-porto',
+    title: 'Chegada',
+    subtitle: 'Trapiche & Porto de Algodoal',
+    emoji: '🏝️',
+    coverImage: '/imagens/porto.jpg',
+    fullImage: '/imagens/porto.jpg',
+    description: 'Vista aérea espetacular da chegada em Algodoal. O porto e o trapiche de madeira dão as boas-vindas com águas calmas e rabetas ancoradas.',
+    location: 'Porto de Algodoal / Canal',
+    tag: 'Chegada na Ilha',
+    category: 'todos',
+    whatsapp: '5591983456789',
+    is_active: true,
+    order_index: 1,
+    created_at: '2026-01-01T00:00:00Z'
+  },
+  {
+    id: 'story-charrete',
+    title: 'Charretes',
+    subtitle: 'Transporte Oficial Credenciado',
+    emoji: '🐎',
+    coverImage: '/imagens/vila.jpg',
+    fullImage: '/imagens/vila.jpg',
+    description: 'Na Ilha de Algodoal não circulam carros. O transporte oficial e ecológico é feito por charreteiros credenciados que conduzem com carinho pelas ruas de areia.',
+    location: 'Porto de Algodoal ⇄ Praia da Princesa',
+    tag: 'Transporte APA',
+    category: 'transporte',
+    whatsapp: '5591983456789',
+    is_active: true,
+    order_index: 2,
+    created_at: '2026-01-02T00:00:00Z'
+  },
+  {
+    id: 'story-vila',
+    title: 'A Vila',
+    subtitle: 'Ruas Floridas & Natureza',
+    emoji: '🌸',
+    coverImage: '/imagens/vila2.jpg',
+    fullImage: '/imagens/vila2.jpg',
+    description: 'Ruas tranquilas de areia batida ladeadas por buganvílias, coqueirais e casas rústicas com vista direta para a brisa do Atlântico.',
+    location: 'Vila de Algodoal',
+    tag: 'Passeio a Pé',
+    category: 'pousadas',
+    whatsapp: '5591981234567',
+    is_active: true,
+    order_index: 3,
+    created_at: '2026-01-03T00:00:00Z'
+  },
+  {
+    id: 'story-praia',
+    title: 'Maré Baixa',
+    subtitle: 'Praia da Princesa & Manguezais',
+    emoji: '🌊',
+    coverImage: '/imagens/algodoal.jpg',
+    fullImage: '/imagens/algodoal.jpg',
+    description: 'Na maré baixa, bancos de areia dourada se estendem por quilômetros entre canais verdes e manguezais preservados da APA.',
+    location: 'Praia da Princesa & Dunas',
+    tag: 'Natureza Selvagem',
+    category: 'passeios',
+    whatsapp: '5591981234567',
+    is_active: true,
+    order_index: 4,
+    created_at: '2026-01-04T00:00:00Z'
+  },
+  {
+    id: 'story-rabeta',
+    title: 'Rabetas',
+    subtitle: 'Navegação pelos Canais',
+    emoji: '🚤',
+    coverImage: '/imagens/canal.jpg',
+    fullImage: '/imagens/canal.jpg',
+    description: 'Passeios de barco rabeta pelo Furo Velho, travessia para Fortalezinha e navegação em águas esverdeadas e límpidas com mestres locais.',
+    location: 'Canal do Furo Velho & Camboinha',
+    tag: 'Passeios Náuticos',
+    category: 'passeios',
+    whatsapp: '5591984567890',
+    is_active: true,
+    order_index: 5,
+    created_at: '2026-01-05T00:00:00Z'
+  },
+  {
+    id: 'story-por-do-sol',
+    title: 'Pôr do Sol',
+    subtitle: 'Charrete ao Entardecer Dourado',
+    emoji: '🌅',
+    coverImage: '/imagens/carroca.jpg',
+    fullImage: '/imagens/carroca.jpg',
+    description: 'O pôr do sol inesquecível na beira da Praia da Princesa com charretes trotando nas águas rasas sob a luz dourada do fim de tarde.',
+    location: 'Praia da Princesa',
+    tag: 'Cenário Mágico',
+    category: 'passeios',
+    whatsapp: '5591983456789',
+    is_active: true,
+    order_index: 6,
+    created_at: '2026-01-06T00:00:00Z'
+  },
+  {
+    id: 'story-festa',
+    title: 'Luau & Reggae',
+    subtitle: 'Noites de Carimbó & Reggae Raiz',
+    emoji: '🔥',
+    coverImage: '/imagens/festa.jpg',
+    fullImage: '/imagens/festa.jpg',
+    description: 'A energia contagiante do Carimbó raiz de Marapanim, luaus pé na areia e noites de reggae paraense com fogueira à beira-mar.',
+    location: 'Praia da Princesa (Decks Culturais)',
+    tag: 'Cultura & Música',
+    category: 'eventos',
+    whatsapp: '5591986789012',
+    is_active: true,
+    order_index: 7,
+    created_at: '2026-01-07T00:00:00Z'
+  },
+  {
+    id: 'story-maruda',
+    title: 'Travessia',
+    subtitle: 'Marudá ⇄ Algodoal',
+    emoji: '⚓',
+    coverImage: '/imagens/porto2.jpg',
+    fullImage: '/imagens/porto2.jpg',
+    description: 'A travessia tradicional de barco a partir do porto de Marudá com vista para as praias e a vida caiçara da Amazônia Atlântica.',
+    location: 'Porto de Marudá / Algodoal',
+    tag: 'Barcos de Linha',
+    category: 'compras',
+    whatsapp: '5591984567890',
+    is_active: true,
+    order_index: 8,
+    created_at: '2026-01-08T00:00:00Z'
+  }
+];
+
 interface AdminSettings {
   admin_username: string;
   admin_email: string;
@@ -657,6 +789,7 @@ interface LocalDatabaseState {
   advertisements: Advertisement[];
   tide_days: TideDayEntry[];
   users: UserProfile[];
+  stories?: IslandStory[];
   admin_settings?: AdminSettings;
 }
 
@@ -689,6 +822,7 @@ function loadLocalDB(): LocalDatabaseState {
       if (!parsed.advertisements || parsed.advertisements.length === 0) parsed.advertisements = SEED_ADVERTISEMENTS;
       if (!parsed.tide_days || parsed.tide_days.length === 0) parsed.tide_days = SEED_TIDE_DAYS;
       if (!parsed.users || parsed.users.length === 0) parsed.users = SEED_USERS;
+      if (!parsed.stories || parsed.stories.length === 0) parsed.stories = SEED_STORIES;
       if (!parsed.partners.some((p: Partner) => p.category === 'pousadas')) {
         parsed.partners = [...parsed.partners, ...SEED_PARTNERS.filter(p => p.category === 'pousadas')];
       }
@@ -708,7 +842,8 @@ function loadLocalDB(): LocalDatabaseState {
     reviews: SEED_REVIEWS,
     advertisements: SEED_ADVERTISEMENTS,
     tide_days: SEED_TIDE_DAYS,
-    users: SEED_USERS
+    users: SEED_USERS,
+    stories: SEED_STORIES
   };
 
   saveLocalDB(initial);
@@ -1118,6 +1253,85 @@ export async function getIslandStats() {
     totalAds: (db.advertisements || []).length,
     activeAds: (db.advertisements || []).filter(a => a.is_active).length,
     totalAdViews: (db.advertisements || []).reduce((acc, a) => acc + (a.views_count || 0), 0),
-    totalAdClicks: (db.advertisements || []).reduce((acc, a) => acc + (a.clicks_count || 0), 0)
+    totalAdClicks: (db.advertisements || []).reduce((acc, a) => acc + (a.clicks_count || 0), 0),
+    totalStories: (db.stories || []).length,
+    activeStories: (db.stories || []).filter(s => s.is_active !== false).length
   };
+}
+
+// ==========================================
+// ISLAND STORIES (DESTAQUES DA ILHA) DAL
+// ==========================================
+
+export async function getStories(onlyActive = false): Promise<IslandStory[]> {
+  const db = loadLocalDB();
+  let list = db.stories || SEED_STORIES;
+  if (onlyActive) {
+    list = list.filter(s => s.is_active !== false);
+  }
+  return list.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+}
+
+export async function getStoryById(id: string): Promise<IslandStory | null> {
+  const db = loadLocalDB();
+  const list = db.stories || SEED_STORIES;
+  return list.find(s => s.id === id) || null;
+}
+
+export async function createStory(storyData: Partial<IslandStory>): Promise<IslandStory> {
+  const db = loadLocalDB();
+  if (!db.stories) db.stories = [...SEED_STORIES];
+
+  const newStory: IslandStory = {
+    id: storyData.id || `story_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+    title: storyData.title || 'Novo Destaque',
+    subtitle: storyData.subtitle || 'Destaque de Algodoal',
+    emoji: storyData.emoji || '✨',
+    coverImage: storyData.coverImage || '/imagens/vila2.jpg',
+    fullImage: storyData.fullImage || storyData.coverImage || '/imagens/vila2.jpg',
+    description: storyData.description || 'Conheça as belezas e histórias da Ilha de Algodoal.',
+    location: storyData.location || 'Ilha de Algodoal',
+    tag: storyData.tag || 'Destaque',
+    category: storyData.category || 'todos',
+    whatsapp: storyData.whatsapp || '',
+    is_active: storyData.is_active !== false,
+    order_index: typeof storyData.order_index === 'number' ? storyData.order_index : (db.stories.length + 1),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  db.stories.push(newStory);
+  saveLocalDB(db);
+  return newStory;
+}
+
+export async function updateStory(id: string, updates: Partial<IslandStory>): Promise<IslandStory | null> {
+  const db = loadLocalDB();
+  if (!db.stories) db.stories = [...SEED_STORIES];
+
+  const index = db.stories.findIndex(s => s.id === id);
+  if (index === -1) return null;
+
+  db.stories[index] = {
+    ...db.stories[index],
+    ...updates,
+    updated_at: new Date().toISOString()
+  };
+
+  saveLocalDB(db);
+  return db.stories[index];
+}
+
+export async function deleteStory(id: string): Promise<boolean> {
+  const db = loadLocalDB();
+  if (!db.stories) db.stories = [...SEED_STORIES];
+
+  const initialLength = db.stories.length;
+  db.stories = db.stories.filter(s => s.id !== id);
+
+  if (db.stories.length < initialLength) {
+    saveLocalDB(db);
+    return true;
+  }
+  return false;
 }

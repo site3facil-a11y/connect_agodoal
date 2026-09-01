@@ -1,124 +1,128 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, X, ChevronRight, MessageCircle, MapPin, Heart, Share2 } from 'lucide-react';
+import { api } from '../../services/api';
+import { IslandStory } from '../../types';
 
-export interface IslandStory {
-  id: string;
-  title: string;
-  subtitle: string;
-  emoji: string;
-  coverImage: string;
-  fullImage: string;
-  description: string;
-  location: string;
-  tag: string;
-  category?: string;
-  whatsapp?: string;
-}
-
-const ISLAND_STORIES: IslandStory[] = [
+const DEFAULT_ISLAND_STORIES: IslandStory[] = [
   {
     id: 'story-porto',
     title: 'Chegada',
     subtitle: 'Trapiche & Porto de Algodoal',
-    emoji: '🏝️',
+    icon: '🏝️',
     coverImage: '/imagens/porto.jpg',
     fullImage: '/imagens/porto.jpg',
     description: 'Vista aérea espetacular da chegada em Algodoal. O porto e o trapiche de madeira dão as boas-vindas com águas calmas e rabetas ancoradas.',
     location: 'Porto de Algodoal / Canal',
     tag: 'Chegada na Ilha',
     category: 'todos',
-    whatsapp: '5591983456789'
+    whatsapp: '5591983456789',
+    active: true,
+    orderIndex: 1
   },
   {
     id: 'story-charrete',
     title: 'Charretes',
     subtitle: 'Transporte Oficial Credenciado',
-    emoji: '🐎',
+    icon: '🐎',
     coverImage: '/imagens/vila.jpg',
     fullImage: '/imagens/vila.jpg',
     description: 'Na Ilha de Algodoal não circulam carros. O transporte oficial e ecológico é feito por charreteiros credenciados que conduzem com carinho pelas ruas de areia.',
     location: 'Porto de Algodoal ⇄ Praia da Princesa',
     tag: 'Transporte APA',
     category: 'transporte',
-    whatsapp: '5591983456789'
+    whatsapp: '5591983456789',
+    active: true,
+    orderIndex: 2
   },
   {
     id: 'story-vila',
     title: 'A Vila',
     subtitle: 'Ruas Floridas & Natureza',
-    emoji: '🌸',
+    icon: '🌸',
     coverImage: '/imagens/vila2.jpg',
     fullImage: '/imagens/vila2.jpg',
     description: 'Ruas tranquilas de areia batida ladeadas por buganvílias, coqueirais e casas rústicas com vista direta para a brisa do Atlântico.',
     location: 'Vila de Algodoal',
     tag: 'Passeio a Pé',
     category: 'pousadas',
-    whatsapp: '5591981234567'
+    whatsapp: '5591981234567',
+    active: true,
+    orderIndex: 3
   },
   {
     id: 'story-praia',
     title: 'Maré Baixa',
     subtitle: 'Praia da Princesa & Manguezais',
-    emoji: '🌊',
+    icon: '🌊',
     coverImage: '/imagens/algodoal.jpg',
     fullImage: '/imagens/algodoal.jpg',
     description: 'Na maré baixa, bancos de areia dourada se estendem por quilômetros entre canais verdes e manguezais preservados da APA.',
     location: 'Praia da Princesa & Dunas',
     tag: 'Natureza Selvagem',
     category: 'passeios',
-    whatsapp: '5591981234567'
+    whatsapp: '5591981234567',
+    active: true,
+    orderIndex: 4
   },
   {
     id: 'story-rabeta',
     title: 'Rabetas',
     subtitle: 'Navegação pelos Canais',
-    emoji: '🚤',
+    icon: '🚤',
     coverImage: '/imagens/canal.jpg',
     fullImage: '/imagens/canal.jpg',
     description: 'Passeios de barco rabeta pelo Furo Velho, travessia para Fortalezinha e navegação em águas esverdeadas e límpidas com mestres locais.',
     location: 'Canal do Furo Velho & Camboinha',
     tag: 'Passeios Náuticos',
     category: 'passeios',
-    whatsapp: '5591984567890'
+    whatsapp: '5591984567890',
+    active: true,
+    orderIndex: 5
   },
   {
     id: 'story-por-do-sol',
     title: 'Pôr do Sol',
     subtitle: 'Charrete ao Entardecer Dourado',
-    emoji: '🌅',
+    icon: '🌅',
     coverImage: '/imagens/carroca.jpg',
     fullImage: '/imagens/carroca.jpg',
     description: 'O pôr do sol inesquecível na beira da Praia da Princesa com charretes trotando nas águas rasas sob a luz dourada do fim de tarde.',
     location: 'Praia da Princesa',
     tag: 'Cenário Mágico',
     category: 'passeios',
-    whatsapp: '5591983456789'
+    whatsapp: '5591983456789',
+    active: true,
+    orderIndex: 6
   },
   {
     id: 'story-festa',
     title: 'Luau & Reggae',
     subtitle: 'Noites de Carimbó & Reggae Raiz',
-    emoji: '🔥',
+    icon: '🔥',
     coverImage: '/imagens/festa.jpg',
     fullImage: '/imagens/festa.jpg',
     description: 'A energia contagiante do Carimbó raiz de Marapanim, luaus pé na areia e noites de reggae paraense com fogueira à beira-mar.',
     location: 'Praia da Princesa (Decks Culturais)',
     tag: 'Cultura & Música',
     category: 'eventos',
-    whatsapp: '5591986789012'
+    whatsapp: '5591986789012',
+    active: true,
+    orderIndex: 7
   },
   {
     id: 'story-maruda',
     title: 'Travessia',
     subtitle: 'Marudá ⇄ Algodoal',
-    emoji: '⚓',
+    icon: '⚓',
     coverImage: '/imagens/porto2.jpg',
     fullImage: '/imagens/porto2.jpg',
     description: 'A travessia tradicional de barco a partir do porto de Marudá com vista para as praias e a vida caiçara da Amazônia Atlântica.',
     location: 'Porto de Marudá / Algodoal',
     tag: 'Barcos de Linha',
     category: 'compras',
-    whatsapp: '5591984567890'
+    whatsapp: '5591984567890',
+    active: true,
+    orderIndex: 8
   }
 ];
 
@@ -137,8 +141,34 @@ export const StoriesRow: React.FC<StoriesRowProps> = ({
   showHeaderTitle = true,
   className = ''
 }) => {
+  const [stories, setStories] = useState<IslandStory[]>(DEFAULT_ISLAND_STORIES);
   const [selectedStory, setSelectedStory] = useState<IslandStory | null>(null);
   const isDark = theme === 'dark';
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchStories = async () => {
+      try {
+        const data = await api.getStories();
+        if (isMounted && data && Array.isArray(data) && data.length > 0) {
+          const activeSorted = data
+            .filter((s: IslandStory) => s.active !== false)
+            .sort((a: IslandStory, b: IslandStory) => (a.orderIndex || 0) - (b.orderIndex || 0));
+          setStories(activeSorted.length > 0 ? activeSorted : DEFAULT_ISLAND_STORIES);
+        }
+      } catch (err) {
+        console.warn('Usando destaques padrão offline:', err);
+      }
+    };
+
+    fetchStories();
+    // Listen for custom event or periodic poll
+    window.addEventListener('algodoal_stories_updated', fetchStories);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('algodoal_stories_updated', fetchStories);
+    };
+  }, []);
 
   const handleStoryClick = (story: IslandStory) => {
     setSelectedStory(story);
@@ -146,6 +176,8 @@ export const StoriesRow: React.FC<StoriesRowProps> = ({
       onSelectCategory(story.category);
     }
   };
+
+  if (!stories || stories.length === 0) return null;
 
   return (
     <section className={`py-3 px-4 transition-colors ${
@@ -167,8 +199,9 @@ export const StoriesRow: React.FC<StoriesRowProps> = ({
 
       {/* Horizontal Stories Carousel */}
       <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1">
-        {ISLAND_STORIES.map((story) => {
+        {stories.map((story) => {
           const isSelectedCategory = selectedCategory && story.category === selectedCategory && story.category !== 'todos';
+          const emojiIcon = story.icon || story.emoji || '🏝️';
 
           return (
             <button
@@ -185,7 +218,7 @@ export const StoriesRow: React.FC<StoriesRowProps> = ({
                   isDark ? 'border-slate-900 bg-slate-800' : 'border-white bg-slate-100'
                 }`}>
                   <img
-                    src={story.coverImage}
+                    src={story.coverImage || '/imagens/vila2.jpg'}
                     alt={story.title}
                     className="w-full h-full object-cover group-hover:opacity-90 transition"
                     onError={(e) => {
@@ -193,7 +226,7 @@ export const StoriesRow: React.FC<StoriesRowProps> = ({
                     }}
                   />
                   <span className="absolute bottom-0 right-0 text-xs bg-slate-950/80 text-white rounded-full px-1">
-                    {story.emoji}
+                    {emojiIcon}
                   </span>
                 </div>
               </div>
@@ -215,7 +248,7 @@ export const StoriesRow: React.FC<StoriesRowProps> = ({
           <div className="relative w-full max-w-sm h-[82vh] max-h-[700px] rounded-3xl overflow-hidden bg-slate-950 text-white shadow-2xl flex flex-col justify-between border border-teal-500/40">
             {/* Background Story Image */}
             <img
-              src={selectedStory.fullImage}
+              src={selectedStory.fullImage || selectedStory.coverImage || '/imagens/vila2.jpg'}
               alt={selectedStory.title}
               className="absolute inset-0 w-full h-full object-cover"
               onError={(e) => {
@@ -229,7 +262,7 @@ export const StoriesRow: React.FC<StoriesRowProps> = ({
             {/* Top Bar inside Story */}
             <div className="relative z-10 p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xl">{selectedStory.emoji}</span>
+                <span className="text-xl">{selectedStory.icon || selectedStory.emoji || '🏝️'}</span>
                 <div>
                   <h4 className="text-sm font-black leading-none">{selectedStory.title}</h4>
                   <span className="text-[10px] text-teal-300 font-semibold">{selectedStory.tag}</span>
@@ -238,7 +271,7 @@ export const StoriesRow: React.FC<StoriesRowProps> = ({
 
               <button
                 onClick={() => setSelectedStory(null)}
-                className="w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center backdrop-blur-md hover:bg-black/80 transition"
+                className="w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center backdrop-blur-md hover:bg-black/80 transition cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -246,23 +279,27 @@ export const StoriesRow: React.FC<StoriesRowProps> = ({
 
             {/* Bottom Content inside Story */}
             <div className="relative z-10 p-5 space-y-3">
-              <div className="flex items-center gap-1 text-xs text-amber-300 font-bold">
-                <MapPin className="w-3.5 h-3.5" />
-                <span>{selectedStory.location}</span>
-              </div>
+              {selectedStory.location && (
+                <div className="flex items-center gap-1 text-xs text-amber-300 font-bold">
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>{selectedStory.location}</span>
+                </div>
+              )}
 
               <h3 className="text-lg font-black font-heading leading-snug">
                 {selectedStory.subtitle}
               </h3>
 
-              <p className="text-xs text-slate-200 leading-relaxed bg-black/40 p-3 rounded-2xl backdrop-blur-xs border border-white/10">
-                {selectedStory.description}
-              </p>
+              {selectedStory.description && (
+                <p className="text-xs text-slate-200 leading-relaxed bg-black/40 p-3 rounded-2xl backdrop-blur-xs border border-white/10">
+                  {selectedStory.description}
+                </p>
+              )}
 
               <div className="pt-2 flex items-center gap-2">
                 {selectedStory.whatsapp && (
                   <a
-                    href={`https://wa.me/${selectedStory.whatsapp}?text=Olá! Vi o destaque sobre ${encodeURIComponent(selectedStory.title)} no Algodoal Connect.`}
+                    href={`https://wa.me/${selectedStory.whatsapp.replace(/\D/g, '')}?text=Olá! Vi o destaque sobre ${encodeURIComponent(selectedStory.title)} no Algodoal Connect.`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1 py-3 px-4 rounded-2xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg transition"
@@ -273,7 +310,7 @@ export const StoriesRow: React.FC<StoriesRowProps> = ({
                 )}
                 <button
                   onClick={() => setSelectedStory(null)}
-                  className="py-3 px-4 rounded-2xl bg-white/20 text-white font-bold text-xs backdrop-blur-md hover:bg-white/30 transition"
+                  className="py-3 px-4 rounded-2xl bg-white/20 text-white font-bold text-xs backdrop-blur-md hover:bg-white/30 transition cursor-pointer"
                 >
                   Fechar
                 </button>
