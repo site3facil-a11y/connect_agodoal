@@ -2171,13 +2171,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
                     <div>
                       <label className="block text-xs font-black uppercase text-slate-800 mb-1">
-                        Subcategoria / Especialidade
+                        Preço Inicial (R$)
                       </label>
                       <input
-                        type="text"
-                        placeholder="Ex: Chalés Beira-Mar, Peixada Regional"
-                        value={currentPartner.subcategory || ''}
-                        onChange={(e) => setCurrentPartner(prev => ({ ...prev, subcategory: e.target.value }))}
+                        type="number"
+                        step="0.01"
+                        placeholder="150.00"
+                        value={currentPartner.price_starting || 0}
+                        onChange={(e) => setCurrentPartner(prev => ({ ...prev, price_starting: Number(e.target.value) }))}
                         className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
                       />
                     </div>
@@ -2206,35 +2207,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         placeholder="(91) 98123-4567"
                         value={currentPartner.phone || ''}
                         onChange={(e) => setCurrentPartner(prev => ({ ...prev, phone: e.target.value }))}
-                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-black uppercase text-slate-800 mb-1">
-                        Preço Inicial (R$)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        placeholder="150.00"
-                        value={currentPartner.price_starting || 0}
-                        onChange={(e) => setCurrentPartner(prev => ({ ...prev, price_starting: Number(e.target.value) }))}
-                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-black uppercase text-slate-800 mb-1">
-                        Identificação / Veículo / Placa
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Ex: Charrete #14, Rabeta Estrela"
-                        value={currentPartner.vehicle_badge || ''}
-                        onChange={(e) => setCurrentPartner(prev => ({ ...prev, vehicle_badge: e.target.value }))}
                         className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
                       />
                     </div>
@@ -2431,45 +2403,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           </div>
                         )}
                       </div>
-
-                      {currentPartner.photo_url && (
-                        <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-xs">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <img
-                              src={currentPartner.photo_url}
-                              alt="Miniatura"
-                              className="w-10 h-10 rounded-lg object-cover border border-slate-300 shrink-0"
-                            />
-                            <span className="text-xs font-bold text-slate-700 truncate">
-                              Foto carregada: {currentPartner.photo_url.split('/').pop()}
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const input = document.getElementById('partner-image-file-input') as HTMLInputElement;
-                              if (input) input.click();
-                            }}
-                            className="text-xs font-black text-emerald-700 hover:text-emerald-800 underline ml-2 shrink-0 cursor-pointer"
-                          >
-                            Trocar foto
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Direct URL input fallback */}
-                      <div className="pt-1">
-                        <label className="block text-[10px] font-bold text-slate-500 mb-1">
-                          Ou digite o link direto da imagem:
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="https://exemplo.com/foto.jpg ou /imagens/vila2.jpg"
-                          value={currentPartner.photo_url || ''}
-                          onChange={(e) => setCurrentPartner(prev => ({ ...prev, photo_url: e.target.value }))}
-                          className="w-full p-2 rounded-xl border border-slate-200 text-xs text-slate-800 bg-white"
-                        />
-                      </div>
                     </div>
                   </div>
 
@@ -2530,17 +2463,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                             <span>Oficial APA</span>
                           </span>
                         )}
-
-                        {currentPartner.vehicle_badge && (
-                          <span className="absolute top-2.5 right-2.5 bg-amber-400 text-slate-950 text-[10px] font-black uppercase px-2 py-0.5 rounded-full shadow-md">
-                            {currentPartner.vehicle_badge}
-                          </span>
-                        )}
                       </div>
 
                       <div className="p-4 space-y-2.5">
                         <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 block">
-                          {currentPartner.subcategory || currentPartner.category || 'Categoria'}
+                          {currentPartner.category || 'Estabelecimento'}
                         </span>
                         <h5 className="text-sm font-black text-slate-900">
                           {currentPartner.name || 'Nome da Pousada / Parceiro'}
@@ -2677,52 +2604,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-black uppercase text-slate-800 mb-1">
-                        Slot do Banner no Hero
-                      </label>
-                      <select
-                        value={currentAd.banner_slot || 'nenhum'}
-                        onChange={(e) => setCurrentAd(prev => ({ ...prev, banner_slot: e.target.value }))}
-                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 bg-white"
-                      >
-                        <option value="nenhum">Nenhum (Apenas na Categoria)</option>
-                        <option value="banner_1">🏷️ Banner 1 (Amarelo - Transporte)</option>
-                        <option value="banner_2">🏷️ Banner 2 (Vinho - Alimentação)</option>
-                        <option value="banner_3">🏷️ Banner 3 (Verde - Compras/Depósito)</option>
-                        <option value="banner_4">🏷️ Banner 4 (Azul - Passeios)</option>
-                        <option value="destaque_topo">⭐ Destaque Topo</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-black uppercase text-slate-800 mb-1">
-                        Selo / Badge Promocional
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Ex: Mais Recomendado, Top 1"
-                        value={currentAd.badge || ''}
-                        onChange={(e) => setCurrentAd(prev => ({ ...prev, badge: e.target.value }))}
-                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-black uppercase text-slate-800 mb-1">
-                      Slogan / Subtítulo Curto
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ex: O melhor peixe frito com açaí grosso na beira da praia"
-                      value={currentAd.tagline || ''}
-                      onChange={(e) => setCurrentAd(prev => ({ ...prev, tagline: e.target.value }))}
-                      className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
-                    />
-                  </div>
-
                   <div>
                     <label className="block text-xs font-black uppercase text-slate-800 mb-1">
                       Descrição Completa
@@ -2836,31 +2717,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           </div>
                         )}
                       </div>
-
-                      {currentAd.image_url && (
-                        <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-xs">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <img
-                              src={currentAd.image_url}
-                              alt="Miniatura"
-                              className="w-10 h-10 rounded-lg object-cover border border-slate-300 shrink-0"
-                            />
-                            <span className="text-xs font-bold text-slate-700 truncate">
-                              Imagem carregada: {currentAd.image_url.split('/').pop()}
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const input = document.getElementById('ad-image-file-input') as HTMLInputElement;
-                              if (input) input.click();
-                            }}
-                            className="text-xs font-black text-amber-700 hover:text-amber-800 underline ml-2 shrink-0 cursor-pointer"
-                          >
-                            Trocar imagem
-                          </button>
-                        </div>
-                      )}
                     </div>
                   </div>
 
@@ -2897,16 +2753,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           alt="Prévia"
                           className="w-full h-full object-cover"
                         />
-                        {currentAd.badge && (
-                          <span className="absolute top-2 left-2 bg-amber-400 text-slate-950 text-[10px] font-black uppercase px-2 py-0.5 rounded-full shadow-md">
-                            {currentAd.badge}
-                          </span>
-                        )}
-                        {currentAd.banner_slot && currentAd.banner_slot !== 'nenhum' && (
-                          <span className="absolute top-2 right-2 bg-slate-950/80 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-white/20">
-                            {currentAd.banner_slot}
-                          </span>
-                        )}
                       </div>
 
                       <div className="p-4 space-y-2">
@@ -2917,7 +2763,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           {currentAd.title || 'Título do Anúncio'}
                         </h5>
                         <p className="text-xs text-slate-500 line-clamp-2">
-                          {currentAd.description || currentAd.tagline || 'Descrição prévia do anúncio...'}
+                          {currentAd.description || 'Descrição prévia do anúncio...'}
                         </p>
 
                         <div className="pt-2 flex items-center justify-between border-t border-slate-100 text-xs">
