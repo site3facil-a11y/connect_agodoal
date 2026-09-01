@@ -86,8 +86,8 @@ export const AdDetailsModal: React.FC<AdDetailsModalProps> = ({
         className="bg-white dark:bg-slate-900 rounded-3xl max-w-xl w-full shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col my-auto transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header Media */}
-        <div className="relative h-56 sm:h-64 w-full bg-slate-950 overflow-hidden">
+        {/* Modal Header Media - Natural Color */}
+        <div className="relative h-60 sm:h-72 w-full bg-slate-900 overflow-hidden">
           <img
             src={ad.image_url || '/imagens/vila2.jpg'}
             alt={ad.title}
@@ -96,7 +96,8 @@ export const AdDetailsModal: React.FC<AdDetailsModalProps> = ({
               (e.target as HTMLImageElement).src = '/imagens/vila2.jpg';
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-black/30" />
+          {/* Localized bottom shadow solely behind text */}
+          <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent pointer-events-none" />
 
           {/* Close & Share Top Buttons */}
           <div className="absolute top-3 right-3 flex items-center gap-2 z-10">

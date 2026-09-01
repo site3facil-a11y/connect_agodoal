@@ -124,8 +124,8 @@ export const MobileCategoryFeed: React.FC<MobileCategoryFeedProps> = ({
                   isDark ? 'bg-slate-900 border-slate-800/90' : 'bg-white border-slate-200'
                 }`}
               >
-                {/* Media Container */}
-                <div className="relative h-48 w-full overflow-hidden bg-slate-800">
+                {/* Media Container - 100% Natural Color & Crisp Light */}
+                <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
                   <img
                     src={item.photo_url || '/assets/images/vila_algodoal_rua_1787985524739.jpg'}
                     alt={item.name}
@@ -134,16 +134,15 @@ export const MobileCategoryFeed: React.FC<MobileCategoryFeedProps> = ({
                       (e.target as HTMLImageElement).src = '/assets/images/vila_algodoal_rua_1787985524739.jpg';
                     }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
 
-                  {/* Top Badges */}
-                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-                    <span className="px-2.5 py-1 rounded-xl bg-slate-950/80 backdrop-blur-md text-teal-300 font-bold text-[10px] uppercase tracking-wider border border-teal-500/30">
+                  {/* Top Badges with crisp backdrop blur */}
+                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+                    <span className="px-2.5 py-1 rounded-xl bg-slate-950/80 backdrop-blur-md text-teal-300 font-bold text-[10px] uppercase tracking-wider border border-teal-500/30 shadow-md">
                       {item.subcategory || item.category}
                     </span>
 
                     {item.verified && (
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-black text-[10px] uppercase flex items-center gap-1 shadow-md">
+                      <span className="px-2.5 py-1 rounded-full bg-emerald-500 text-slate-950 font-black text-[10px] uppercase flex items-center gap-1 shadow-md">
                         <CheckCircle2 className="w-3 h-3" />
                         Verificado APA
                       </span>
@@ -151,8 +150,8 @@ export const MobileCategoryFeed: React.FC<MobileCategoryFeedProps> = ({
                   </div>
 
                   {/* Price Tag over Media */}
-                  <div className="absolute bottom-3 right-3">
-                    <span className="px-3 py-1 rounded-2xl bg-amber-400 text-slate-950 font-black text-xs shadow-md">
+                  <div className="absolute bottom-3 right-3 pointer-events-none">
+                    <span className="px-3 py-1 rounded-2xl bg-amber-400 text-slate-950 font-black text-xs shadow-lg border border-amber-300">
                       A partir de R$ {item.price_starting.toFixed(2)}
                     </span>
                   </div>

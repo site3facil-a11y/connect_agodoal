@@ -146,8 +146,8 @@ export const HeroBannersCarousel: React.FC<HeroBannersCarouselProps> = ({
       <div className={`relative rounded-3xl overflow-hidden shadow-xl border group transition-colors ${
         isDark ? 'bg-slate-900 border-teal-500/30 shadow-black/40' : 'bg-slate-900 border-slate-700/60 shadow-slate-200/80'
       }`}>
-        {/* Banner Image with subtle zoom */}
-        <div className="relative h-48 sm:h-56 w-full overflow-hidden">
+        {/* Banner Image in full natural color */}
+        <div className="relative h-52 sm:h-60 w-full overflow-hidden bg-slate-800">
           <img
             src={current.image_url || '/assets/images/rabeta_barco_mar_1787985502030.jpg'}
             alt={current.title}
@@ -156,8 +156,8 @@ export const HeroBannersCarousel: React.FC<HeroBannersCarouselProps> = ({
               (e.target as HTMLImageElement).src = '/assets/images/rabeta_barco_mar_1787985502030.jpg';
             }}
           />
-          {/* Multi-tone Gradient overlay for maximum readability */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
+          {/* Subtle localized bottom shadow solely behind text - leaving the top and middle 100% bright & natural */}
+          <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent pointer-events-none" />
         </div>
 
         {/* Floating Badges */}
