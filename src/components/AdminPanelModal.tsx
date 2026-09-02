@@ -201,6 +201,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     subtitle?: string;
     created_at?: string;
   }>>([]);
+  const [deletedHeroPresets, setDeletedHeroPresets] = useState<string[]>([]);
   const [isSavingHeroBg, setIsSavingHeroBg] = useState<boolean>(false);
   const [isHeroBgDragOver, setIsHeroBgDragOver] = useState<boolean>(false);
   const [isUploadingHeroBgFile, setIsUploadingHeroBgFile] = useState<boolean>(false);
@@ -329,6 +330,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           if (Array.isArray(dataSettings.hero_custom_images)) {
             setCustomHeroImages(dataSettings.hero_custom_images);
           }
+          if (Array.isArray(dataSettings.hero_deleted_presets)) {
+            setDeletedHeroPresets(dataSettings.hero_deleted_presets);
+          }
         }
       } catch (err) {
         console.warn('Configurações do admin não puderam ser lidas:', err);
@@ -378,7 +382,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     url: string = selectedHeroBg,
     rotation: boolean = isHeroRotationEnabled,
     activeList: string[] = activeHeroImages,
-    customList = customHeroImages
+    customList = customHeroImages,
+    deletedPresets: string[] = deletedHeroPresets
   ) => {
     setIsSavingHeroBg(true);
     setActionError('');
@@ -387,13 +392,15 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
         hero_background_url: url,
         hero_rotation_enabled: rotation,
         hero_active_images: activeList,
-        hero_custom_images: customList
+        hero_custom_images: customList,
+        hero_deleted_presets: deletedPresets
       });
       if (res.success) {
         setSelectedHeroBg(url);
         setIsHeroRotationEnabled(rotation);
         setActiveHeroImages(activeList);
         setCustomHeroImages(customList);
+        setDeletedHeroPresets(deletedPresets);
         localStorage.setItem('algodoal_hero_background', url);
         if (onUpdateHeroBackground) {
           onUpdateHeroBackground(url);
@@ -411,6 +418,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       setIsHeroRotationEnabled(rotation);
       setActiveHeroImages(activeList);
       setCustomHeroImages(customList);
+      setDeletedHeroPresets(deletedPresets);
       localStorage.setItem('algodoal_hero_background', url);
       if (onUpdateHeroBackground) {
         onUpdateHeroBackground(url);
@@ -434,18 +442,19 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     }
     setActiveHeroImages(nextList);
     // Persist immediately
-    await handleSaveHeroFullSettings(selectedHeroBg, isHeroRotationEnabled, nextList, customHeroImages);
+    await handleSaveHeroFullSettings(selectedHeroBg, isHeroRotationEnabled, nextList, customHeroImages, deletedHeroPresets);
   };
 
   const handleSelectAllImagesForRotation = async () => {
+    const availablePresets = PRESET_HERO_BACKGROUNDS.filter(p => !deletedHeroPresets.includes(p.id));
     const allUrls = [
-      ...PRESET_HERO_BACKGROUNDS.map(p => p.url),
+      ...availablePresets.map(p => p.url),
       ...customHeroImages.map(c => c.url)
     ];
     const unique = Array.from(new Set(allUrls));
     setActiveHeroImages(unique);
-    await handleSaveHeroFullSettings(selectedHeroBg, true, unique, customHeroImages);
-    showSuccess('Todas as fotos foram ativadas para a rotação da capa!');
+    await handleSaveHeroFullSettings(selectedHeroBg, true, unique, customHeroImages, deletedHeroPresets);
+    showSuccess('Todas as fotos ativas foram incluídas na rotação da capa!');
   };
 
   const handleResetToDefaultRotation = async () => {
@@ -453,8 +462,30 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     setSelectedHeroBg('/imagens/algodoal.jpg');
     setIsHeroRotationEnabled(true);
     setActiveHeroImages(defaultUrls);
-    await handleSaveHeroFullSettings('/imagens/algodoal.jpg', true, defaultUrls, customHeroImages);
-    showSuccess('Galeria restaurada para o padrão com rotação ativada!');
+    setDeletedHeroPresets([]);
+    await handleSaveHeroFullSettings('/imagens/algodoal.jpg', true, defaultUrls, customHeroImages, []);
+    showSuccess('Galeria restaurada para o padrão com todas as fotos nativas e rotação ativada!');
+  };
+
+  const handleDeletePresetHeroImage = async (presetId: string, name: string, url: string) => {
+    if (!window.confirm(`Deseja excluir a foto "${name}" da galeria da capa? Ela não aparecerá mais na galeria nem na rotação.`)) return;
+    const nextDeleted = Array.from(new Set([...deletedHeroPresets, presetId]));
+    const nextActive = activeHeroImages.filter(u => u !== url);
+    setDeletedHeroPresets(nextDeleted);
+    const safeActive = nextActive.length > 0 
+      ? nextActive 
+      : (customHeroImages.length > 0 ? [customHeroImages[0].url] : ['/imagens/algodoal.jpg']);
+    setActiveHeroImages(safeActive);
+    const nextSelectedBg = selectedHeroBg === url ? safeActive[0] : selectedHeroBg;
+    setSelectedHeroBg(nextSelectedBg);
+    await handleSaveHeroFullSettings(
+      nextSelectedBg,
+      isHeroRotationEnabled,
+      safeActive,
+      customHeroImages,
+      nextDeleted
+    );
+    showSuccess(`Foto "${name}" excluída da galeria!`);
   };
 
   const handleDeleteCustomHeroImage = async (id: string, name: string) => {
@@ -468,7 +499,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       selectedHeroBg === itemToDelete?.url ? '/imagens/algodoal.jpg' : selectedHeroBg,
       isHeroRotationEnabled,
       nextActive.length > 0 ? nextActive : ['/imagens/algodoal.jpg'],
-      nextCustom
+      nextCustom,
+      deletedHeroPresets
     );
     showSuccess(`Foto "${name}" excluída da galeria!`);
   };
@@ -2682,14 +2714,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                             onClick={handleSelectAllImagesForRotation}
                             className="px-3 py-1 rounded-lg bg-white hover:bg-slate-50 text-slate-800 text-[11px] font-black border border-slate-300 transition cursor-pointer shadow-2xs"
                           >
-                            ✓ Marcar Todas ({PRESET_HERO_BACKGROUNDS.length + customHeroImages.length})
+                            ✓ Marcar Todas ({PRESET_HERO_BACKGROUNDS.filter(p => !deletedHeroPresets.includes(p.id)).length + customHeroImages.length})
                           </button>
                           <button
                             type="button"
                             onClick={handleResetToDefaultRotation}
                             className="px-3 py-1 rounded-lg bg-white hover:bg-slate-50 text-slate-800 text-[11px] font-black border border-slate-300 transition cursor-pointer shadow-2xs"
                           >
-                            Restaurar Padrão
+                            {deletedHeroPresets.length > 0 ? `Restaurar Padrão (${deletedHeroPresets.length} excluídas)` : 'Restaurar Padrão'}
                           </button>
                         </div>
                       )}
@@ -2764,13 +2796,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         </p>
                       </div>
                       <span className="text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 shrink-0">
-                        {activeHeroImages.length} de {PRESET_HERO_BACKGROUNDS.length + customHeroImages.length} ativas na rotação
+                        {activeHeroImages.length} de {PRESET_HERO_BACKGROUNDS.filter(p => !deletedHeroPresets.includes(p.id)).length + customHeroImages.length} ativas na rotação
                       </span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                       {/* 1. Native Preset Images */}
-                      {PRESET_HERO_BACKGROUNDS.map((preset) => {
+                      {PRESET_HERO_BACKGROUNDS.filter((preset) => !deletedHeroPresets.includes(preset.id)).map((preset) => {
                         const isInRotation = activeHeroImages.includes(preset.url);
                         const isCurrentlyPreviewed = selectedHeroBg === preset.url;
 
@@ -2782,7 +2814,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                               if (isHeroRotationEnabled) {
                                 handleToggleImageInRotation(preset.url);
                               } else {
-                                handleSaveHeroFullSettings(preset.url, false, [preset.url], customHeroImages);
+                                handleSaveHeroFullSettings(preset.url, false, [preset.url], customHeroImages, deletedHeroPresets);
                               }
                             }}
                             className={`group rounded-2xl border-2 transition p-3 cursor-pointer flex flex-col justify-between overflow-hidden relative ${
@@ -2838,7 +2870,20 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                               <span className={`text-[11px] font-bold ${isInRotation ? 'text-amber-700' : 'text-slate-400'}`}>
                                 {isInRotation ? '✓ Incluída na Rotação' : '✕ Fora da Rotação'}
                               </span>
-                              <span className="text-[10px] text-slate-400 font-medium">Nativa da Ilha</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] text-slate-400 font-medium">Nativa da Ilha</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeletePresetHeroImage(preset.id, preset.name, preset.url);
+                                  }}
+                                  className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                                  title="Excluir esta foto da galeria"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         );
@@ -2865,7 +2910,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                 if (isHeroRotationEnabled) {
                                   handleToggleImageInRotation(custom.url);
                                 } else {
-                                  handleSaveHeroFullSettings(custom.url, false, [custom.url], customHeroImages);
+                                  handleSaveHeroFullSettings(custom.url, false, [custom.url], customHeroImages, deletedHeroPresets);
                                 }
                               }}
                             >
@@ -2907,7 +2952,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                 if (isHeroRotationEnabled) {
                                   handleToggleImageInRotation(custom.url);
                                 } else {
-                                  handleSaveHeroFullSettings(custom.url, false, [custom.url], customHeroImages);
+                                  handleSaveHeroFullSettings(custom.url, false, [custom.url], customHeroImages, deletedHeroPresets);
                                 }
                               }}
                             >

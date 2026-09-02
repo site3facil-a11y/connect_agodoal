@@ -1276,6 +1276,7 @@ export interface AdminSettings {
   hero_rotation_enabled?: boolean;
   hero_active_images?: string[];
   hero_custom_images?: CustomHeroImage[];
+  hero_deleted_presets?: string[];
   updated_at: string;
 }
 
@@ -1311,6 +1312,7 @@ const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
   hero_rotation_enabled: true,
   hero_active_images: DEFAULT_HERO_PRESET_URLS,
   hero_custom_images: [],
+  hero_deleted_presets: [],
   updated_at: '2026-01-01T00:00:00Z'
 };
 
@@ -1661,13 +1663,7 @@ export async function getAdvertisements(category?: string, onlyActive = true): P
   let list = db.advertisements || [];
   
   if (onlyActive) {
-    const today = new Date().toISOString().split('T')[0];
-    list = list.filter(ad => {
-      if (!ad.is_active) return false;
-      if (ad.start_date && ad.start_date > today) return false;
-      if (ad.end_date && ad.end_date < today) return false;
-      return true;
-    });
+    list = list.filter(ad => ad.is_active !== false);
   }
 
   if (category && category !== 'todos') {
@@ -1794,7 +1790,8 @@ export async function getAdminSettings(): Promise<AdminSettings> {
     hero_active_images: (settings.hero_active_images && settings.hero_active_images.length > 0)
       ? settings.hero_active_images
       : DEFAULT_HERO_PRESET_URLS,
-    hero_custom_images: settings.hero_custom_images || []
+    hero_custom_images: settings.hero_custom_images || [],
+    hero_deleted_presets: settings.hero_deleted_presets || []
   };
 }
 

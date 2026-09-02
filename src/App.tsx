@@ -162,6 +162,149 @@ const INITIAL_PROTOTYPE_PARTNERS: Partner[] = [
   }
 ];
 
+// Fallback Initial Advertisements Data for Instant Rendering
+const INITIAL_PROTOTYPE_ADVERTISEMENTS: Advertisement[] = [
+  {
+    id: 'ad_pousada_destaque',
+    title: 'Pousada Chalés da Princesa - Frente ao Mar',
+    business_name: 'Pousada Chalés da Princesa',
+    category: 'pousadas',
+    tagline: 'Conforto rústico com ar-condicionado e Wi-Fi Starlink',
+    description: 'Desperte com o barulho das ondas na Praia da Princesa. Café da manhã com frutas tropicais e tapiocas quentinhas feito na hora.',
+    image_url: '/imagens/vila2.jpg',
+    whatsapp: '5591981129988',
+    phone: '(91) 98112-9988',
+    location: 'Praia da Princesa',
+    price_starting: 180.00,
+    badge: 'Top Escolha',
+    banner_slot: 'destaque_topo',
+    is_active: true,
+    is_highlighted: true,
+    start_date: '2026-01-01',
+    end_date: '2026-12-31',
+    views_count: 342,
+    clicks_count: 89,
+    created_at: '2026-01-01',
+    updated_at: '2026-01-01'
+  },
+  {
+    id: 'ad_restaurante_banner2',
+    title: 'Peixada & Caldeirada com Jambu no Restaurante O Marujo',
+    business_name: 'Restaurante O Marujo',
+    category: 'alimentacao',
+    tagline: 'O melhor peixe frito com açaí e frutos do mar frescos',
+    description: 'Saboreie o legítimo filhote e pescada amarela fritos na hora com açaí grosso ou caldeirada com camarão regional e folhas de jambu que tremem.',
+    image_url: '/imagens/algodoal.jpg',
+    whatsapp: '5591983342211',
+    phone: '(91) 98334-2211',
+    location: 'Barraca 04 - Praia da Princesa',
+    price_starting: 45.00,
+    badge: 'Mais Recomendado',
+    banner_slot: 'banner_2',
+    is_active: true,
+    is_highlighted: true,
+    start_date: '2026-01-01',
+    end_date: '2026-12-31',
+    views_count: 284,
+    clicks_count: 72,
+    created_at: '2026-01-01',
+    updated_at: '2026-01-01'
+  },
+  {
+    id: 'ad_transporte_banner1',
+    title: 'Charretes Credenciadas no Porto de Algodoal',
+    business_name: 'Associação dos Condutores de Charrete',
+    category: 'transporte',
+    tagline: 'Desembarque com tranquilidade e transporte com preço tabelado',
+    description: 'Chegue na Ilha sem carregar peso nas dunas. Condutores certificados com tabela oficial para transporte até a Praia da Princesa, Camboinha e Fortalezinha.',
+    image_url: '/imagens/carroca.jpg',
+    whatsapp: '5591984521102',
+    phone: '(91) 98452-1102',
+    location: 'Trapiche do Porto de Algodoal',
+    price_starting: 30.00,
+    badge: 'Tabelado Oficial',
+    banner_slot: 'banner_1',
+    is_active: true,
+    is_highlighted: true,
+    start_date: '2026-01-01',
+    end_date: '2026-12-31',
+    views_count: 412,
+    clicks_count: 120,
+    created_at: '2026-01-01',
+    updated_at: '2026-01-01'
+  },
+  {
+    id: 'ad_passeio_banner4',
+    title: 'Passeio Ecológico de Rabeta: Lago da Princesa & Dunas',
+    business_name: 'Mestre Nonato Rabetas',
+    category: 'passeios',
+    tagline: 'Navegue pelos manguezais e descubra o lago de águas avermelhadas',
+    description: 'Passeio privativo ou compartilhado passando pelo canal da Camboinha, dunas de areia branca e banho refrescante no Lago da Princesa.',
+    image_url: '/imagens/canal.jpg',
+    whatsapp: '5591982239901',
+    phone: '(91) 98223-9901',
+    location: 'Trapiche do Canal',
+    price_starting: 25.00,
+    badge: 'Imperdível',
+    banner_slot: 'banner_4',
+    is_active: true,
+    is_highlighted: true,
+    start_date: '2026-01-01',
+    end_date: '2026-12-31',
+    views_count: 295,
+    clicks_count: 65,
+    created_at: '2026-01-01',
+    updated_at: '2026-01-01'
+  },
+  {
+    id: 'ad_deposito_banner3',
+    title: 'Depósito Ilha Bela - Galão de Água 20L & Gelo',
+    business_name: 'Depósito Ilha Bela',
+    category: 'compras',
+    tagline: 'Entrega rápida de água mineral, gelo e carvão na sua pousada',
+    description: 'Precisa de água potável ou gelo para o seu cooler? Peça pelo WhatsApp que entregamos de charrete rapidamente na sua hospedagem.',
+    image_url: '/imagens/porto2.jpg',
+    whatsapp: '5591981125566',
+    phone: '(91) 98112-5566',
+    location: 'Vila de Maiandeua',
+    price_starting: 14.00,
+    badge: 'Entrega Express',
+    banner_slot: 'banner_3',
+    is_active: true,
+    is_highlighted: true,
+    start_date: '2026-01-01',
+    end_date: '2026-12-31',
+    views_count: 180,
+    clicks_count: 45,
+    created_at: '2026-01-01',
+    updated_at: '2026-01-01'
+  },
+  {
+    id: 'ad_evento_luau',
+    title: 'Luau das Dunas & Reggae Roots de Algodoal',
+    business_name: 'Coletivo Cultural Maiandeua',
+    category: 'eventos',
+    tagline: 'Noite de lua cheia, fogueira na areia e o melhor do reggae paraense',
+    description: 'Festa cultural aberta com DJs de reggae roots, apresentação de Carimbó com grupo raiz de Marapanim e fogueira ecológica na praia.',
+    image_url: '/imagens/festa.jpg',
+    whatsapp: '5591983342211',
+    location: 'Barraca Sol & Lua - Praia da Princesa',
+    event_date: '2026-09-05T20:30:00Z',
+    event_venue: 'Praia da Princesa (ao lado do Barata)',
+    price_starting: 0,
+    badge: 'Evento Cultural',
+    banner_slot: 'nenhum',
+    is_active: true,
+    is_highlighted: true,
+    start_date: '2026-08-01',
+    end_date: '2026-09-06',
+    views_count: 512,
+    clicks_count: 180,
+    created_at: '2026-01-01',
+    updated_at: '2026-01-01'
+  }
+];
+
 export function App() {
   // Theme Mode ('dark' | 'light') - Light Theme Default
   const [theme, setTheme] = useState<'dark' | 'light'>('light');
@@ -190,7 +333,7 @@ export function App() {
   });
 
   // Data States
-  const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
+  const [advertisements, setAdvertisements] = useState<Advertisement[]>(INITIAL_PROTOTYPE_ADVERTISEMENTS);
   const [partners, setPartners] = useState<Partner[]>(INITIAL_PROTOTYPE_PARTNERS);
   const [tideDays, setTideDays] = useState<TideDayEntry[]>([]);
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -253,10 +396,10 @@ export function App() {
       }
 
       // 1. Fetch Real Ads from Backend
-      const resAds = await fetch('/api/advertisements?only_active=true');
+      const resAds = await fetch('/api/advertisements');
       if (resAds.ok) {
         const dataAds = await resAds.json();
-        if (dataAds && dataAds.length > 0) {
+        if (Array.isArray(dataAds)) {
           setAdvertisements(dataAds);
         }
       }
@@ -265,7 +408,7 @@ export function App() {
       const resPartners = await fetch('/api/partners');
       if (resPartners.ok) {
         const dataPartners = await resPartners.json();
-        if (dataPartners && dataPartners.length > 0) {
+        if (Array.isArray(dataPartners)) {
           setPartners(dataPartners);
         }
       }
@@ -274,7 +417,7 @@ export function App() {
       const resTides = await fetch('/api/tides/days');
       if (resTides.ok) {
         const dataTides = await resTides.json();
-        if (dataTides && dataTides.length > 0) {
+        if (Array.isArray(dataTides) && dataTides.length > 0) {
           setTideDays(dataTides);
         }
       }

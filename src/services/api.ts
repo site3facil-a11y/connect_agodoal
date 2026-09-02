@@ -388,6 +388,7 @@ export const api = {
     hero_rotation_enabled?: boolean;
     hero_active_images?: string[];
     hero_custom_images?: any[];
+    hero_deleted_presets?: string[];
   }): Promise<any> {
     const res = await fetch(`${API_BASE}/admin/settings/background`, {
       method: 'POST',

@@ -227,3 +227,24 @@ export interface WeatherData {
   source: string;
   updated_at: string;
 }
+
+export interface CustomHeroImage {
+  id: string;
+  name: string;
+  url: string;
+  tag: string;
+  subtitle?: string;
+  created_at: string;
+}
+
+export interface AdminSettings {
+  admin_username: string;
+  admin_email: string;
+  admin_pin: string;
+  hero_background_url?: string;
+  hero_rotation_enabled?: boolean;
+  hero_active_images?: string[];
+  hero_custom_images?: CustomHeroImage[];
+  hero_deleted_presets?: string[];
+  updated_at: string;
+}

@@ -210,6 +210,7 @@ async function startServer() {
         hero_rotation_enabled: settings.hero_rotation_enabled !== false,
         hero_active_images: settings.hero_active_images || [],
         hero_custom_images: settings.hero_custom_images || [],
+        hero_deleted_presets: settings.hero_deleted_presets || [],
         updated_at: settings.updated_at
       });
     } catch (err: any) {
@@ -219,13 +220,14 @@ async function startServer() {
 
   app.post('/api/admin/settings/background', async (req, res) => {
     try {
-      const { hero_background_url, hero_rotation_enabled, hero_active_images, hero_custom_images } = req.body;
+      const { hero_background_url, hero_rotation_enabled, hero_active_images, hero_custom_images, hero_deleted_presets } = req.body;
       
       const payload: any = {};
       if (hero_background_url !== undefined) payload.hero_background_url = hero_background_url;
       if (hero_rotation_enabled !== undefined) payload.hero_rotation_enabled = Boolean(hero_rotation_enabled);
       if (hero_active_images !== undefined) payload.hero_active_images = hero_active_images;
       if (hero_custom_images !== undefined) payload.hero_custom_images = hero_custom_images;
+      if (hero_deleted_presets !== undefined) payload.hero_deleted_presets = hero_deleted_presets;
 
       const updated = await updateAdminSettings(payload);
       res.json({ 
@@ -234,6 +236,7 @@ async function startServer() {
         hero_rotation_enabled: updated.hero_rotation_enabled,
         hero_active_images: updated.hero_active_images,
         hero_custom_images: updated.hero_custom_images,
+        hero_deleted_presets: updated.hero_deleted_presets,
         message: 'Configurações de imagem e rotação da capa atualizadas com sucesso!' 
       });
     } catch (err: any) {
