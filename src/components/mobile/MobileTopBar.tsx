@@ -87,8 +87,8 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
               <h1 className={`text-base font-black font-heading tracking-tight leading-none ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 Algodoal<span className="text-amber-500">Connect</span>
               </h1>
-              <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-teal-500/20 text-teal-600 border border-teal-500/30">
-                APA
+              <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20">
+                GUIA & SERVIÇOS
               </span>
             </div>
             <p className={`text-[10px] flex items-center gap-1 mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>

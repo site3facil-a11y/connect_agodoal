@@ -111,7 +111,7 @@ export const DesktopNavbar: React.FC<DesktopNavbarProps> = ({
         <div className="flex items-center gap-3">
           <span className="text-[11px] font-bold text-emerald-500 flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-            APA Ilha de Maiandeua • Comunidade Ativa
+            Ilha de Maiandeua • Comunidade Ativa
           </span>
         </div>
       </div>
@@ -129,13 +129,13 @@ export const DesktopNavbar: React.FC<DesktopNavbarProps> = ({
               <span className={`text-xl font-black font-heading tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 Algodoal<span className="text-amber-500">Connect</span>
               </span>
-              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-teal-500/20 text-teal-500 border border-teal-500/30">
-                APA MAIANDEUA
+              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20">
+                GUIA DA ILHA
               </span>
             </div>
             <p className={`text-xs flex items-center gap-1 mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
               <MapPin className="w-3 h-3 text-amber-500" />
-              Guia & SuperApp Oficial da Ilha de Algodoal, Pará
+              Guia & SuperApp da Ilha de Algodoal, Pará
             </p>
           </div>
         </div>
