@@ -206,7 +206,7 @@ async function startServer() {
       res.json({
         admin_username: settings.admin_username,
         admin_email: settings.admin_email,
-        hero_background_url: settings.hero_background_url || '/imagens/algodoal.jpg',
+        hero_background_url: settings.hero_background_url || '',
         hero_rotation_enabled: settings.hero_rotation_enabled !== false,
         hero_active_images: settings.hero_active_images || [],
         hero_custom_images: settings.hero_custom_images || [],
