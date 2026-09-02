@@ -42,7 +42,7 @@ import {
   Image as ImageIcon,
   Info
 } from 'lucide-react';
-import { Advertisement, AdCategory, TideDayEntry, Partner, UserProfile, ServiceCategory, IslandStory } from '../types/index.ts';
+import { Advertisement, AdCategory, TideDayEntry, Partner, UserProfile, ServiceCategory, IslandStory, AdPlan, AdPlanType } from '../types/index.ts';
 import { api } from '../services/api.ts';
 
 interface AdminPanelModalProps {
@@ -66,6 +66,53 @@ const CATEGORY_TABS: Array<{ id: string; label: string; icon: any; color: string
   { id: 'informacoes', label: 'Guia da Ilha', icon: Info, color: 'text-teal-600', bg: 'bg-teal-50 border-teal-200 text-teal-900' },
 ];
 
+export const AD_PLANS: AdPlan[] = [
+  {
+    id: 'mensal',
+    name: 'Plano Mensal',
+    price: 30,
+    priceLabel: 'R$ 30 /mês',
+    target: 'Pousadas e Restaurantes Principais',
+    includes: [
+      'Banner rotativo no topo (Hero Carousel)',
+      'Destaque 1º lugar na categoria',
+      'Saiba Mais (página com detalhes e galeria de fotos)',
+      'Botão de WhatsApp direto para reservas e pedidos',
+      'Prioridade de recomendação para turistas'
+    ],
+    color: 'from-amber-500 to-amber-600',
+    badge: 'Mais Recomendado'
+  },
+  {
+    id: 'free',
+    name: 'Plano Free',
+    price: 0,
+    priceLabel: 'Grátis',
+    target: 'Barracas, Depósitos e Passeios de Barco',
+    includes: [
+      'Anúncio menor na listagem da categoria',
+      'Botão de WhatsApp direto',
+      'Localização e horários no guia da Ilha'
+    ],
+    color: 'from-slate-600 to-slate-700',
+    badge: 'Comunitário'
+  },
+  {
+    id: 'divulgacao',
+    name: 'Divulgação',
+    price: 0,
+    priceLabel: 'Grátis',
+    target: 'Luau, Shows de Reggae, Festas e Artesanato',
+    includes: [
+      'Banner rotativo na tela inicial e eventos',
+      'Divulgação cultural de Carimbó, Reggae e Artesanato',
+      'Data e local em destaque para visitantes'
+    ],
+    color: 'from-purple-600 to-indigo-600',
+    badge: 'Cultural / Eventos'
+  }
+];
+
 export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   isOpen,
   onClose,
@@ -74,7 +121,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   onLoginSuccess,
   onLogout
 }) => {
-  const [activeMainTab, setActiveMainTab] = useState<'anuncios' | 'stories' | 'mares' | 'parceiros' | 'seguranca'>('anuncios');
+  const [activeMainTab, setActiveMainTab] = useState<'anuncios' | 'planos' | 'stories' | 'mares' | 'parceiros' | 'seguranca'>('anuncios');
   
   // Auth Form State (when not authenticated as admin)
   const [loginUsername, setLoginUsername] = useState('admin');
@@ -150,6 +197,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [partnerCategoryFilter, setPartnerCategoryFilter] = useState('todos');
   const [partnerStatusFilter, setPartnerStatusFilter] = useState<'todos' | 'ativos' | 'inativos'>('todos');
   const [newAmenityInput, setNewAmenityInput] = useState('');
+
+  // Plans & Monetization Filter & Search
+  const [planSearchTerm, setPlanSearchTerm] = useState('');
+  const [planFilter, setPlanFilter] = useState<'todos' | 'mensal' | 'free' | 'divulgacao'>('todos');
 
   // Stories (Destaques da Ilha) Form & List states
   const [stories, setStories] = useState<IslandStory[]>([]);
@@ -572,6 +623,46 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const handleUpdatePartnerPlan = async (partner: Partner, newPlan: AdPlanType) => {
+    try {
+      const res = await fetch(`/api/partners/${partner.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          plan_type: newPlan,
+          verified: newPlan === 'mensal'
+        })
+      });
+      if (res.ok) {
+        setPartners(prev => prev.map(p => p.id === partner.id ? { ...p, plan_type: newPlan, verified: newPlan === 'mensal' } : p));
+        const planName = newPlan === 'mensal' ? 'Plano Mensal (R$ 30/mês)' : newPlan === 'free' ? 'Plano Free (Grátis)' : 'Divulgação (Grátis)';
+        showSuccess(`Plano de "${partner.name}" atualizado para ${planName}!`);
+        if (onRefreshData) onRefreshData();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSendPartnerPlanWhatsApp = (partner: Partner) => {
+    const plan = partner.plan_type || (partner.category === 'pousadas' || partner.category === 'alimentacao' ? 'mensal' : partner.category === 'eventos' ? 'divulgacao' : 'free');
+    let text = '';
+    if (plan === 'mensal') {
+      text = `Olá ${partner.name}! Tudo bem?\n\nSeu estabelecimento está ativo no *Plano Mensal (R$ 30/mês)* no *Algodoal Connect*.\n\n✨ *Seus Benefícios Exclusivos:*\n- 🏆 Banner Rotativo no Topo\n- 🥇 Destaque 1º Lugar na Categoria\n- 📸 Página "Saiba Mais" com fotos e detalhes\n- 💬 Botão de WhatsApp direto para reservas\n\nConte sempre conosco para divulgar seu negócio na Ilha de Algodoal!`;
+    } else if (plan === 'divulgacao') {
+      text = `Olá ${partner.name}! Tudo bem?\n\nSeu evento cultural / show está ativo na *Divulgação Gratuita* com Banner Rotativo no *Algodoal Connect*! 🎉`;
+    } else {
+      text = `Olá ${partner.name}! Tudo bem?\n\nSeu negócio está cadastrado no *Plano Free (Grátis)* no *Algodoal Connect*.\n\n💡 Gostaria de ter seu *Banner no topo do aplicativo*, *Destaque em 1º Lugar na sua Categoria* e *Página Saiba Mais*? Conheça nosso *Plano Mensal por apenas R$ 30/mês*!`;
+    }
+    const cleanPhone = (partner.whatsapp || partner.phone || '').replace(/\D/g, '');
+    const phone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+    if (!phone || phone === '55') {
+      alert('Este parceiro não possui número de WhatsApp ou telefone cadastrado.');
+      return;
+    }
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   const handlePartnerImageUpload = async (file: File) => {
@@ -1069,6 +1160,18 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               </button>
 
               <button
+                onClick={() => setActiveMainTab('planos')}
+                className={`py-3 px-4 rounded-t-xl border-b-2 flex items-center gap-2 transition cursor-pointer ${
+                  activeMainTab === 'planos'
+                    ? 'border-emerald-500 bg-white text-emerald-950 shadow-xs'
+                    : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                }`}
+              >
+                <DollarSign className="w-4 h-4 text-emerald-600" />
+                <span>💎 Planos & Preços (R$ 30/mês)</span>
+              </button>
+
+              <button
                 onClick={() => setActiveMainTab('stories')}
                 className={`py-3 px-4 rounded-t-xl border-b-2 flex items-center gap-2 transition cursor-pointer ${
                   activeMainTab === 'stories'
@@ -1514,6 +1617,394 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 </div>
               )}
 
+              {/* TAB: PLANOS & MONETIZAÇÃO */}
+              {activeMainTab === 'planos' && (
+                <div className="space-y-6 max-w-7xl mx-auto">
+                  
+                  {/* Header Banner */}
+                  <div className="bg-linear-to-r from-amber-600 via-amber-700 to-slate-900 text-white p-6 rounded-3xl shadow-md flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="space-y-1.5 max-w-2xl">
+                      <div className="inline-flex items-center gap-2 bg-amber-500/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-amber-200 border border-amber-400/30">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Tabela Oficial de Planos Comerciais</span>
+                      </div>
+                      <h3 className="text-xl sm:text-2xl font-black font-serif text-white tracking-tight">
+                        Planos de Anúncio & Divulgação de Algodoal
+                      </h3>
+                      <p className="text-xs sm:text-sm text-amber-100/90 leading-relaxed">
+                        Estrutura comercial justa e transparente: Pousadas e restaurantes principais no Plano Mensal (R$ 30/mês) com banner no topo e destaque 1º lugar, e planos gratuitos para serviços comunitários e atrações culturais.
+                      </p>
+                    </div>
+
+                    <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 flex flex-col items-center justify-center shrink-0 min-w-48 text-center">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-amber-200">
+                        Faturamento Estimado
+                      </span>
+                      <div className="text-2xl sm:text-3xl font-black text-amber-300 mt-0.5">
+                        R$ {(partners.filter(p => (p.plan_type === 'mensal' || (!p.plan_type && (p.category === 'pousadas' || p.category === 'alimentacao')))).length * 30).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </div>
+                      <span className="text-[10px] text-white/80 font-medium">
+                        /mês ({partners.filter(p => (p.plan_type === 'mensal' || (!p.plan_type && (p.category === 'pousadas' || p.category === 'alimentacao')))).length} assinantes ativos)
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 3 Main Pricing Plan Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    
+                    {/* PLANO MENSAL */}
+                    <div className="bg-white rounded-3xl border-2 border-amber-500 shadow-lg p-6 flex flex-col justify-between relative overflow-hidden">
+                      <div className="absolute top-0 right-0 bg-amber-500 text-slate-950 text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl tracking-wider">
+                        Mais Recomendado
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-2xl">🏆</span>
+                          <div>
+                            <h4 className="text-lg font-black text-slate-900 font-serif">Plano Mensal</h4>
+                            <p className="text-[11px] font-bold text-amber-700">Destaque Total & Hero Banner</p>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 pb-4 border-b border-slate-100 flex items-baseline gap-1.5">
+                          <span className="text-3xl font-black text-slate-950">R$ 30</span>
+                          <span className="text-xs font-bold text-slate-500">/mês</span>
+                        </div>
+
+                        <div className="mt-4 bg-amber-50 rounded-xl p-3 border border-amber-100 mb-4">
+                          <span className="text-[11px] font-black uppercase text-amber-900 block mb-1">Indicado Para:</span>
+                          <p className="text-xs font-bold text-amber-950">Pousadas e Restaurantes Principais</p>
+                        </div>
+
+                        <div className="space-y-2.5 text-xs text-slate-700">
+                          <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 block">O que inclui:</span>
+                          <div className="flex items-start gap-2 font-medium">
+                            <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                            <span><strong>Banner rotativo no topo</strong> (Hero Carousel da tela inicial)</span>
+                          </div>
+                          <div className="flex items-start gap-2 font-medium">
+                            <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                            <span><strong>Destaque 1º lugar</strong> na categoria</span>
+                          </div>
+                          <div className="flex items-start gap-2 font-medium">
+                            <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                            <span><strong>Saiba mais:</strong> página completa com fotos e detalhes</span>
+                          </div>
+                          <div className="flex items-start gap-2 font-medium">
+                            <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                            <span><strong>Botão de WhatsApp direto</strong> para reservas e pedidos</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+                        <span className="text-slate-500 font-medium">Empresas neste plano:</span>
+                        <span className="bg-amber-100 text-amber-900 font-black px-2.5 py-0.5 rounded-full">
+                          {partners.filter(p => (p.plan_type === 'mensal' || (!p.plan_type && (p.category === 'pousadas' || p.category === 'alimentacao')))).length} ativas
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* PLANO FREE */}
+                    <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6 flex flex-col justify-between relative overflow-hidden">
+                      <div className="absolute top-0 right-0 bg-slate-200 text-slate-700 text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl tracking-wider">
+                        Comunitário
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-2xl">🏪</span>
+                          <div>
+                            <h4 className="text-lg font-black text-slate-900 font-serif">Plano Free</h4>
+                            <p className="text-[11px] font-bold text-slate-600">Cadastro Gratuito no Guia</p>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 pb-4 border-b border-slate-100 flex items-baseline gap-1.5">
+                          <span className="text-3xl font-black text-emerald-600">Grátis</span>
+                        </div>
+
+                        <div className="mt-4 bg-slate-50 rounded-xl p-3 border border-slate-200 mb-4">
+                          <span className="text-[11px] font-black uppercase text-slate-700 block mb-1">Indicado Para:</span>
+                          <p className="text-xs font-bold text-slate-900">Barracas, Depósitos e Passeios de Barco</p>
+                        </div>
+
+                        <div className="space-y-2.5 text-xs text-slate-700">
+                          <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 block">O que inclui:</span>
+                          <div className="flex items-start gap-2 font-medium">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                            <span><strong>Anúncio menor</strong> na listagem da categoria</span>
+                          </div>
+                          <div className="flex items-start gap-2 font-medium">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                            <span><strong>Botão de WhatsApp</strong> direto com o cliente</span>
+                          </div>
+                          <div className="flex items-start gap-2 font-medium">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                            <span>Localização, horários e contato no guia da Ilha</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+                        <span className="text-slate-500 font-medium">Estabelecimentos:</span>
+                        <span className="bg-slate-100 text-slate-800 font-black px-2.5 py-0.5 rounded-full">
+                          {partners.filter(p => (p.plan_type === 'free' || (!p.plan_type && p.category !== 'pousadas' && p.category !== 'alimentacao' && p.category !== 'eventos'))).length} cadastrados
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* PLANO DIVULGAÇÃO */}
+                    <div className="bg-white rounded-3xl border border-purple-200 shadow-xs p-6 flex flex-col justify-between relative overflow-hidden">
+                      <div className="absolute top-0 right-0 bg-purple-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl tracking-wider">
+                        Cultural / Eventos
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-2xl">🎉</span>
+                          <div>
+                            <h4 className="text-lg font-black text-slate-900 font-serif">Divulgação</h4>
+                            <p className="text-[11px] font-bold text-purple-700">Apoio Cultural & Atrações</p>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 pb-4 border-b border-slate-100 flex items-baseline gap-1.5">
+                          <span className="text-3xl font-black text-purple-600">Grátis</span>
+                        </div>
+
+                        <div className="mt-4 bg-purple-50 rounded-xl p-3 border border-purple-100 mb-4">
+                          <span className="text-[11px] font-black uppercase text-purple-900 block mb-1">Indicado Para:</span>
+                          <p className="text-xs font-bold text-purple-950">Luau, Shows de Reggae, Festas e Artesanato</p>
+                        </div>
+
+                        <div className="space-y-2.5 text-xs text-slate-700">
+                          <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 block">O que inclui:</span>
+                          <div className="flex items-start gap-2 font-medium">
+                            <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+                            <span><strong>Banner rotativo</strong> na página inicial e eventos</span>
+                          </div>
+                          <div className="flex items-start gap-2 font-medium">
+                            <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+                            <span>Divulgação cultural e apoio a artistas locais</span>
+                          </div>
+                          <div className="flex items-start gap-2 font-medium">
+                            <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+                            <span>Data, local e WhatsApp dos organizadores</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+                        <span className="text-slate-500 font-medium">Eventos ativos:</span>
+                        <span className="bg-purple-100 text-purple-900 font-black px-2.5 py-0.5 rounded-full">
+                          {ads.filter(a => a.category === 'eventos' || a.plan_type === 'divulgacao').length + partners.filter(p => p.category === 'eventos' || p.plan_type === 'divulgacao').length} eventos
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quick Plan Manager Table */}
+                  <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <h4 className="text-base font-black text-slate-900 font-serif">
+                          Gerenciamento de Planos por Estabelecimento
+                        </h4>
+                        <p className="text-xs text-slate-500">
+                          Altere o plano comercial de qualquer parceiro com 1 clique ou envie mensagem no WhatsApp.
+                        </p>
+                      </div>
+
+                      {/* Search and filter controls */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="relative">
+                          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <input
+                            type="text"
+                            placeholder="Buscar parceiro..."
+                            value={planSearchTerm}
+                            onChange={(e) => setPlanSearchTerm(e.target.value)}
+                            className="text-xs pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-hidden focus:border-amber-500 w-44"
+                          />
+                        </div>
+
+                        <div className="flex bg-slate-100 p-1 rounded-xl gap-1 text-[11px] font-bold">
+                          <button
+                            onClick={() => setPlanFilter('todos')}
+                            className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                              planFilter === 'todos' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500 hover:text-slate-800'
+                            }`}
+                          >
+                            Todos
+                          </button>
+                          <button
+                            onClick={() => setPlanFilter('mensal')}
+                            className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                              planFilter === 'mensal' ? 'bg-amber-500 text-slate-950 font-black shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                            }`}
+                          >
+                            Mensal (R$ 30)
+                          </button>
+                          <button
+                            onClick={() => setPlanFilter('free')}
+                            className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                              planFilter === 'free' ? 'bg-emerald-600 text-white font-black shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                            }`}
+                          >
+                            Free
+                          </button>
+                          <button
+                            onClick={() => setPlanFilter('divulgacao')}
+                            className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                              planFilter === 'divulgacao' ? 'bg-purple-600 text-white font-black shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                            }`}
+                          >
+                            Divulgação
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Table */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-slate-100 text-slate-700 uppercase font-black text-[11px] border-b border-slate-200">
+                            <th className="py-3 px-4">Estabelecimento / Contato</th>
+                            <th className="py-3 px-4">Categoria</th>
+                            <th className="py-3 px-4">Plano Atual</th>
+                            <th className="py-3 px-4">Alterar Plano</th>
+                            <th className="py-3 px-4 text-right">Ações Rápidas</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {partners
+                            .filter(p => {
+                              const currentPlan = p.plan_type || (p.category === 'pousadas' || p.category === 'alimentacao' ? 'mensal' : p.category === 'eventos' ? 'divulgacao' : 'free');
+                              if (planFilter !== 'todos' && currentPlan !== planFilter) return false;
+                              if (planSearchTerm) {
+                                const term = planSearchTerm.toLowerCase();
+                                return p.name.toLowerCase().includes(term) || p.category.toLowerCase().includes(term) || (p.location || '').toLowerCase().includes(term);
+                              }
+                              return true;
+                            })
+                            .map(partner => {
+                              const currentPlan = partner.plan_type || (partner.category === 'pousadas' || partner.category === 'alimentacao' ? 'mensal' : partner.category === 'eventos' ? 'divulgacao' : 'free');
+                              return (
+                                <tr key={partner.id} className="hover:bg-slate-50 transition">
+                                  <td className="py-3 px-4">
+                                    <div className="flex items-center gap-3">
+                                      <img
+                                        src={partner.photo_url || '/imagens/algodoal.jpg'}
+                                        alt={partner.name}
+                                        className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0"
+                                      />
+                                      <div>
+                                        <div className="font-black text-slate-900 flex items-center gap-1.5">
+                                          <span>{partner.name}</span>
+                                          {partner.verified && (
+                                            <span className="bg-amber-100 text-amber-900 text-[10px] font-black px-1.5 py-0.2 rounded-md">
+                                              Destaque
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="text-[11px] text-slate-500 flex items-center gap-2">
+                                          <span>{partner.phone || partner.whatsapp || 'Sem contato'}</span>
+                                          <span>•</span>
+                                          <span className="truncate max-w-40">{partner.location || 'Ilha de Algodoal'}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </td>
+
+                                  <td className="py-3 px-4">
+                                    <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-bold text-[11px] uppercase">
+                                      {partner.category}
+                                    </span>
+                                  </td>
+
+                                  <td className="py-3 px-4">
+                                    {currentPlan === 'mensal' && (
+                                      <span className="bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1 rounded-lg font-black text-xs inline-flex items-center gap-1">
+                                        <span>🏆</span> Plano Mensal (R$ 30/mês)
+                                      </span>
+                                    )}
+                                    {currentPlan === 'free' && (
+                                      <span className="bg-slate-100 text-slate-800 border border-slate-300 px-2.5 py-1 rounded-lg font-bold text-xs inline-flex items-center gap-1">
+                                        <span>🏪</span> Plano Free (Grátis)
+                                      </span>
+                                    )}
+                                    {currentPlan === 'divulgacao' && (
+                                      <span className="bg-purple-100 text-purple-900 border border-purple-300 px-2.5 py-1 rounded-lg font-bold text-xs inline-flex items-center gap-1">
+                                        <span>🎉</span> Divulgação (Grátis)
+                                      </span>
+                                    )}
+                                  </td>
+
+                                  <td className="py-3 px-4">
+                                    <div className="flex items-center gap-1.5">
+                                      <button
+                                        onClick={() => handleUpdatePartnerPlan(partner, 'mensal')}
+                                        className={`px-2 py-1 rounded-lg text-[11px] font-black transition cursor-pointer ${
+                                          currentPlan === 'mensal'
+                                            ? 'bg-amber-500 text-slate-950 shadow-xs ring-2 ring-amber-300'
+                                            : 'bg-slate-100 text-slate-600 hover:bg-amber-100 hover:text-amber-900'
+                                        }`}
+                                      >
+                                        R$ 30/mês
+                                      </button>
+                                      <button
+                                        onClick={() => handleUpdatePartnerPlan(partner, 'free')}
+                                        className={`px-2 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                                          currentPlan === 'free'
+                                            ? 'bg-emerald-600 text-white font-black shadow-xs ring-2 ring-emerald-300'
+                                            : 'bg-slate-100 text-slate-600 hover:bg-emerald-100 hover:text-emerald-900'
+                                        }`}
+                                      >
+                                        Free
+                                      </button>
+                                      <button
+                                        onClick={() => handleUpdatePartnerPlan(partner, 'divulgacao')}
+                                        className={`px-2 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                                          currentPlan === 'divulgacao'
+                                            ? 'bg-purple-600 text-white font-black shadow-xs ring-2 ring-purple-300'
+                                            : 'bg-slate-100 text-slate-600 hover:bg-purple-100 hover:text-purple-900'
+                                        }`}
+                                      >
+                                        Divulgação
+                                      </button>
+                                    </div>
+                                  </td>
+
+                                  <td className="py-3 px-4 text-right">
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      <button
+                                        onClick={() => handleSendPartnerPlanWhatsApp(partner)}
+                                        title="Enviar mensagem comercial no WhatsApp"
+                                        className="py-1 px-2.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-black text-[11px] flex items-center gap-1 transition cursor-pointer"
+                                      >
+                                        <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                                        <span>WhatsApp</span>
+                                      </button>
+                                      <button
+                                        onClick={() => handleOpenEditPartner(partner)}
+                                        title="Editar detalhes do parceiro"
+                                        className="p-1.5 rounded-lg text-slate-500 hover:text-amber-700 hover:bg-amber-50 transition cursor-pointer"
+                                      >
+                                        <Edit className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
               {/* TAB 3: POUSADAS & PARCEIROS */}
               {activeMainTab === 'parceiros' && (
                 <div className="space-y-6 max-w-6xl mx-auto">
@@ -1614,7 +2105,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       {[
                         { id: 'todos', label: 'Todas as Categorias', icon: Sparkles },
                         { id: 'pousadas', label: 'Pousadas & Chalés', icon: Hotel },
-                        { id: 'transporte', label: 'Charretes APA', icon: Truck },
+                        { id: 'transporte', label: 'Charretes & Transporte', icon: Truck },
                         { id: 'alimentacao', label: 'Gastronomia', icon: Utensils },
                         { id: 'passeios', label: 'Rabetas & Lago', icon: Compass },
                         { id: 'compras', label: 'Disk Gelo & Compras', icon: ShoppingBag },
@@ -1676,11 +2167,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                               />
                               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
                               
-                              {/* Verified Badge */}
+                              {/* Highlight/Plan Badge */}
                               {p.verified && (
-                                <span className="absolute top-2.5 left-2.5 bg-emerald-500 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md">
-                                  <ShieldCheck className="w-3 h-3" />
-                                  <span>Oficial APA</span>
+                                <span className="absolute top-2.5 left-2.5 bg-emerald-600 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md">
+                                  <Sparkles className="w-3 h-3" />
+                                  <span>Destaque</span>
                                 </span>
                               )}
 
@@ -2405,6 +2896,76 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
                   {/* Status checkboxes */}
                   <div className="space-y-2 pt-2">
+                    <div className="pt-2">
+                      <label className="block text-xs font-black uppercase text-slate-800 mb-1.5">
+                        Plano Comercial do Estabelecimento *
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPartner(prev => ({ ...prev, plan_type: 'mensal', verified: true }))}
+                          className={`p-2.5 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                            (currentPartner.plan_type === 'mensal' || (!currentPartner.plan_type && (currentPartner.category === 'pousadas' || currentPartner.category === 'alimentacao')))
+                              ? 'border-amber-500 bg-amber-50/80 ring-2 ring-amber-400'
+                              : 'border-slate-200 bg-white hover:bg-slate-50'
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-black text-amber-950">Plano Mensal</span>
+                              <span className="text-sm">🏆</span>
+                            </div>
+                            <span className="text-[10px] font-black text-amber-700 block mt-0.5">R$ 30 /mês</span>
+                          </div>
+                          <span className="text-[9px] text-slate-500 mt-2 block leading-tight">
+                            Banner Topo + 1º Lugar + Saiba Mais + WhatsApp
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPartner(prev => ({ ...prev, plan_type: 'free', verified: false }))}
+                          className={`p-2.5 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                            currentPartner.plan_type === 'free' || (!currentPartner.plan_type && currentPartner.category !== 'pousadas' && currentPartner.category !== 'alimentacao' && currentPartner.category !== 'eventos')
+                              ? 'border-emerald-500 bg-emerald-50/80 ring-2 ring-emerald-400'
+                              : 'border-slate-200 bg-white hover:bg-slate-50'
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-black text-slate-900">Plano Free</span>
+                              <span className="text-sm">🏪</span>
+                            </div>
+                            <span className="text-[10px] font-black text-emerald-700 block mt-0.5">Grátis</span>
+                          </div>
+                          <span className="text-[9px] text-slate-500 mt-2 block leading-tight">
+                            Anúncio menor na categoria + WhatsApp
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPartner(prev => ({ ...prev, plan_type: 'divulgacao', verified: false }))}
+                          className={`p-2.5 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                            currentPartner.plan_type === 'divulgacao' || (!currentPartner.plan_type && currentPartner.category === 'eventos')
+                              ? 'border-purple-500 bg-purple-50/80 ring-2 ring-purple-400'
+                              : 'border-slate-200 bg-white hover:bg-slate-50'
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-black text-purple-950">Divulgação</span>
+                              <span className="text-sm">🎉</span>
+                            </div>
+                            <span className="text-[10px] font-black text-purple-700 block mt-0.5">Grátis</span>
+                          </div>
+                          <span className="text-[9px] text-slate-500 mt-2 block leading-tight">
+                            Banner rotativo para shows, luau e artesanato
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="flex items-center gap-2">
                       <input
                         type="checkbox"
@@ -2422,13 +2983,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       <input
                         type="checkbox"
                         id="partner_verified_toggle"
-                        checked={currentPartner.verified ?? true}
+                        checked={currentPartner.verified ?? (currentPartner.plan_type === 'mensal')}
                         onChange={(e) => setCurrentPartner(prev => ({ ...prev, verified: e.target.checked }))}
                         className="w-4 h-4 text-emerald-600 rounded cursor-pointer"
                       />
                       <label htmlFor="partner_verified_toggle" className="text-xs font-black text-slate-900 cursor-pointer flex items-center gap-1">
-                        <span>Selo de Credenciado / Verificado Oficial APA</span>
-                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 inline" />
+                        <span>Destaque Especial (1º Lugar da Categoria / Plano Mensal)</span>
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-600 inline" />
                       </label>
                     </div>
                   </div>
@@ -2455,9 +3016,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
                         
                         {currentPartner.verified && (
-                          <span className="absolute top-2.5 left-2.5 bg-emerald-500 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md">
-                            <ShieldCheck className="w-3 h-3" />
-                            <span>Oficial APA</span>
+                          <span className="absolute top-2.5 left-2.5 bg-emerald-600 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md">
+                            <Sparkles className="w-3 h-3" />
+                            <span>Destaque</span>
                           </span>
                         )}
                       </div>

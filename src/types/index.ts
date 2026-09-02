@@ -2,6 +2,19 @@ export type ServiceCategory = 'transporte' | 'passeios' | 'compras' | 'alimentac
 
 export type AdCategory = 'transporte' | 'pousadas' | 'passeios' | 'alimentacao' | 'compras' | 'eventos' | 'informacoes' | 'restaurante' | 'pousada' | 'passeio' | 'evento';
 
+export type AdPlanType = 'mensal' | 'free' | 'divulgacao';
+
+export interface AdPlan {
+  id: AdPlanType;
+  name: string;
+  price: number;
+  priceLabel: string;
+  target: string;
+  includes: string[];
+  color: string;
+  badge?: string;
+}
+
 export type OrderStatus = 'pendente' | 'aceito' | 'em_rota' | 'concluido' | 'cancelado';
 
 export type PaymentMethod = 'pix' | 'dinheiro' | 'cartao';
@@ -40,6 +53,7 @@ export interface Advertisement {
   event_date?: string; // Para eventos (ex: '2026-09-05T20:00:00Z')
   event_venue?: string; // Ex: 'Bar do Barata - Praia da Princesa'
   banner_slot?: 'banner_1' | 'banner_2' | 'banner_3' | 'banner_4' | 'destaque_topo' | 'nenhum';
+  plan_type?: AdPlanType;
   is_active: boolean;
   is_highlighted: boolean;
   start_date: string; // ISO string ou YYYY-MM-DD
@@ -75,6 +89,7 @@ export interface Partner {
   total_reviews: number;
   is_active: boolean;
   verified: boolean;
+  plan_type?: AdPlanType;
   price_starting: number;
   vehicle_badge?: string; // Ex: Charrete #14, Rabeta 'Estrela do Mar'
   opening_hours?: string;
