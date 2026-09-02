@@ -207,6 +207,9 @@ async function startServer() {
         admin_username: settings.admin_username,
         admin_email: settings.admin_email,
         hero_background_url: settings.hero_background_url || '/imagens/algodoal.jpg',
+        hero_rotation_enabled: settings.hero_rotation_enabled !== false,
+        hero_active_images: settings.hero_active_images || [],
+        hero_custom_images: settings.hero_custom_images || [],
         updated_at: settings.updated_at
       });
     } catch (err: any) {
@@ -216,17 +219,22 @@ async function startServer() {
 
   app.post('/api/admin/settings/background', async (req, res) => {
     try {
-      const { hero_background_url } = req.body;
-      if (!hero_background_url) {
-        return res.status(400).json({ error: 'URL da imagem de fundo não fornecida.' });
-      }
-      const updated = await updateAdminSettings({
-        hero_background_url
-      });
+      const { hero_background_url, hero_rotation_enabled, hero_active_images, hero_custom_images } = req.body;
+      
+      const payload: any = {};
+      if (hero_background_url !== undefined) payload.hero_background_url = hero_background_url;
+      if (hero_rotation_enabled !== undefined) payload.hero_rotation_enabled = Boolean(hero_rotation_enabled);
+      if (hero_active_images !== undefined) payload.hero_active_images = hero_active_images;
+      if (hero_custom_images !== undefined) payload.hero_custom_images = hero_custom_images;
+
+      const updated = await updateAdminSettings(payload);
       res.json({ 
         success: true, 
         hero_background_url: updated.hero_background_url, 
-        message: 'Foto de fundo da capa atualizada com sucesso!' 
+        hero_rotation_enabled: updated.hero_rotation_enabled,
+        hero_active_images: updated.hero_active_images,
+        hero_custom_images: updated.hero_custom_images,
+        message: 'Configurações de imagem e rotação da capa atualizadas com sucesso!' 
       });
     } catch (err: any) {
       res.status(500).json({ error: 'Erro ao atualizar foto de fundo', details: err.message });

@@ -808,11 +808,23 @@ const SEED_STORIES: IslandStory[] = [
   }
 ];
 
-interface AdminSettings {
+export interface CustomHeroImage {
+  id: string;
+  name: string;
+  url: string;
+  tag: string;
+  subtitle?: string;
+  created_at: string;
+}
+
+export interface AdminSettings {
   admin_username: string;
   admin_email: string;
   admin_pin: string;
   hero_background_url?: string;
+  hero_rotation_enabled?: boolean;
+  hero_active_images?: string[];
+  hero_custom_images?: CustomHeroImage[];
   updated_at: string;
 }
 
@@ -831,11 +843,23 @@ interface LocalDatabaseState {
   admin_settings?: AdminSettings;
 }
 
+export const DEFAULT_HERO_PRESET_URLS = [
+  '/imagens/algodoal.jpg',
+  '/imagens/vila.jpg',
+  '/imagens/vila2.jpg',
+  '/imagens/canal.jpg',
+  '/imagens/porto.jpg',
+  '/imagens/porto2.jpg'
+];
+
 const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
   admin_username: 'admin',
   admin_email: 'admin@algodoalconnect.com.br',
   admin_pin: 'algodoal2026',
   hero_background_url: '/imagens/algodoal.jpg',
+  hero_rotation_enabled: true,
+  hero_active_images: DEFAULT_HERO_PRESET_URLS,
+  hero_custom_images: [],
   updated_at: '2026-01-01T00:00:00Z'
 };
 
@@ -1134,7 +1158,15 @@ export async function incrementAdMetrics(id: string, type: 'view' | 'click'): Pr
 
 export async function getAdminSettings(): Promise<AdminSettings> {
   const db = loadLocalDB();
-  return db.admin_settings || DEFAULT_ADMIN_SETTINGS;
+  const settings = db.admin_settings || DEFAULT_ADMIN_SETTINGS;
+  return {
+    ...DEFAULT_ADMIN_SETTINGS,
+    ...settings,
+    hero_active_images: (settings.hero_active_images && settings.hero_active_images.length > 0)
+      ? settings.hero_active_images
+      : DEFAULT_HERO_PRESET_URLS,
+    hero_custom_images: settings.hero_custom_images || []
+  };
 }
 
 export async function validateAdminCredentials(usernameOrEmail: string, pinOrPassword: string): Promise<boolean> {

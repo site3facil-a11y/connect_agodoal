@@ -180,11 +180,27 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [authError, setAuthError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  // Hero Background Management state
+  // Hero Background & Dynamic Rotation State
   const [selectedHeroBg, setSelectedHeroBg] = useState<string>(() => {
     return heroBackgroundUrl || localStorage.getItem('algodoal_hero_background') || '/imagens/algodoal.jpg';
   });
-  const [customHeroUrl, setCustomHeroUrl] = useState<string>('');
+  const [isHeroRotationEnabled, setIsHeroRotationEnabled] = useState<boolean>(true);
+  const [activeHeroImages, setActiveHeroImages] = useState<string[]>([
+    '/imagens/algodoal.jpg',
+    '/imagens/vila.jpg',
+    '/imagens/vila2.jpg',
+    '/imagens/canal.jpg',
+    '/imagens/porto.jpg',
+    '/imagens/porto2.jpg'
+  ]);
+  const [customHeroImages, setCustomHeroImages] = useState<Array<{
+    id: string;
+    name: string;
+    url: string;
+    tag?: string;
+    subtitle?: string;
+    created_at?: string;
+  }>>([]);
   const [isSavingHeroBg, setIsSavingHeroBg] = useState<boolean>(false);
   const [isHeroBgDragOver, setIsHeroBgDragOver] = useState<boolean>(false);
   const [isUploadingHeroBgFile, setIsUploadingHeroBgFile] = useState<boolean>(false);
@@ -296,12 +312,23 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     setIsLoading(true);
     setActionError('');
     try {
-      // Load Admin Settings (including hero_background_url)
+      // Load Admin Settings (including hero_background_url, hero_rotation_enabled, hero_active_images, hero_custom_images)
       try {
         const resSettings = await fetch('/api/admin/settings');
         const dataSettings = await resSettings.json();
-        if (dataSettings && dataSettings.hero_background_url) {
-          setSelectedHeroBg(dataSettings.hero_background_url);
+        if (dataSettings) {
+          if (dataSettings.hero_background_url) {
+            setSelectedHeroBg(dataSettings.hero_background_url);
+          }
+          if (typeof dataSettings.hero_rotation_enabled === 'boolean') {
+            setIsHeroRotationEnabled(dataSettings.hero_rotation_enabled);
+          }
+          if (Array.isArray(dataSettings.hero_active_images) && dataSettings.hero_active_images.length > 0) {
+            setActiveHeroImages(dataSettings.hero_active_images);
+          }
+          if (Array.isArray(dataSettings.hero_custom_images)) {
+            setCustomHeroImages(dataSettings.hero_custom_images);
+          }
         }
       } catch (err) {
         console.warn('Configurações do admin não puderam ser lidas:', err);
@@ -345,39 +372,105 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   };
 
   // ==========================
-  // HERO BACKGROUND HANDLERS
+  // HERO BACKGROUND & ROTATION HANDLERS
   // ==========================
-  const handleApplyHeroBackground = async (newUrl: string) => {
-    if (!newUrl) return;
+  const handleSaveHeroFullSettings = async (
+    url: string = selectedHeroBg,
+    rotation: boolean = isHeroRotationEnabled,
+    activeList: string[] = activeHeroImages,
+    customList = customHeroImages
+  ) => {
     setIsSavingHeroBg(true);
     setActionError('');
     try {
-      const res = await api.updateHeroBackground(newUrl);
+      const res = await api.updateHeroSettings({
+        hero_background_url: url,
+        hero_rotation_enabled: rotation,
+        hero_active_images: activeList,
+        hero_custom_images: customList
+      });
       if (res.success) {
-        setSelectedHeroBg(newUrl);
-        localStorage.setItem('algodoal_hero_background', newUrl);
+        setSelectedHeroBg(url);
+        setIsHeroRotationEnabled(rotation);
+        setActiveHeroImages(activeList);
+        setCustomHeroImages(customList);
+        localStorage.setItem('algodoal_hero_background', url);
         if (onUpdateHeroBackground) {
-          onUpdateHeroBackground(newUrl);
+          onUpdateHeroBackground(url);
         }
         if (onRefreshData) {
           onRefreshData();
         }
-        showSuccess('✨ Imagem de fundo do topo atualizada com sucesso no banco de dados!');
+        showSuccess('✨ Configurações da capa e galeria salvas com sucesso no servidor!');
       } else {
-        setActionError(res.message || 'Erro ao atualizar a imagem de fundo.');
+        setActionError(res.message || 'Erro ao atualizar configurações da capa.');
       }
     } catch (err: any) {
-      console.error('Erro ao salvar imagem de fundo:', err);
-      // Fallback local update
-      setSelectedHeroBg(newUrl);
-      localStorage.setItem('algodoal_hero_background', newUrl);
+      console.error('Erro ao salvar capa:', err);
+      setSelectedHeroBg(url);
+      setIsHeroRotationEnabled(rotation);
+      setActiveHeroImages(activeList);
+      setCustomHeroImages(customList);
+      localStorage.setItem('algodoal_hero_background', url);
       if (onUpdateHeroBackground) {
-        onUpdateHeroBackground(newUrl);
+        onUpdateHeroBackground(url);
       }
-      showSuccess('✨ Imagem de fundo do topo aplicada com sucesso!');
+      showSuccess('✨ Configurações da capa salvas!');
     } finally {
       setIsSavingHeroBg(false);
     }
+  };
+
+  const handleToggleImageInRotation = async (imgUrl: string) => {
+    let nextList: string[];
+    if (activeHeroImages.includes(imgUrl)) {
+      if (activeHeroImages.length <= 1) {
+        alert('É necessário manter pelo menos 1 imagem selecionada para a capa.');
+        return;
+      }
+      nextList = activeHeroImages.filter(u => u !== imgUrl);
+    } else {
+      nextList = [...activeHeroImages, imgUrl];
+    }
+    setActiveHeroImages(nextList);
+    // Persist immediately
+    await handleSaveHeroFullSettings(selectedHeroBg, isHeroRotationEnabled, nextList, customHeroImages);
+  };
+
+  const handleSelectAllImagesForRotation = async () => {
+    const allUrls = [
+      ...PRESET_HERO_BACKGROUNDS.map(p => p.url),
+      ...customHeroImages.map(c => c.url)
+    ];
+    const unique = Array.from(new Set(allUrls));
+    setActiveHeroImages(unique);
+    await handleSaveHeroFullSettings(selectedHeroBg, true, unique, customHeroImages);
+    showSuccess('Todas as fotos foram ativadas para a rotação da capa!');
+  };
+
+  const handleResetToDefaultRotation = async () => {
+    const defaultUrls = PRESET_HERO_BACKGROUNDS.map(p => p.url);
+    setSelectedHeroBg('/imagens/algodoal.jpg');
+    setIsHeroRotationEnabled(true);
+    setActiveHeroImages(defaultUrls);
+    await handleSaveHeroFullSettings('/imagens/algodoal.jpg', true, defaultUrls, customHeroImages);
+    showSuccess('Galeria restaurada para o padrão com rotação ativada!');
+  };
+
+  const handleDeleteCustomHeroImage = async (id: string, name: string) => {
+    if (!window.confirm(`Deseja remover a foto "${name}" da galeria?`)) return;
+    const itemToDelete = customHeroImages.find(c => c.id === id);
+    const nextCustom = customHeroImages.filter(c => c.id !== id);
+    const nextActive = itemToDelete ? activeHeroImages.filter(u => u !== itemToDelete.url) : activeHeroImages;
+    setCustomHeroImages(nextCustom);
+    setActiveHeroImages(nextActive.length > 0 ? nextActive : ['/imagens/algodoal.jpg']);
+    await handleSaveHeroFullSettings(
+      selectedHeroBg === itemToDelete?.url ? '/imagens/algodoal.jpg' : selectedHeroBg,
+      isHeroRotationEnabled,
+      nextActive.length > 0 ? nextActive : ['/imagens/algodoal.jpg'],
+      nextCustom
+    );
+    showSuccess(`Foto "${name}" excluída da galeria!`);
   };
 
   const handleHeroBgFileUpload = (file: File) => {
@@ -386,15 +479,44 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       setActionError('Por favor envie um arquivo de imagem válido (JPG, PNG, WebP).');
       return;
     }
+    if (file.size > 15 * 1024 * 1024) {
+      setActionError('A imagem deve ter no máximo 15MB.');
+      return;
+    }
     setIsUploadingHeroBgFile(true);
+    setActionError('');
     const reader = new FileReader();
     reader.onload = async (e) => {
       const base64 = e.target?.result as string;
-      if (base64) {
-        setSelectedHeroBg(base64);
-        await handleApplyHeroBackground(base64);
+      let finalUrl = base64;
+      try {
+        const res = await api.uploadImage(base64, file.name);
+        if (res.success && res.url) {
+          finalUrl = res.url;
+        }
+      } catch (errUpload) {
+        console.warn('Fallback base64 para foto da capa:', errUpload);
       }
+
+      const newCustomEntry = {
+        id: `hero_custom_${Date.now()}`,
+        name: file.name.replace(/\.[^/.]+$/, "") || 'Foto Personalizada',
+        url: finalUrl,
+        tag: '📸 Upload',
+        subtitle: 'Adicionada ao portal',
+        created_at: new Date().toISOString()
+      };
+
+      const nextCustom = [newCustomEntry, ...customHeroImages];
+      const nextActive = Array.from(new Set([...activeHeroImages, finalUrl]));
+      
+      setSelectedHeroBg(finalUrl);
+      setCustomHeroImages(nextCustom);
+      setActiveHeroImages(nextActive);
+
+      await handleSaveHeroFullSettings(finalUrl, isHeroRotationEnabled, nextActive, nextCustom);
       setIsUploadingHeroBgFile(false);
+      showSuccess(`Nova foto "${file.name}" adicionada à galeria e incluída na rotação!`);
     };
     reader.onerror = () => {
       setActionError('Erro ao processar o arquivo de imagem.');
@@ -2447,7 +2569,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 </div>
               )}
 
-              {/* TAB 6: GERENCIADOR DE FUNDO DA CAPA (HERO BACKGROUND) */}
+              {/* TAB 6: GERENCIADOR DE FUNDO DA CAPA & ROTAÇÃO DINÂMICA */}
               {activeMainTab === 'fundo' && (
                 <div className="space-y-6 max-w-5xl mx-auto">
                   
@@ -2459,28 +2581,28 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           <ImageIcon className="w-5 h-5" />
                         </span>
                         <h3 className="text-base font-black text-slate-900 font-serif">
-                          Imagem de Fundo da Capa Principal (Hero)
+                          Galeria e Rotação da Capa Principal (Hero)
                         </h3>
                         <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-                          Personalização Visual
+                          {isHeroRotationEnabled ? '🔄 Rotação Ativa' : '📌 Modo Fixo'}
                         </span>
                       </div>
                       <p className="text-xs text-slate-500">
-                        Escolha uma foto da galeria nativa da Ilha de Algodoal, faça upload de uma nova imagem ou informe um link direto.
+                        Defina as imagens da capa e ative a rotação automática para trocar a foto a cada atualização da página.
                       </p>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
                       <button
-                        onClick={() => handleApplyHeroBackground('/imagens/algodoal.jpg')}
+                        onClick={handleResetToDefaultRotation}
                         disabled={isSavingHeroBg}
                         className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer border border-slate-300"
-                        title="Restaurar pôr do sol clássico padrão"
+                        title="Restaurar galeria e rotação padrão"
                       >
                         Restaurar Padrão
                       </button>
                       <button
-                        onClick={() => handleApplyHeroBackground(selectedHeroBg)}
+                        onClick={() => handleSaveHeroFullSettings(selectedHeroBg, isHeroRotationEnabled, activeHeroImages, customHeroImages)}
                         disabled={isSavingHeroBg}
                         className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
                       >
@@ -2489,8 +2611,88 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         ) : (
                           <CheckCircle2 className="w-4 h-4" />
                         )}
-                        <span>Salvar no Servidor</span>
+                        <span>Salvar Configurações</span>
                       </button>
+                    </div>
+                  </div>
+
+                  {/* Mode Selector Card */}
+                  <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                          <span>⚙️</span>
+                          <span>Modo de Exibição da Capa</span>
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Escolha se a imagem deve trocar a cada visita ou permanecer fixa em uma foto específica.
+                        </p>
+                      </div>
+
+                      {/* Mode Toggle Buttons */}
+                      <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsHeroRotationEnabled(true);
+                            handleSaveHeroFullSettings(selectedHeroBg, true, activeHeroImages, customHeroImages);
+                          }}
+                          className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer ${
+                            isHeroRotationEnabled
+                              ? 'bg-amber-500 text-slate-950 shadow-xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          <span>🔄</span>
+                          <span>Trocar a Cada Atualização</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsHeroRotationEnabled(false);
+                            handleSaveHeroFullSettings(selectedHeroBg, false, activeHeroImages, customHeroImages);
+                          }}
+                          className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer ${
+                            !isHeroRotationEnabled
+                              ? 'bg-amber-500 text-slate-950 shadow-xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          <span>📌</span>
+                          <span>Imagem Fixa</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Status & Quick Actions Bar */}
+                    <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 text-xs font-bold text-amber-950">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                        <span>
+                          {isHeroRotationEnabled
+                            ? `Rotação ativa com ${activeHeroImages.length} foto(s) selecionada(s) para o sorteio.`
+                            : `Modo fixo ativo. A imagem selecionada abaixo permanecerá fixa no topo.`}
+                        </span>
+                      </div>
+
+                      {isHeroRotationEnabled && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleSelectAllImagesForRotation}
+                            className="px-3 py-1 rounded-lg bg-white hover:bg-slate-50 text-slate-800 text-[11px] font-black border border-slate-300 transition cursor-pointer shadow-2xs"
+                          >
+                            ✓ Marcar Todas ({PRESET_HERO_BACKGROUNDS.length + customHeroImages.length})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleResetToDefaultRotation}
+                            className="px-3 py-1 rounded-lg bg-white hover:bg-slate-50 text-slate-800 text-[11px] font-black border border-slate-300 transition cursor-pointer shadow-2xs"
+                          >
+                            Restaurar Padrão
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -2500,9 +2702,27 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 bg-amber-950/60 px-2.5 py-1 rounded-full border border-amber-500/30">
                         ● Prévia em Tempo Real da Capa
                       </span>
-                      <span className="text-xs text-slate-400 font-medium truncate max-w-xs">
-                        {selectedHeroBg.startsWith('data:') ? 'Imagem personalizada carregada' : selectedHeroBg}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {isHeroRotationEnabled && activeHeroImages.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const pool = activeHeroImages;
+                              const currentIdx = pool.indexOf(selectedHeroBg);
+                              const nextIdx = (currentIdx + 1) % pool.length;
+                              setSelectedHeroBg(pool[nextIdx]);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-slate-700 text-[11px] font-bold transition cursor-pointer flex items-center gap-1"
+                            title="Alternar entre as imagens selecionadas na rotação para testar"
+                          >
+                            <span>🎲</span>
+                            <span>Testar Próxima Foto</span>
+                          </button>
+                        )}
+                        <span className="text-xs text-slate-400 font-medium truncate max-w-xs">
+                          {selectedHeroBg.startsWith('data:') ? 'Foto personalizada carregada' : selectedHeroBg}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="relative rounded-2xl overflow-hidden min-h-[200px] sm:min-h-[240px] flex items-center p-6 border border-slate-700/80">
@@ -2529,35 +2749,49 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Gallery of Presets (6 Algodoal Locations) */}
+                  {/* Gallery of Images (Native Presets + Custom Uploads) with Rotation Checkboxes */}
                   <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                        <span>🏝️</span>
-                        <span>Galeria de Fotos Nativas da Ilha</span>
-                      </h4>
-                      <span className="text-xs text-slate-500 font-medium">
-                        Clique em qualquer foto para selecionar e aplicar
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                          <span>🏖️</span>
+                          <span>Galeria de Imagens da Ilha</span>
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {isHeroRotationEnabled
+                            ? 'Marque/desmarque as caixas de seleção para definir quais fotos farão parte da rotação a cada atualização.'
+                            : 'Clique na foto desejada para defini-la como fundo fixo permanente da capa.'}
+                        </p>
+                      </div>
+                      <span className="text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 shrink-0">
+                        {activeHeroImages.length} de {PRESET_HERO_BACKGROUNDS.length + customHeroImages.length} ativas na rotação
                       </span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                      {/* 1. Native Preset Images */}
                       {PRESET_HERO_BACKGROUNDS.map((preset) => {
-                        const isSelected = selectedHeroBg === preset.url;
+                        const isInRotation = activeHeroImages.includes(preset.url);
+                        const isCurrentlyPreviewed = selectedHeroBg === preset.url;
+
                         return (
                           <div
                             key={preset.id}
                             onClick={() => {
                               setSelectedHeroBg(preset.url);
-                              handleApplyHeroBackground(preset.url);
+                              if (isHeroRotationEnabled) {
+                                handleToggleImageInRotation(preset.url);
+                              } else {
+                                handleSaveHeroFullSettings(preset.url, false, [preset.url], customHeroImages);
+                              }
                             }}
-                            className={`group rounded-2xl border-2 transition p-2.5 cursor-pointer flex flex-col justify-between overflow-hidden relative ${
-                              isSelected
-                                ? 'border-amber-500 bg-amber-50/50 shadow-md ring-2 ring-amber-400/20'
-                                : 'border-slate-200 hover:border-amber-300 bg-slate-50 hover:bg-white shadow-2xs'
+                            className={`group rounded-2xl border-2 transition p-3 cursor-pointer flex flex-col justify-between overflow-hidden relative ${
+                              isInRotation
+                                ? 'border-amber-500 bg-amber-50/40 shadow-sm ring-2 ring-amber-400/20'
+                                : 'border-slate-200 hover:border-slate-300 bg-slate-50/70 hover:bg-white opacity-70'
                             }`}
                           >
-                            <div className="relative h-28 w-full rounded-xl overflow-hidden mb-2">
+                            <div className="relative h-32 w-full rounded-xl overflow-hidden mb-2.5">
                               <img
                                 src={preset.url}
                                 alt={preset.name}
@@ -2566,139 +2800,205 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                               <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-slate-950/80 text-white text-[10px] font-bold backdrop-blur-xs">
                                 {preset.tag}
                               </span>
-                              {isSelected && (
-                                <span className="absolute top-2 right-2 p-1 rounded-full bg-amber-500 text-slate-950 shadow-md">
-                                  <Check className="w-3.5 h-3.5 stroke-[3]" />
-                                </span>
-                              )}
+
+                              {/* Checkbox / Active Status Badge */}
+                              <div className="absolute top-2 right-2">
+                                {isHeroRotationEnabled ? (
+                                  <div
+                                    className={`w-6 h-6 rounded-lg flex items-center justify-center transition shadow-md ${
+                                      isInRotation
+                                        ? 'bg-amber-500 text-slate-950'
+                                        : 'bg-black/60 text-white/40 border border-white/30'
+                                    }`}
+                                  >
+                                    {isInRotation && <Check className="w-4 h-4 stroke-[3]" />}
+                                  </div>
+                                ) : (
+                                  isCurrentlyPreviewed && (
+                                    <div className="w-6 h-6 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center shadow-md">
+                                      <Check className="w-4 h-4 stroke-[3]" />
+                                    </div>
+                                  )
+                                )}
+                              </div>
                             </div>
 
                             <div>
-                              <h5 className="text-xs font-black text-slate-900 leading-tight">
-                                {preset.name}
-                              </h5>
+                              <div className="flex items-center justify-between gap-1">
+                                <h5 className="text-xs font-black text-slate-900 leading-tight line-clamp-1">
+                                  {preset.name}
+                                </h5>
+                              </div>
                               <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">
                                 {preset.subtitle}
                               </p>
                             </div>
 
-                            <button
-                              type="button"
-                              className={`mt-2.5 w-full py-1.5 rounded-lg text-xs font-black transition cursor-pointer flex items-center justify-center gap-1 ${
-                                isSelected
-                                  ? 'bg-amber-500 text-slate-950 shadow-xs'
-                                  : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-200'
-                              }`}
+                            <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
+                              <span className={`text-[11px] font-bold ${isInRotation ? 'text-amber-700' : 'text-slate-400'}`}>
+                                {isInRotation ? '✓ Incluída na Rotação' : '✕ Fora da Rotação'}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-medium">Nativa da Ilha</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* 2. Custom Uploaded Images */}
+                      {customHeroImages.map((custom) => {
+                        const isInRotation = activeHeroImages.includes(custom.url);
+                        const isCurrentlyPreviewed = selectedHeroBg === custom.url;
+
+                        return (
+                          <div
+                            key={custom.id}
+                            className={`group rounded-2xl border-2 transition p-3 flex flex-col justify-between overflow-hidden relative ${
+                              isInRotation
+                                ? 'border-amber-500 bg-amber-50/40 shadow-sm ring-2 ring-amber-400/20'
+                                : 'border-slate-200 hover:border-slate-300 bg-slate-50/70 hover:bg-white opacity-70'
+                            }`}
+                          >
+                            <div 
+                              className="relative h-32 w-full rounded-xl overflow-hidden mb-2.5 cursor-pointer"
+                              onClick={() => {
+                                setSelectedHeroBg(custom.url);
+                                if (isHeroRotationEnabled) {
+                                  handleToggleImageInRotation(custom.url);
+                                } else {
+                                  handleSaveHeroFullSettings(custom.url, false, [custom.url], customHeroImages);
+                                }
+                              }}
                             >
-                              {isSelected ? '✓ Imagem Ativa' : 'Selecionar Foto'}
-                            </button>
+                              <img
+                                src={custom.url}
+                                alt={custom.name}
+                                className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
+                              />
+                              <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-indigo-950/80 text-white text-[10px] font-bold backdrop-blur-xs">
+                                {custom.tag || '📸 Enviada'}
+                              </span>
+
+                              {/* Checkbox / Active Status Badge */}
+                              <div className="absolute top-2 right-2">
+                                {isHeroRotationEnabled ? (
+                                  <div
+                                    className={`w-6 h-6 rounded-lg flex items-center justify-center transition shadow-md ${
+                                      isInRotation
+                                        ? 'bg-amber-500 text-slate-950'
+                                        : 'bg-black/60 text-white/40 border border-white/30'
+                                    }`}
+                                  >
+                                    {isInRotation && <Check className="w-4 h-4 stroke-[3]" />}
+                                  </div>
+                                ) : (
+                                  isCurrentlyPreviewed && (
+                                    <div className="w-6 h-6 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center shadow-md">
+                                      <Check className="w-4 h-4 stroke-[3]" />
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            </div>
+
+                            <div 
+                              className="cursor-pointer"
+                              onClick={() => {
+                                setSelectedHeroBg(custom.url);
+                                if (isHeroRotationEnabled) {
+                                  handleToggleImageInRotation(custom.url);
+                                } else {
+                                  handleSaveHeroFullSettings(custom.url, false, [custom.url], customHeroImages);
+                                }
+                              }}
+                            >
+                              <h5 className="text-xs font-black text-slate-900 leading-tight line-clamp-1">
+                                {custom.name}
+                              </h5>
+                              <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">
+                                {custom.subtitle || 'Foto enviada pelo administrador'}
+                              </p>
+                            </div>
+
+                            <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
+                              <span className={`text-[11px] font-bold ${isInRotation ? 'text-amber-700' : 'text-slate-400'}`}>
+                                {isInRotation ? '✓ Incluída na Rotação' : '✕ Fora da Rotação'}
+                              </span>
+
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteCustomHeroImage(custom.id, custom.name);
+                                }}
+                                className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                                title="Excluir esta foto da galeria"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                         );
                       })}
                     </div>
                   </div>
 
-                  {/* Upload Custom File & URL Inputs */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    
-                    {/* Drag and Drop File Upload */}
-                    <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs flex flex-col justify-between">
-                      <div>
-                        <h4 className="text-xs font-black uppercase text-slate-800 mb-1 flex items-center gap-1.5">
-                          <UploadCloud className="w-4 h-4 text-indigo-600" />
-                          <span>Fazer Upload de Foto do Computador</span>
-                        </h4>
-                        <p className="text-xs text-slate-500 mb-3">
-                          Envie uma foto em alta resolução da praia, pousada ou evento (JPG, PNG, WebP).
-                        </p>
-                      </div>
+                  {/* Upload New Custom Photo to Gallery (No Direct URL input as requested) */}
+                  <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900 mb-1 flex items-center gap-2">
+                        <UploadCloud className="w-4 h-4 text-amber-600" />
+                        <span>Enviar Nova Foto para a Galeria da Capa</span>
+                      </h4>
+                      <p className="text-xs text-slate-500 mb-4">
+                        Adicione fotos de alta resolução da Ilha de Algodoal (praias, pousadas, passeios de barco ou pôr do sol). A imagem será adicionada à galeria e automaticamente incluída na rotação.
+                      </p>
+                    </div>
 
-                      <label
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          setIsHeroBgDragOver(true);
-                        }}
-                        onDragLeave={() => setIsHeroBgDragOver(false)}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          setIsHeroBgDragOver(false);
-                          if (e.dataTransfer.files?.[0]) {
-                            handleHeroBgFileUpload(e.dataTransfer.files[0]);
+                    <label
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsHeroBgDragOver(true);
+                      }}
+                      onDragLeave={() => setIsHeroBgDragOver(false)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsHeroBgDragOver(false);
+                        if (e.dataTransfer.files?.[0]) {
+                          handleHeroBgFileUpload(e.dataTransfer.files[0]);
+                        }
+                      }}
+                      className={`w-full border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2.5 ${
+                        isHeroBgDragOver
+                          ? 'border-amber-500 bg-amber-50'
+                          : 'border-slate-300 hover:border-amber-400 bg-slate-50 hover:bg-white'
+                      }`}
+                    >
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files?.[0]) {
+                            handleHeroBgFileUpload(e.target.files[0]);
                           }
                         }}
-                        className={`flex-1 border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2 ${
-                          isHeroBgDragOver
-                            ? 'border-amber-500 bg-amber-50'
-                            : 'border-slate-300 hover:border-amber-400 bg-slate-50'
-                        }`}
-                      >
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            if (e.target.files?.[0]) {
-                              handleHeroBgFileUpload(e.target.files[0]);
-                            }
-                          }}
-                        />
-                        <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center">
-                          {isUploadingHeroBgFile ? (
-                            <RefreshCw className="w-5 h-5 animate-spin" />
-                          ) : (
-                            <UploadCloud className="w-5 h-5" />
-                          )}
-                        </div>
-                        <span className="text-xs font-bold text-slate-700">
-                          {isUploadingHeroBgFile ? 'Processando imagem...' : 'Clique para escolher ou arraste a imagem aqui'}
-                        </span>
-                        <span className="text-[10px] text-slate-400">
-                          Recomendado: 1920x800 ou horizontal panorâmica
-                        </span>
-                      </label>
-                    </div>
-
-                    {/* Direct Image URL input */}
-                    <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs flex flex-col justify-between">
+                      />
+                      <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shadow-xs">
+                        {isUploadingHeroBgFile ? (
+                          <RefreshCw className="w-6 h-6 animate-spin" />
+                        ) : (
+                          <UploadCloud className="w-6 h-6" />
+                        )}
+                      </div>
                       <div>
-                        <h4 className="text-xs font-black uppercase text-slate-800 mb-1 flex items-center gap-1.5">
-                          <ImageIcon className="w-4 h-4 text-emerald-600" />
-                          <span>Link Direto da Imagem (URL)</span>
-                        </h4>
-                        <p className="text-xs text-slate-500 mb-3">
-                          Cole o endereço web de qualquer foto pública hospedada na internet.
-                        </p>
+                        <span className="text-xs font-black text-slate-800 block">
+                          {isUploadingHeroBgFile ? 'Processando e enviando imagem...' : 'Clique para selecionar do computador ou arraste a foto aqui'}
+                        </span>
+                        <span className="text-[11px] text-slate-400 block mt-0.5">
+                          Formatos aceitos: JPG, PNG, WebP (Recomendado: 1920x800 ou horizontal)
+                        </span>
                       </div>
-
-                      <div className="space-y-3 pt-2">
-                        <div>
-                          <input
-                            type="url"
-                            placeholder="https://exemplo.com/minha-foto-algodoal.jpg"
-                            value={customHeroUrl}
-                            onChange={(e) => setCustomHeroUrl(e.target.value)}
-                            className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white text-xs font-semibold text-slate-900"
-                          />
-                        </div>
-
-                        <button
-                          type="button"
-                          disabled={!customHeroUrl.trim() || isSavingHeroBg}
-                          onClick={() => {
-                            if (customHeroUrl.trim()) {
-                              setSelectedHeroBg(customHeroUrl.trim());
-                              handleApplyHeroBackground(customHeroUrl.trim());
-                              setCustomHeroUrl('');
-                            }
-                          }}
-                          className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition cursor-pointer shadow-sm disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-                        >
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span>Carregar e Aplicar URL</span>
-                        </button>
-                      </div>
-                    </div>
-
+                    </label>
                   </div>
 
                 </div>

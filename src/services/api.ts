@@ -374,5 +374,27 @@ export const api = {
     });
     if (!res.ok) throw new Error('Falha ao excluir destaque/story');
     return true;
+  },
+
+  // Admin Settings & Hero Background Management
+  async getHeroSettings(): Promise<any> {
+    const res = await fetch(`${API_BASE}/admin/settings`);
+    if (!res.ok) throw new Error('Falha ao obter configurações');
+    return res.json();
+  },
+
+  async updateHeroSettings(payload: {
+    hero_background_url?: string;
+    hero_rotation_enabled?: boolean;
+    hero_active_images?: string[];
+    hero_custom_images?: any[];
+  }): Promise<any> {
+    const res = await fetch(`${API_BASE}/admin/settings/background`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Falha ao atualizar configurações de fundo');
+    return res.json();
   }
 };

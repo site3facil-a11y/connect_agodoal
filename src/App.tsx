@@ -225,14 +225,27 @@ export function App() {
 
   const loadRealData = async () => {
     try {
-      // 0. Fetch Admin Settings (Hero Background URL)
+      // 0. Fetch Admin Settings (Hero Background URL & Rotation)
       try {
         const resSettings = await fetch('/api/admin/settings');
         if (resSettings.ok) {
           const dataSettings = await resSettings.json();
-          if (dataSettings && dataSettings.hero_background_url) {
-            setHeroBackgroundUrl(dataSettings.hero_background_url);
-            localStorage.setItem('algodoal_hero_background', dataSettings.hero_background_url);
+          if (dataSettings) {
+            const isRotation = dataSettings.hero_rotation_enabled !== false;
+            const activePool: string[] = dataSettings.hero_active_images && dataSettings.hero_active_images.length > 0
+              ? dataSettings.hero_active_images
+              : ['/imagens/algodoal.jpg', '/imagens/vila.jpg', '/imagens/vila2.jpg', '/imagens/canal.jpg', '/imagens/porto.jpg', '/imagens/porto2.jpg'];
+
+            if (isRotation && activePool.length > 0) {
+              // Pick random image from active pool every time the page is opened or refreshed
+              const randomIndex = Math.floor(Math.random() * activePool.length);
+              const pickedImage = activePool[randomIndex];
+              setHeroBackgroundUrl(pickedImage);
+              localStorage.setItem('algodoal_hero_background', pickedImage);
+            } else if (dataSettings.hero_background_url) {
+              setHeroBackgroundUrl(dataSettings.hero_background_url);
+              localStorage.setItem('algodoal_hero_background', dataSettings.hero_background_url);
+            }
           }
         }
       } catch (errSettings) {

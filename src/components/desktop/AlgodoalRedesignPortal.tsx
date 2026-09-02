@@ -343,18 +343,6 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
         <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/20 to-transparent z-10" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent z-10" />
 
-        {/* Admin Quick Background Switcher Trigger (Floating Top Right in Hero) */}
-        <div className="absolute top-4 right-4 z-20 hidden sm:flex items-center gap-2">
-          <button
-            onClick={onOpenAdminBackground || onOpenAdmin}
-            className="px-3 py-1.5 rounded-full bg-slate-900/80 hover:bg-slate-900 text-amber-300 hover:text-amber-200 border border-amber-500/40 text-[11px] font-bold backdrop-blur-md transition flex items-center gap-1.5 shadow-lg cursor-pointer"
-            title="Alterar imagem de fundo no Painel do Administrador"
-          >
-            <span>🖼️</span>
-            <span>Trocar Fundo da Capa</span>
-          </button>
-        </div>
-
         <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-12 relative z-20 flex flex-col md:flex-row items-start md:items-end justify-between gap-8">
           
           {/* Left Hero Title & Search */}
