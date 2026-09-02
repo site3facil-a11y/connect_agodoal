@@ -9,8 +9,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Smartphone, 
-  Monitor, 
   Sun, 
   Moon, 
   Sparkles, 
@@ -165,9 +163,6 @@ export function App() {
   // Theme Mode ('dark' | 'light') - Light Theme Default
   const [theme, setTheme] = useState<'dark' | 'light'>('light');
 
-  // Device Frame View State ('mobile-frame' | 'desktop-view')
-  const [deviceView, setDeviceView] = useState<'mobile-frame' | 'desktop-view'>('desktop-view');
-
   // Navigation Tabs & Category Filters
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [selectedCategory, setSelectedCategory] = useState<string>('todos');
@@ -306,347 +301,253 @@ export function App() {
     }`}>
       
       {/* ======================================================== */}
-      {/* 1. TOP SIMULATION & CONTROLS TOOLBAR                     */}
+      {/* 1. DESKTOP VIEW (Visible on screens >= 1024px)           */}
       {/* ======================================================== */}
-      <div className={`w-full border-b px-4 py-2 flex items-center justify-between z-30 text-xs transition-colors ${
-        isDark ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700 shadow-xs'
-      }`}>
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-teal-500 animate-pulse" />
-          <span className="font-bold">
-            Algodoal Connect • <strong className="text-teal-600">Portal de Anúncios & Guia</strong>
-          </span>
-          <span className={`hidden md:inline-block px-2 py-0.5 rounded-md text-[10px] border ${
-            isDark ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-600 border-slate-200'
-          }`}>
-            Contatos 100% Diretos via WhatsApp
-          </span>
-        </div>
+      <div className="hidden lg:flex w-full min-h-screen flex-col">
+        {/* Desktop Top Navigation Bar */}
+        <DesktopNavbar
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+          onOpenAdmin={() => setIsAdminModalOpen(true)}
+          onOpenTides={() => setIsTidesModalOpen(true)}
+          onOpenWeather={() => setIsWeatherModalOpen(true)}
+          currentUser={currentUser}
+          currentTideSummary={dynamicTideSummary}
+          weather={weather}
+        />
 
-        {/* View Switcher & Theme Switcher Controls */}
-        <div className="flex items-center gap-2">
-          {/* Theme Switcher Button */}
-          <button
-            onClick={toggleTheme}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-xl font-bold text-xs transition cursor-pointer border ${
-              isDark 
-                ? 'bg-slate-800 hover:bg-slate-700 text-amber-400 border-slate-700' 
-                : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-300'
-            }`}
-            title="Alternar Tema Claro / Escuro"
-          >
-            {isDark ? (
-              <>
-                <Sun className="w-3.5 h-3.5 text-amber-400" />
-                <span className="hidden sm:inline">Tema Claro</span>
-              </>
-            ) : (
-              <>
-                <Moon className="w-3.5 h-3.5 text-slate-700" />
-                <span className="hidden sm:inline">Tema Escuro</span>
-              </>
-            )}
-          </button>
-
-          {/* View Modes */}
-          <div className={`flex items-center gap-1 p-1 rounded-xl border ${
-            isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
-          }`}>
-            <button
-              onClick={() => setDeviceView('mobile-frame')}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
-                deviceView === 'mobile-frame'
-                  ? 'bg-teal-500 text-slate-950 shadow-xs'
-                  : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Smartphone className="w-3.5 h-3.5" />
-              <span>Celular</span>
-            </button>
-
-            <button
-              onClick={() => setDeviceView('desktop-view')}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
-                deviceView === 'desktop-view'
-                  ? 'bg-teal-500 text-slate-950 shadow-xs'
-                  : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Monitor className="w-3.5 h-3.5" />
-              <span>Computador (Desktop)</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* ======================================================== */}
-      {/* 2. DESKTOP FULL-WIDTH VIEW                               */}
-      {/* ======================================================== */}
-      {deviceView === 'desktop-view' ? (
-        <div className={`w-full min-h-screen flex flex-col ${isDark ? 'bg-slate-950' : 'bg-slate-100'}`}>
-          {/* Desktop Top Navigation Bar */}
-          <DesktopNavbar
-            theme={theme}
-            onToggleTheme={toggleTheme}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-            onOpenAdmin={() => setIsAdminModalOpen(true)}
-            onOpenTides={() => setIsTidesModalOpen(true)}
-            onOpenWeather={() => setIsWeatherModalOpen(true)}
-            currentUser={currentUser}
-            currentTideSummary={dynamicTideSummary}
-            weather={weather}
-          />
-
-          {/* Desktop Grid Layout (Hero + Main Content + Side Column) */}
-          <div className="max-w-7xl mx-auto w-full px-6 py-6 space-y-6">
-            
-            {/* Desktop Hero Section: 2 Columns (Commercial Banners + Tide & Island Status) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              {/* Left Column: Commercial Hero Banners (7 Cols) */}
-              <div className="lg:col-span-7 space-y-4">
-                <HeroBannersCarousel
-                  theme={theme}
-                  advertisements={advertisements}
-                  onOpenDetails={(ad) => setSelectedAdForDetails(ad)}
-                  onAdClick={(ad) => {
-                    setSelectedAdForDetails(ad);
-                    if (ad.category) setSelectedCategory(ad.category);
-                  }}
-                />
-
-                {/* 8 Essential Island Actions Grid */}
-                <div className={`rounded-3xl border overflow-hidden p-2 ${
-                  isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200'
-                }`}>
-                  <QuickActionsGrid
-                    theme={theme}
-                    onSelectCategory={(cat) => setSelectedCategory(cat)}
-                    onOpenTides={() => setIsTidesModalOpen(true)}
-                    onOpenAdmin={() => setIsAdminModalOpen(true)}
-                  />
-                </div>
-              </div>
-
-              {/* Right Column: Live Tide Wave Graph + Transparency & Direct Contact Portal Box (5 Cols) */}
-              <div className="lg:col-span-5 space-y-5">
-                {/* Tide Widget */}
-                <TideWaveWidget
-                  theme={theme}
-                  currentTideDay={todayTide}
-                  onOpenFullTides={() => setIsTidesModalOpen(true)}
-                />
-
-                {/* Portal Transparency & How It Works Card */}
-                <div className={`rounded-3xl border p-5 space-y-3.5 shadow-sm transition-colors ${
-                  isDark ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-teal-950/30 border-slate-800' : 'bg-white border-slate-200'
-                }`}>
-                  <div className="flex items-center gap-2">
-                    <span className="p-2 rounded-2xl bg-teal-500/20 text-teal-500">
-                      <Megaphone className="w-5 h-5" />
-                    </span>
-                    <div>
-                      <h3 className={`text-sm font-black font-heading ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                        Portal de Anúncios Diretos
-                      </h3>
-                      <p className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                        100% livre de comissões e intermediações
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 text-xs">
-                    <div className="flex items-start gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-teal-500 shrink-0 mt-0.5" />
-                      <p className={isDark ? 'text-slate-300' : 'text-slate-600'}>
-                        <strong>Contato 100% Direto:</strong> Você fala diretamente com o dono da pousada, charreteiro, piloteiro ou depósito via WhatsApp.
-                      </p>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-teal-500 shrink-0 mt-0.5" />
-                      <p className={isDark ? 'text-slate-300' : 'text-slate-600'}>
-                        <strong>Sem taxas extras:</strong> Negocie valores, combine horários e reserve sem nenhuma cobrança ou intermediação do site.
-                      </p>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-teal-500 shrink-0 mt-0.5" />
-                      <p className={isDark ? 'text-slate-300' : 'text-slate-600'}>
-                        <strong>Comércio da APA Valorizado:</strong> Apoio e divulgação aos trabalhadores e empreendedores da Ilha de Algodoal.
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => setIsAdminModalOpen(true)}
-                    className="w-full py-2.5 px-4 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-md transition cursor-pointer"
-                  >
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>Anunciar no Guia / Painel Gestor</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Main Category Feed Grid (Pousadas, Gastronomia, Rabetas, Suprimentos) */}
-            <div className={`rounded-3xl border overflow-hidden p-4 sm:p-6 shadow-sm ${
-              isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-white border-slate-200'
-            }`}>
-              <div className="mb-4">
-                <h2 className={`text-xl font-black font-heading ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  Explorar Anúncios & Serviços em Algodoal
-                </h2>
-                <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Consulte pousadas, restaurantes, condutores de charretes, barcos e depósitos com contato direto pelo WhatsApp.
-                </p>
-              </div>
-
-              <MobileCategoryFeed
+        {/* Desktop Grid Layout (Hero + Main Content + Side Column) */}
+        <div className="max-w-7xl mx-auto w-full px-6 py-6 space-y-6">
+          
+          {/* Desktop Hero Section: 2 Columns (Commercial Banners + Tide & Island Status) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Left Column: Commercial Hero Banners (7 Cols) */}
+            <div className="lg:col-span-7 space-y-4">
+              <HeroBannersCarousel
                 theme={theme}
-                selectedCategory={selectedCategory}
-                onSelectCategory={setSelectedCategory}
-                searchTerm={searchTerm}
-                partners={partners}
+                advertisements={advertisements}
+                onOpenDetails={(ad) => setSelectedAdForDetails(ad)}
+                onAdClick={(ad) => {
+                  setSelectedAdForDetails(ad);
+                  if (ad.category) setSelectedCategory(ad.category);
+                }}
               />
-            </div>
-          </div>
 
-          {/* Desktop Footer with Environmental Protection Info & Developer Attribution */}
-          <footer className={`w-full py-8 border-t mt-12 transition-colors ${
-            isDark ? 'bg-slate-950 border-slate-900 text-slate-400' : 'bg-white border-slate-200 text-slate-600'
-          }`}>
-            <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
-              <div className="flex flex-col sm:flex-row items-center gap-2 text-center sm:text-left">
+              {/* 8 Essential Island Actions Grid */}
+              <div className={`rounded-3xl border overflow-hidden p-2 ${
+                isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200'
+              }`}>
+                <QuickActionsGrid
+                  theme={theme}
+                  onSelectCategory={(cat) => setSelectedCategory(cat)}
+                  onOpenTides={() => setIsTidesModalOpen(true)}
+                  onOpenAdmin={() => setIsAdminModalOpen(true)}
+                />
+              </div>
+            </div>
+
+            {/* Right Column: Live Tide Wave Graph + Transparency & Direct Contact Portal Box (5 Cols) */}
+            <div className="lg:col-span-5 space-y-5">
+              {/* Tide Widget */}
+              <TideWaveWidget
+                theme={theme}
+                currentTideDay={todayTide}
+                onOpenFullTides={() => setIsTidesModalOpen(true)}
+              />
+
+              {/* Portal Transparency & How It Works Card */}
+              <div className={`rounded-3xl border p-5 space-y-3.5 shadow-sm transition-colors ${
+                isDark ? 'bg-linear-to-br from-slate-900 via-slate-900 to-teal-950/30 border-slate-800' : 'bg-white border-slate-200'
+              }`}>
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">🌴</span>
-                  <span className="font-bold">Algodoal Connect • Guia de Anúncios da APA de Algodoal-Maiandeua</span>
+                  <span className="p-2 rounded-2xl bg-teal-500/20 text-teal-500">
+                    <Megaphone className="w-5 h-5" />
+                  </span>
+                  <div>
+                    <h3 className={`text-sm font-black font-heading ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      Portal de Anúncios Diretos
+                    </h3>
+                    <p className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      100% livre de comissões e intermediações
+                    </p>
+                  </div>
                 </div>
-                <span className="hidden sm:inline text-slate-400">•</span>
-                <p className="text-[11px]">
-                  Preserve a natureza: recolha seu lixo, respeite os animais e apoie o comércio local.
-                </p>
-              </div>
 
-              {/* 3facil.com Credit */}
-              <div className="flex items-center gap-1.5 text-[11px]">
-                <span className="text-slate-500 dark:text-slate-400">Produzido por</span>
-                <a 
-                  href="https://www.3facil.com" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="font-bold text-teal-600 dark:text-teal-400 hover:underline transition-colors bg-teal-50 dark:bg-teal-950/50 px-2.5 py-0.5 rounded-full border border-teal-200 dark:border-teal-800/60"
-                  title="Produzido por 3facil.com - Visite www.3facil.com"
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-teal-500 shrink-0 mt-0.5" />
+                    <p className={isDark ? 'text-slate-300' : 'text-slate-600'}>
+                      <strong>Contato 100% Direto:</strong> Você fala diretamente com o dono da pousada, charreteiro, piloteiro ou depósito via WhatsApp.
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-teal-500 shrink-0 mt-0.5" />
+                    <p className={isDark ? 'text-slate-300' : 'text-slate-600'}>
+                      <strong>Sem taxas extras:</strong> Negocie valores, combine horários e reserve sem nenhuma cobrança ou intermediação do site.
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-teal-500 shrink-0 mt-0.5" />
+                    <p className={isDark ? 'text-slate-300' : 'text-slate-600'}>
+                      <strong>Comércio da APA Valorizado:</strong> Apoio e divulgação aos trabalhadores e empreendedores da Ilha de Algodoal.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setIsAdminModalOpen(true)}
+                  className="w-full py-2.5 px-4 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-md transition cursor-pointer"
                 >
-                  3facil.com
-                </a>
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Anunciar no Guia / Painel Gestor</span>
+                </button>
               </div>
-            </div>
-          </footer>
-        </div>
-      ) : (
-        /* ======================================================== */
-        /* 3. MOBILE FRAME PREVIEW VIEW                             */
-        /* ======================================================== */
-        <main
-          className={`w-full max-w-[430px] my-4 sm:my-8 rounded-[40px] border-[8px] shadow-2xl overflow-hidden min-h-[860px] flex flex-col justify-start relative transition-all duration-300 ${
-            isDark 
-              ? 'border-slate-800 shadow-teal-950/40 bg-slate-950' 
-              : 'border-slate-300 shadow-slate-400/40 bg-slate-50'
-          }`}
-        >
-          {/* Dynamic Island Bezel for Mobile Frame */}
-          <div className={`w-full pt-2 pb-1 flex items-center justify-center border-b ${
-            isDark ? 'bg-slate-900 border-slate-800/60' : 'bg-slate-200 border-slate-300'
-          }`}>
-            <div className={`w-24 h-4 rounded-full flex items-center justify-end px-2 gap-1 border ${
-              isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-800 border-slate-700'
-            }`}>
-              <span className="w-2 h-2 rounded-full bg-teal-400/80 animate-pulse" />
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
             </div>
           </div>
 
-          {/* 1. Mobile Top Bar with Live Island Weather, Tides & Search */}
-          <MobileTopBar
-            theme={theme}
-            onToggleTheme={toggleTheme}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            onOpenAdmin={() => setIsAdminModalOpen(true)}
-            onOpenTides={() => setIsTidesModalOpen(true)}
-            onOpenWeather={() => setIsWeatherModalOpen(true)}
-            currentUser={currentUser}
-            currentTideSummary={dynamicTideSummary}
-            weather={weather}
-          />
+          {/* Main Category Feed Grid (Pousadas, Gastronomia, Rabetas, Suprimentos) */}
+          <div className={`rounded-3xl border overflow-hidden p-4 sm:p-6 shadow-sm ${
+            isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-white border-slate-200'
+          }`}>
+            <div className="mb-4">
+              <h2 className={`text-xl font-black font-heading ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                Explorar Anúncios & Serviços em Algodoal
+              </h2>
+              <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                Consulte pousadas, restaurantes, condutores de charretes, barcos e depósitos com contato direto pelo WhatsApp.
+              </p>
+            </div>
 
-          {/* 2. Hero Carousel Commercial Banners */}
-          <HeroBannersCarousel
-            theme={theme}
-            advertisements={advertisements}
-            onOpenDetails={(ad) => setSelectedAdForDetails(ad)}
-            onAdClick={(ad) => {
-              setSelectedAdForDetails(ad);
-              if (ad.category) setSelectedCategory(ad.category);
-            }}
-          />
+            <MobileCategoryFeed
+              theme={theme}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+              searchTerm={searchTerm}
+              partners={partners}
+            />
+          </div>
+        </div>
 
-          {/* 3. Quick Actions Grid (8 Essential Categories) */}
-          <QuickActionsGrid
-            theme={theme}
-            onSelectCategory={(cat) => setSelectedCategory(cat)}
-            onOpenTides={() => setIsTidesModalOpen(true)}
-            onOpenAdmin={() => setIsAdminModalOpen(true)}
-          />
+        {/* Desktop Footer with Environmental Protection Info & Developer Attribution */}
+        <footer className={`w-full py-8 border-t mt-12 transition-colors ${
+          isDark ? 'bg-slate-950 border-slate-900 text-slate-400' : 'bg-white border-slate-200 text-slate-600'
+        }`}>
+          <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
+            <div className="flex flex-col sm:flex-row items-center gap-2 text-center sm:text-left">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🌴</span>
+                <span className="font-bold">Algodoal Connect • Guia de Anúncios da APA de Algodoal-Maiandeua</span>
+              </div>
+              <span className="hidden sm:inline text-slate-400">•</span>
+              <p className="text-[11px]">
+                Preserve a natureza: recolha seu lixo, respeite os animais e apoie o comércio local.
+              </p>
+            </div>
 
-          {/* 4. Live Tide Wave Widget (Marapanim Tide Graph) */}
-          <TideWaveWidget
-            theme={theme}
-            currentTideDay={todayTide}
-            onOpenFullTides={() => setIsTidesModalOpen(true)}
-          />
-
-          {/* 5. Categorized Feed with Stories & Direct WhatsApp Contacts */}
-          <MobileCategoryFeed
-            theme={theme}
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-            searchTerm={searchTerm}
-            partners={partners}
-          />
-
-          {/* Mobile Footer with 3facil.com Credit */}
-          <div className="px-6 pt-2 pb-6 text-center">
-            <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
-              <span>Produzido por</span>
+            {/* 3facil.com Credit */}
+            <div className="flex items-center gap-1.5 text-[11px]">
+              <span className="text-slate-500 dark:text-slate-400">Produzido por</span>
               <a 
                 href="https://www.3facil.com" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="font-bold text-teal-600 dark:text-teal-400 hover:underline bg-teal-50 dark:bg-teal-950/50 px-2.5 py-0.5 rounded-full border border-teal-200 dark:border-teal-800/60 transition"
-                title="Produzido por 3facil.com"
+                className="font-bold text-teal-600 dark:text-teal-400 hover:underline transition-colors bg-teal-50 dark:bg-teal-950/50 px-2.5 py-0.5 rounded-full border border-teal-200 dark:border-teal-800/60"
+                title="Produzido por 3facil.com - Visite www.3facil.com"
               >
                 3facil.com
               </a>
             </div>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
-              APA de Algodoal-Maiandeua • Pará
-            </p>
           </div>
+        </footer>
+      </div>
 
-          {/* Extra bottom padding to avoid bottom nav bar overlap */}
-          <div className="h-20 w-full" />
+      {/* ======================================================== */}
+      {/* 2. MOBILE VIEW (Visible on screens < 1024px)              */}
+      {/* ======================================================== */}
+      <main className="block lg:hidden w-full max-w-md mx-auto min-h-screen flex-col justify-start relative transition-all duration-300">
+        {/* 1. Mobile Top Bar with Live Island Weather, Tides & Search */}
+        <MobileTopBar
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          onOpenAdmin={() => setIsAdminModalOpen(true)}
+          onOpenTides={() => setIsTidesModalOpen(true)}
+          onOpenWeather={() => setIsWeatherModalOpen(true)}
+          currentUser={currentUser}
+          currentTideSummary={dynamicTideSummary}
+          weather={weather}
+        />
 
-          {/* 7. Fixed Mobile Bottom Navigation Bar */}
-          <MobileBottomNav
-            theme={theme}
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-            isAdminLoggedIn={currentUser?.role === 'admin'}
-          />
-        </main>
-      )}
+        {/* 2. Hero Carousel Commercial Banners */}
+        <HeroBannersCarousel
+          theme={theme}
+          advertisements={advertisements}
+          onOpenDetails={(ad) => setSelectedAdForDetails(ad)}
+          onAdClick={(ad) => {
+            setSelectedAdForDetails(ad);
+            if (ad.category) setSelectedCategory(ad.category);
+          }}
+        />
+
+        {/* 3. Quick Actions Grid (8 Essential Categories) */}
+        <QuickActionsGrid
+          theme={theme}
+          onSelectCategory={(cat) => setSelectedCategory(cat)}
+          onOpenTides={() => setIsTidesModalOpen(true)}
+          onOpenAdmin={() => setIsAdminModalOpen(true)}
+        />
+
+        {/* 4. Live Tide Wave Widget (Marapanim Tide Graph) */}
+        <TideWaveWidget
+          theme={theme}
+          currentTideDay={todayTide}
+          onOpenFullTides={() => setIsTidesModalOpen(true)}
+        />
+
+        {/* 5. Categorized Feed with Stories & Direct WhatsApp Contacts */}
+        <MobileCategoryFeed
+          theme={theme}
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+          searchTerm={searchTerm}
+          partners={partners}
+        />
+
+        {/* Mobile Footer with 3facil.com Credit */}
+        <div className="px-6 pt-2 pb-6 text-center">
+          <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
+            <span>Produzido por</span>
+            <a 
+              href="https://www.3facil.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="font-bold text-teal-600 dark:text-teal-400 hover:underline bg-teal-50 dark:bg-teal-950/50 px-2.5 py-0.5 rounded-full border border-teal-200 dark:border-teal-800/60 transition"
+              title="Produzido por 3facil.com"
+            >
+              3facil.com
+            </a>
+          </div>
+          <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+            APA de Algodoal-Maiandeua • Pará
+          </p>
+        </div>
+
+        {/* Extra bottom padding to avoid bottom nav bar overlap */}
+        <div className="h-20 w-full" />
+
+        {/* 6. Fixed Mobile Bottom Navigation Bar */}
+        <MobileBottomNav
+          theme={theme}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          isAdminLoggedIn={currentUser?.role === 'admin'}
+        />
+      </main>
 
       {/* ======================================================== */}
       {/* 4. MODALS SYSTEM                                         */}

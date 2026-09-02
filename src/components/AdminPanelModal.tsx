@@ -121,7 +121,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   onLoginSuccess,
   onLogout
 }) => {
-  const [activeMainTab, setActiveMainTab] = useState<'anuncios' | 'planos' | 'stories' | 'mares' | 'parceiros' | 'seguranca'>('anuncios');
+  const [activeMainTab, setActiveMainTab] = useState<'anuncios' | 'planos' | 'stories' | 'parceiros' | 'seguranca'>('anuncios');
   
   // Auth Form State (when not authenticated as admin)
   const [loginUsername, setLoginUsername] = useState('admin');
@@ -1184,18 +1184,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               </button>
 
               <button
-                onClick={() => setActiveMainTab('mares')}
-                className={`py-3 px-4 rounded-t-xl border-b-2 flex items-center gap-2 transition cursor-pointer ${
-                  activeMainTab === 'mares'
-                    ? 'border-sky-500 bg-white text-sky-950 shadow-xs'
-                    : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-                }`}
-              >
-                <Waves className="w-4 h-4 text-sky-600" />
-                <span>🌊 Tábua de Marés (Marapanim)</span>
-              </button>
-
-              <button
                 onClick={() => setActiveMainTab('parceiros')}
                 className={`py-3 px-4 rounded-t-xl border-b-2 flex items-center gap-2 transition cursor-pointer ${
                   activeMainTab === 'parceiros'
@@ -1545,74 +1533,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         </div>
                       ))
                     )}
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 2: TÁBUA DE MARÉS */}
-              {activeMainTab === 'mares' && (
-                <div className="space-y-6 max-w-6xl mx-auto">
-                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div>
-                      <h3 className="text-base font-black text-slate-900 font-serif">
-                        Tábua de Marés Oficial (Estação Marapanim / Algodoal)
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Dados de preamar e baixa-mar sincronizados com a capitania e tabuademares.com.
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={handleSyncMarapanim}
-                        disabled={isLoading}
-                        className="py-2 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center gap-2 transition cursor-pointer"
-                      >
-                        <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                        <span>Sincronizar Marapanim</span>
-                      </button>
-
-                      <button
-                        onClick={() => setIsAddingTideDay(true)}
-                        className="py-2 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs flex items-center gap-1.5 transition cursor-pointer"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Inserir Dia</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[11px] border-b border-slate-200">
-                          <th className="py-3 px-4">Data</th>
-                          <th className="py-3 px-4">Lua & Coeficiente</th>
-                          <th className="py-3 px-4">Marés Altas</th>
-                          <th className="py-3 px-4">Marés Baixas</th>
-                          <th className="py-3 px-4">Recomendações</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 font-medium">
-                        {tideDays.map((tide) => (
-                          <tr key={tide.id || tide.date} className="hover:bg-slate-50">
-                            <td className="py-3 px-4 font-black text-slate-900">{tide.date}</td>
-                            <td className="py-3 px-4">
-                              <span className="font-bold text-amber-700">{tide.moon_phase}</span> (Coef: {tide.coefficient})
-                            </td>
-                            <td className="py-3 px-4 text-sky-700 font-bold">
-                              {tide.high_tides.map(h => `${h.time} (${h.height})`).join(' | ')}
-                            </td>
-                            <td className="py-3 px-4 text-emerald-700 font-bold">
-                              {tide.low_tides.map(l => `${l.time} (${l.height})`).join(' | ')}
-                            </td>
-                            <td className="py-3 px-4 text-slate-500 text-[11px] max-w-xs truncate">
-                              {tide.recommendations || 'Normal'}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
                   </div>
                 </div>
               )}
@@ -3354,58 +3274,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     </button>
                   </div>
                 </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Modal Inserir Dia de Maré */}
-        {isAddingTideDay && (
-          <div className="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-sky-300">
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-                <h4 className="text-sm font-black font-serif text-slate-900">Inserir Registro de Maré</h4>
-                <button onClick={() => setIsAddingTideDay(false)}><X className="w-4 h-4" /></button>
-              </div>
-              <form onSubmit={handleSaveTideDay} className="space-y-3 text-xs">
-                <div>
-                  <label className="font-bold">Data (AAAA-MM-DD)</label>
-                  <input
-                    type="date"
-                    required
-                    value={currentTideDay.date}
-                    onChange={(e) => setCurrentTideDay(prev => ({ ...prev, date: e.target.value }))}
-                    className="w-full p-2 border rounded-xl"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold">Fase da Lua</label>
-                  <select
-                    value={currentTideDay.moon_phase}
-                    onChange={(e) => setCurrentTideDay(prev => ({ ...prev, moon_phase: e.target.value as any }))}
-                    className="w-full p-2 border rounded-xl"
-                  >
-                    <option value="Nova">Nova</option>
-                    <option value="Crescente">Crescente</option>
-                    <option value="Cheia">Cheia</option>
-                    <option value="Minguante">Minguante</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="font-bold">Recomendações</label>
-                  <textarea
-                    rows={2}
-                    value={currentTideDay.recommendations || ''}
-                    onChange={(e) => setCurrentTideDay(prev => ({ ...prev, recommendations: e.target.value }))}
-                    className="w-full p-2 border rounded-xl"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full py-2.5 bg-sky-600 text-white font-bold rounded-xl hover:bg-sky-500 transition"
-                >
-                  Salvar Maré no Banco
-                </button>
               </form>
             </div>
           </div>
