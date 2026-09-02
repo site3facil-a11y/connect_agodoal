@@ -41,6 +41,457 @@ if (databaseUrl && !databaseUrl.includes('localhost:5432')) {
   }
 }
 
+// ==========================================
+// POSTGRESQL SCHEMA BOOTSTRAP + SEED
+// ==========================================
+// Every DAL function below awaits this promise before touching pgPool, so the
+// tables and initial seed data always exist before the first real query runs.
+let pgInitPromise: Promise<void> | null = pgPool ? initPostgres() : null;
+
+async function initPostgres(): Promise<void> {
+  try {
+    await pgPool!.query(`
+      CREATE TABLE IF NOT EXISTS partners (
+        id VARCHAR(64) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        category VARCHAR(50) NOT NULL,
+        subcategory VARCHAR(150),
+        phone VARCHAR(50) NOT NULL,
+        whatsapp VARCHAR(50) NOT NULL,
+        description TEXT,
+        photo_url TEXT,
+        location VARCHAR(255) NOT NULL,
+        rating NUMERIC(3,2) DEFAULT 5.0,
+        total_reviews INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT TRUE,
+        verified BOOLEAN DEFAULT TRUE,
+        plan_type VARCHAR(20),
+        price_starting NUMERIC(10,2) DEFAULT 0.0,
+        vehicle_badge VARCHAR(150),
+        opening_hours VARCHAR(150),
+        amenities JSONB DEFAULT '[]',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS services_products (
+        id VARCHAR(64) PRIMARY KEY,
+        partner_id VARCHAR(64) REFERENCES partners(id) ON DELETE CASCADE,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        price NUMERIC(10,2) NOT NULL DEFAULT 0,
+        unit VARCHAR(80) NOT NULL DEFAULT 'por unidade',
+        category VARCHAR(50) NOT NULL,
+        image_url TEXT,
+        available BOOLEAN DEFAULT TRUE,
+        estimated_time VARCHAR(80)
+      );
+
+      CREATE TABLE IF NOT EXISTS orders (
+        id VARCHAR(64) PRIMARY KEY,
+        customer_name VARCHAR(255) NOT NULL,
+        customer_phone VARCHAR(50) NOT NULL,
+        customer_location VARCHAR(255) NOT NULL,
+        destination_location VARCHAR(255),
+        partner_id VARCHAR(64) REFERENCES partners(id) ON DELETE SET NULL,
+        partner_name VARCHAR(255),
+        category VARCHAR(50) NOT NULL,
+        items JSONB NOT NULL DEFAULT '[]',
+        total_price NUMERIC(10,2) NOT NULL DEFAULT 0,
+        status VARCHAR(50) NOT NULL DEFAULT 'pendente',
+        payment_method VARCHAR(50) NOT NULL DEFAULT 'pix',
+        notes TEXT,
+        driver_or_agent_name VARCHAR(255),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS reviews (
+        id VARCHAR(64) PRIMARY KEY,
+        partner_id VARCHAR(64) REFERENCES partners(id) ON DELETE CASCADE,
+        customer_name VARCHAR(255) NOT NULL,
+        rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+        comment TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS island_spots (
+        id VARCHAR(64) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        category VARCHAR(50) NOT NULL,
+        description TEXT,
+        image_url TEXT,
+        distance_from_port VARCHAR(100),
+        walking_time VARCHAR(100),
+        cart_time VARCHAR(100),
+        tips TEXT,
+        coordinates JSONB
+      );
+
+      CREATE TABLE IF NOT EXISTS boat_crossings (
+        id VARCHAR(64) PRIMARY KEY,
+        origin VARCHAR(150) NOT NULL,
+        destination VARCHAR(150) NOT NULL,
+        departure_times JSONB NOT NULL DEFAULT '[]',
+        price NUMERIC(10,2) NOT NULL DEFAULT 0,
+        duration VARCHAR(80) NOT NULL,
+        association VARCHAR(255),
+        phone VARCHAR(50),
+        notes TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS useful_contacts (
+        id VARCHAR(64) PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        category VARCHAR(50) NOT NULL,
+        phone VARCHAR(50) NOT NULL,
+        whatsapp VARCHAR(50),
+        location VARCHAR(255) NOT NULL,
+        description TEXT,
+        available_hours VARCHAR(100)
+      );
+
+      CREATE TABLE IF NOT EXISTS advertisements (
+        id VARCHAR(64) PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        category VARCHAR(50) NOT NULL,
+        partner_id VARCHAR(64),
+        business_name VARCHAR(255) NOT NULL,
+        tagline VARCHAR(255),
+        description TEXT,
+        image_url TEXT,
+        link_url TEXT,
+        whatsapp VARCHAR(50),
+        phone VARCHAR(50),
+        location VARCHAR(255),
+        price_starting NUMERIC(10,2) DEFAULT 0,
+        badge VARCHAR(100),
+        event_date VARCHAR(50),
+        event_venue VARCHAR(255),
+        banner_slot VARCHAR(30) DEFAULT 'nenhum',
+        plan_type VARCHAR(20),
+        is_active BOOLEAN DEFAULT TRUE,
+        is_highlighted BOOLEAN DEFAULT FALSE,
+        start_date VARCHAR(20),
+        end_date VARCHAR(20),
+        views_count INTEGER DEFAULT 0,
+        clicks_count INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS tide_days (
+        id VARCHAR(64) PRIMARY KEY,
+        date VARCHAR(10) UNIQUE NOT NULL,
+        moon_phase VARCHAR(20) NOT NULL,
+        coefficient INTEGER,
+        high_tides JSONB NOT NULL DEFAULT '[]',
+        low_tides JSONB NOT NULL DEFAULT '[]',
+        source VARCHAR(50) NOT NULL DEFAULT 'manual',
+        recommendations TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS users (
+        id VARCHAR(64) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        phone VARCHAR(50),
+        avatar_url TEXT,
+        provider VARCHAR(20) NOT NULL DEFAULT 'email',
+        role VARCHAR(20) NOT NULL DEFAULT 'tourist',
+        partner_id VARCHAR(64),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS admin_settings (
+        id INTEGER PRIMARY KEY DEFAULT 1,
+        admin_username VARCHAR(100) NOT NULL DEFAULT 'admin',
+        admin_email VARCHAR(255) NOT NULL DEFAULT 'admin@algodoalconnect.com.br',
+        admin_pin VARCHAR(255) NOT NULL DEFAULT 'algodoal2026',
+        hero_background_url TEXT,
+        hero_rotation_enabled BOOLEAN DEFAULT TRUE,
+        hero_active_images JSONB DEFAULT '[]',
+        hero_custom_images JSONB DEFAULT '[]',
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        CONSTRAINT admin_settings_singleton CHECK (id = 1)
+      );
+
+      CREATE TABLE IF NOT EXISTS stories (
+        id VARCHAR(64) PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        subtitle VARCHAR(255),
+        emoji VARCHAR(10),
+        cover_image TEXT,
+        full_image TEXT,
+        description TEXT,
+        location VARCHAR(255),
+        tag VARCHAR(100),
+        category VARCHAR(50) DEFAULT 'todos',
+        whatsapp VARCHAR(50),
+        is_active BOOLEAN DEFAULT TRUE,
+        order_index INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_partners_category ON partners(category);
+      CREATE INDEX IF NOT EXISTS idx_services_partner ON services_products(partner_id);
+      CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+      CREATE INDEX IF NOT EXISTS idx_orders_partner ON orders(partner_id);
+      CREATE INDEX IF NOT EXISTS idx_advertisements_category ON advertisements(category);
+      CREATE INDEX IF NOT EXISTS idx_reviews_partner ON reviews(partner_id);
+    `);
+
+    console.log('🗄️  Tabelas PostgreSQL verificadas/criadas com sucesso.');
+    await seedPostgresIfEmpty();
+  } catch (err) {
+    console.error('❌ Falha ao inicializar o schema PostgreSQL. Caindo para o armazenamento local em arquivo JSON:', err);
+    // Disable the pool so every DAL function below falls back to the local JSON store
+    // instead of silently failing on every request.
+    pgPool = null;
+  }
+}
+
+async function seedPostgresIfEmpty(): Promise<void> {
+  const { rows } = await pgPool!.query('SELECT COUNT(*)::int AS count FROM partners');
+  if (rows[0].count > 0) {
+    console.log('✅ PostgreSQL já contém dados — seed inicial ignorado.');
+    return;
+  }
+
+  console.log('🌱 Banco PostgreSQL vazio. Semeando dados iniciais de Algodoal Connect...');
+
+  for (const p of SEED_PARTNERS) {
+    await pgPool!.query(
+      `INSERT INTO partners (id, name, category, subcategory, phone, whatsapp, description, photo_url, location, rating, total_reviews, is_active, verified, plan_type, price_starting, vehicle_badge, opening_hours, amenities, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+       ON CONFLICT (id) DO NOTHING`,
+      [p.id, p.name, p.category, p.subcategory || null, p.phone, p.whatsapp, p.description, p.photo_url, p.location, p.rating, p.total_reviews, p.is_active, p.verified, p.plan_type || null, p.price_starting, p.vehicle_badge || null, p.opening_hours || null, JSON.stringify(p.amenities || []), p.created_at]
+    );
+  }
+
+  for (const s of SEED_SERVICES) {
+    await pgPool!.query(
+      `INSERT INTO services_products (id, partner_id, name, description, price, unit, category, image_url, available, estimated_time)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+       ON CONFLICT (id) DO NOTHING`,
+      [s.id, s.partner_id, s.name, s.description, s.price, s.unit, s.category, s.image_url, s.available, s.estimated_time || null]
+    );
+  }
+
+  for (const o of SEED_ORDERS) {
+    await pgPool!.query(
+      `INSERT INTO orders (id, customer_name, customer_phone, customer_location, destination_location, partner_id, partner_name, category, items, total_price, status, payment_method, notes, driver_or_agent_name, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+       ON CONFLICT (id) DO NOTHING`,
+      [o.id, o.customer_name, o.customer_phone, o.customer_location, o.destination_location || null, o.partner_id, o.partner_name || null, o.category, JSON.stringify(o.items || []), o.total_price, o.status, o.payment_method, o.notes || null, o.driver_or_agent_name || null, o.created_at, o.updated_at]
+    );
+  }
+
+  for (const sp of SEED_ISLAND_SPOTS) {
+    await pgPool!.query(
+      `INSERT INTO island_spots (id, name, category, description, image_url, distance_from_port, walking_time, cart_time, tips, coordinates)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+       ON CONFLICT (id) DO NOTHING`,
+      [sp.id, sp.name, sp.category, sp.description, sp.image_url, sp.distance_from_port, sp.walking_time, sp.cart_time, sp.tips, JSON.stringify(sp.coordinates)]
+    );
+  }
+
+  for (const b of SEED_BOAT_CROSSINGS) {
+    await pgPool!.query(
+      `INSERT INTO boat_crossings (id, origin, destination, departure_times, price, duration, association, phone, notes)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+       ON CONFLICT (id) DO NOTHING`,
+      [b.id, b.origin, b.destination, JSON.stringify(b.departure_times), b.price, b.duration, b.association, b.phone, b.notes]
+    );
+  }
+
+  for (const c of SEED_USEFUL_CONTACTS) {
+    await pgPool!.query(
+      `INSERT INTO useful_contacts (id, title, category, phone, whatsapp, location, description, available_hours)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       ON CONFLICT (id) DO NOTHING`,
+      [c.id, c.title, c.category, c.phone, c.whatsapp || null, c.location, c.description, c.available_hours]
+    );
+  }
+
+  for (const r of SEED_REVIEWS) {
+    await pgPool!.query(
+      `INSERT INTO reviews (id, partner_id, customer_name, rating, comment, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6)
+       ON CONFLICT (id) DO NOTHING`,
+      [r.id, r.partner_id, r.customer_name, r.rating, r.comment, r.created_at]
+    );
+  }
+
+  for (const a of SEED_ADVERTISEMENTS) {
+    await pgPool!.query(
+      `INSERT INTO advertisements (id, title, category, partner_id, business_name, tagline, description, image_url, link_url, whatsapp, phone, location, price_starting, badge, event_date, event_venue, banner_slot, plan_type, is_active, is_highlighted, start_date, end_date, views_count, clicks_count, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
+       ON CONFLICT (id) DO NOTHING`,
+      [a.id, a.title, a.category, a.partner_id || null, a.business_name, a.tagline || null, a.description, a.image_url, a.link_url || null, a.whatsapp, a.phone || null, a.location, a.price_starting || 0, a.badge || null, a.event_date || null, a.event_venue || null, a.banner_slot || 'nenhum', a.plan_type || null, a.is_active, a.is_highlighted, a.start_date, a.end_date, a.views_count || 0, a.clicks_count || 0, a.created_at, a.updated_at]
+    );
+  }
+
+  for (const t of SEED_TIDE_DAYS) {
+    await pgPool!.query(
+      `INSERT INTO tide_days (id, date, moon_phase, coefficient, high_tides, low_tides, source, recommendations)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       ON CONFLICT (date) DO NOTHING`,
+      [t.id, t.date, t.moon_phase, t.coefficient || null, JSON.stringify(t.high_tides), JSON.stringify(t.low_tides), t.source, t.recommendations || null]
+    );
+  }
+
+  for (const u of SEED_USERS) {
+    await pgPool!.query(
+      `INSERT INTO users (id, name, email, phone, avatar_url, provider, role, partner_id, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+       ON CONFLICT (id) DO NOTHING`,
+      [u.id, u.name, u.email, u.phone || null, u.avatar_url || null, u.provider, u.role, u.partner_id || null, u.created_at]
+    );
+  }
+
+  for (const st of SEED_STORIES) {
+    await pgPool!.query(
+      `INSERT INTO stories (id, title, subtitle, emoji, cover_image, full_image, description, location, tag, category, whatsapp, is_active, order_index, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+       ON CONFLICT (id) DO NOTHING`,
+      [st.id, st.title, st.subtitle, st.emoji || null, st.coverImage, st.fullImage, st.description, st.location, st.tag, st.category || 'todos', st.whatsapp || null, st.is_active !== false, st.order_index || 0, st.created_at || new Date().toISOString(), st.updated_at || new Date().toISOString()]
+    );
+  }
+
+  await pgPool!.query(
+    `INSERT INTO admin_settings (id, admin_username, admin_email, admin_pin, hero_background_url, hero_rotation_enabled, hero_active_images, hero_custom_images, updated_at)
+     VALUES (1,'admin','admin@algodoalconnect.com.br','algodoal2026','/imagens/algodoal.jpg', TRUE, $1, '[]', NOW())
+     ON CONFLICT (id) DO NOTHING`,
+    [JSON.stringify(['/imagens/algodoal.jpg', '/imagens/vila.jpg', '/imagens/vila2.jpg', '/imagens/canal.jpg', '/imagens/porto.jpg', '/imagens/porto2.jpg'])]
+  );
+
+  console.log('✅ Seed inicial do PostgreSQL concluído com sucesso.');
+}
+
+// Ensures the schema/seed step has finished before any DAL function issues a query.
+async function pgReady(): Promise<boolean> {
+  if (!pgInitPromise) return false;
+  await pgInitPromise;
+  return !!pgPool;
+}
+
+// ---- Row → interface mappers (pg returns NUMERIC as string and JSONB as parsed JS) ----
+function rowToPartner(r: any): Partner {
+  return {
+    id: r.id, name: r.name, category: r.category, subcategory: r.subcategory || undefined,
+    phone: r.phone, whatsapp: r.whatsapp, description: r.description || '', photo_url: r.photo_url,
+    location: r.location, rating: Number(r.rating), total_reviews: Number(r.total_reviews),
+    is_active: r.is_active, verified: r.verified, plan_type: r.plan_type || undefined,
+    price_starting: Number(r.price_starting), vehicle_badge: r.vehicle_badge || undefined,
+    opening_hours: r.opening_hours || undefined, amenities: r.amenities || [],
+    created_at: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at
+  };
+}
+function rowToService(r: any): ServiceProduct {
+  return {
+    id: r.id, partner_id: r.partner_id, name: r.name, description: r.description || '',
+    price: Number(r.price), unit: r.unit, category: r.category, image_url: r.image_url,
+    available: r.available, estimated_time: r.estimated_time || undefined
+  };
+}
+function rowToOrder(r: any): Order {
+  return {
+    id: r.id, customer_name: r.customer_name, customer_phone: r.customer_phone,
+    customer_location: r.customer_location, destination_location: r.destination_location || undefined,
+    partner_id: r.partner_id, partner_name: r.partner_name || undefined, category: r.category,
+    items: r.items || [], total_price: Number(r.total_price), status: r.status,
+    payment_method: r.payment_method, notes: r.notes || undefined,
+    driver_or_agent_name: r.driver_or_agent_name || undefined,
+    created_at: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
+    updated_at: r.updated_at instanceof Date ? r.updated_at.toISOString() : r.updated_at
+  };
+}
+function rowToReview(r: any): Review {
+  return {
+    id: r.id, partner_id: r.partner_id, customer_name: r.customer_name, rating: Number(r.rating),
+    comment: r.comment || '', created_at: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at
+  };
+}
+function rowToIslandSpot(r: any): IslandSpot {
+  return {
+    id: r.id, name: r.name, category: r.category, description: r.description || '',
+    image_url: r.image_url, distance_from_port: r.distance_from_port, walking_time: r.walking_time,
+    cart_time: r.cart_time, tips: r.tips || '', coordinates: r.coordinates || { x: 0, y: 0 }
+  };
+}
+function rowToBoatCrossing(r: any): BoatCrossingSchedule {
+  return {
+    id: r.id, origin: r.origin, destination: r.destination, departure_times: r.departure_times || [],
+    price: Number(r.price), duration: r.duration, association: r.association || '',
+    phone: r.phone || '', notes: r.notes || ''
+  };
+}
+function rowToUsefulContact(r: any): UsefulContact {
+  return {
+    id: r.id, title: r.title, category: r.category, phone: r.phone, whatsapp: r.whatsapp || undefined,
+    location: r.location, description: r.description || '', available_hours: r.available_hours || ''
+  };
+}
+function rowToAdvertisement(r: any): Advertisement {
+  return {
+    id: r.id, title: r.title, category: r.category, partner_id: r.partner_id || undefined,
+    business_name: r.business_name, tagline: r.tagline || undefined, description: r.description || '',
+    image_url: r.image_url, link_url: r.link_url || undefined, whatsapp: r.whatsapp || '',
+    phone: r.phone || undefined, location: r.location || '', price_starting: r.price_starting !== null ? Number(r.price_starting) : undefined,
+    badge: r.badge || undefined, event_date: r.event_date || undefined, event_venue: r.event_venue || undefined,
+    banner_slot: r.banner_slot || 'nenhum', plan_type: r.plan_type || undefined,
+    is_active: r.is_active, is_highlighted: r.is_highlighted,
+    start_date: r.start_date, end_date: r.end_date,
+    views_count: Number(r.views_count) || 0, clicks_count: Number(r.clicks_count) || 0,
+    created_at: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
+    updated_at: r.updated_at instanceof Date ? r.updated_at.toISOString() : r.updated_at
+  };
+}
+function rowToTideDay(r: any): TideDayEntry {
+  return {
+    id: r.id, date: r.date, moon_phase: r.moon_phase, coefficient: r.coefficient != null ? Number(r.coefficient) : undefined,
+    high_tides: r.high_tides || [], low_tides: r.low_tides || [], source: r.source, recommendations: r.recommendations || undefined
+  };
+}
+function rowToUser(r: any): UserProfile {
+  return {
+    id: r.id, name: r.name, email: r.email, phone: r.phone || undefined, avatar_url: r.avatar_url || undefined,
+    provider: r.provider, role: r.role, partner_id: r.partner_id || undefined,
+    created_at: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at
+  };
+}
+function rowToStory(r: any): IslandStory {
+  return {
+    id: r.id, title: r.title, subtitle: r.subtitle || '', emoji: r.emoji || undefined,
+    coverImage: r.cover_image, fullImage: r.full_image, description: r.description || '',
+    location: r.location || '', tag: r.tag || '', category: r.category || 'todos',
+    whatsapp: r.whatsapp || undefined, is_active: r.is_active, order_index: r.order_index,
+    created_at: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
+    updated_at: r.updated_at instanceof Date ? r.updated_at.toISOString() : r.updated_at
+  };
+}
+
+// Generic partial UPDATE builder used by the Postgres branches below.
+async function pgPartialUpdate(table: string, id: string, updates: Record<string, any>, columnMap: Record<string, string> = {}): Promise<any | null> {
+  const entries = Object.entries(updates).filter(([, v]) => v !== undefined);
+  if (entries.length === 0) {
+    const res = await pgPool!.query(`SELECT * FROM ${table} WHERE id = $1`, [id]);
+    return res.rows[0] || null;
+  }
+  const setClauses: string[] = [];
+  const values: any[] = [];
+  entries.forEach(([key, value], i) => {
+    const column = columnMap[key] || key;
+    values.push(value);
+    setClauses.push(`"${column}" = $${i + 1}`);
+  });
+  values.push(id);
+  const query = `UPDATE ${table} SET ${setClauses.join(', ')} WHERE id = $${values.length} RETURNING *`;
+  const res = await pgPool!.query(query, values);
+  return res.rows[0] || null;
+}
+
 // Initial genuine island seed data
 const SEED_PARTNERS: Partner[] = [
   {
@@ -932,9 +1383,27 @@ function saveLocalDB(state: LocalDatabaseState) {
 }
 
 // Compute live tide schedule for Algodoal
-export function getLiveTideSchedule(): TideSchedule[] {
-  const db = loadLocalDB();
+export async function getLiveTideSchedule(): Promise<TideSchedule[]> {
   const todayStr = new Date().toISOString().split('T')[0];
+
+  if (await pgReady()) {
+    const res = await pgPool!.query('SELECT * FROM tide_days WHERE date = $1', [todayStr]);
+    const todayEntry = res.rows[0] ? rowToTideDay(res.rows[0]) : null;
+    if (todayEntry) {
+      const list: TideSchedule[] = [];
+      todayEntry.high_tides.forEach(h => list.push({ time: h.time, type: 'Alta (Preamar)', height: h.height, status: 'Favorável para passeios' }));
+      todayEntry.low_tides.forEach(l => list.push({ time: l.time, type: 'Baixa (Baixa-mar)', height: l.height, status: 'Atenção às pedras' }));
+      return list.sort((a, b) => a.time.localeCompare(b.time));
+    }
+    return [
+      { time: '04:12', type: 'Alta (Preamar)', height: '4.2m', status: 'Favorável para passeios' },
+      { time: '10:25', type: 'Baixa (Baixa-mar)', height: '0.4m', status: 'Atenção às pedras' },
+      { time: '16:38', type: 'Alta (Preamar)', height: '4.4m', status: 'Favorável para passeios' },
+      { time: '22:50', type: 'Baixa (Baixa-mar)', height: '0.5m', status: 'Passeio pelo canal' }
+    ];
+  }
+
+  const db = loadLocalDB();
   const todayEntry = db.tide_days?.find(t => t.date === todayStr);
 
   if (todayEntry) {
@@ -971,6 +1440,17 @@ export function getLiveTideSchedule(): TideSchedule[] {
 // ==========================================
 
 export async function getPartners(category?: string): Promise<Partner[]> {
+  if (await pgReady()) {
+    const params: any[] = [];
+    let query = 'SELECT * FROM partners WHERE is_active = TRUE';
+    if (category && category !== 'todos') {
+      params.push(category);
+      query += ` AND category = $${params.length}`;
+    }
+    query += ' ORDER BY rating DESC';
+    const res = await pgPool!.query(query, params);
+    return res.rows.map(rowToPartner);
+  }
   const db = loadLocalDB();
   let list = db.partners.filter(p => p.is_active);
   if (category && category !== 'todos') {
@@ -980,16 +1460,32 @@ export async function getPartners(category?: string): Promise<Partner[]> {
 }
 
 export async function getAllPartnersAdmin(): Promise<Partner[]> {
+  if (await pgReady()) {
+    const res = await pgPool!.query('SELECT * FROM partners ORDER BY created_at DESC');
+    return res.rows.map(rowToPartner);
+  }
   const db = loadLocalDB();
   return db.partners;
 }
 
 export async function getPartnerById(id: string): Promise<Partner | null> {
+  if (await pgReady()) {
+    const res = await pgPool!.query('SELECT * FROM partners WHERE id = $1', [id]);
+    return res.rows[0] ? rowToPartner(res.rows[0]) : null;
+  }
   const db = loadLocalDB();
   return db.partners.find(p => p.id === id) || null;
 }
 
 export async function createPartner(partner: Partner): Promise<Partner> {
+  if (await pgReady()) {
+    const res = await pgPool!.query(
+      `INSERT INTO partners (id, name, category, subcategory, phone, whatsapp, description, photo_url, location, rating, total_reviews, is_active, verified, plan_type, price_starting, vehicle_badge, opening_hours, amenities, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING *`,
+      [partner.id, partner.name, partner.category, partner.subcategory || null, partner.phone, partner.whatsapp, partner.description, partner.photo_url, partner.location, partner.rating, partner.total_reviews, partner.is_active, partner.verified, partner.plan_type || null, partner.price_starting, partner.vehicle_badge || null, partner.opening_hours || null, JSON.stringify(partner.amenities || []), partner.created_at]
+    );
+    return rowToPartner(res.rows[0]);
+  }
   const db = loadLocalDB();
   db.partners.push(partner);
   saveLocalDB(db);
@@ -997,6 +1493,12 @@ export async function createPartner(partner: Partner): Promise<Partner> {
 }
 
 export async function updatePartner(id: string, updates: Partial<Partner>): Promise<Partner | null> {
+  if (await pgReady()) {
+    const payload = { ...updates } as Record<string, any>;
+    if (payload.amenities !== undefined) payload.amenities = JSON.stringify(payload.amenities);
+    const row = await pgPartialUpdate('partners', id, payload);
+    return row ? rowToPartner(row) : null;
+  }
   const db = loadLocalDB();
   const index = db.partners.findIndex(p => p.id === id);
   if (index === -1) return null;
@@ -1006,6 +1508,10 @@ export async function updatePartner(id: string, updates: Partial<Partner>): Prom
 }
 
 export async function deletePartner(id: string): Promise<boolean> {
+  if (await pgReady()) {
+    const res = await pgPool!.query('DELETE FROM partners WHERE id = $1 RETURNING id', [id]);
+    return (res.rowCount || 0) > 0;
+  }
   const db = loadLocalDB();
   const lenBefore = db.partners.length;
   db.partners = db.partners.filter(p => p.id !== id);
@@ -1014,6 +1520,15 @@ export async function deletePartner(id: string): Promise<boolean> {
 }
 
 export async function getServices(partnerId?: string, category?: string): Promise<ServiceProduct[]> {
+  if (await pgReady()) {
+    const conditions: string[] = [];
+    const params: any[] = [];
+    if (partnerId) { params.push(partnerId); conditions.push(`partner_id = $${params.length}`); }
+    if (category && category !== 'todos') { params.push(category); conditions.push(`category = $${params.length}`); }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const res = await pgPool!.query(`SELECT * FROM services_products ${where}`, params);
+    return res.rows.map(rowToService);
+  }
   const db = loadLocalDB();
   let list = db.services;
   if (partnerId) list = list.filter(s => s.partner_id === partnerId);
@@ -1022,6 +1537,14 @@ export async function getServices(partnerId?: string, category?: string): Promis
 }
 
 export async function createService(service: ServiceProduct): Promise<ServiceProduct> {
+  if (await pgReady()) {
+    const res = await pgPool!.query(
+      `INSERT INTO services_products (id, partner_id, name, description, price, unit, category, image_url, available, estimated_time)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      [service.id, service.partner_id, service.name, service.description, service.price, service.unit, service.category, service.image_url, service.available, service.estimated_time || null]
+    );
+    return rowToService(res.rows[0]);
+  }
   const db = loadLocalDB();
   db.services.push(service);
   saveLocalDB(db);
@@ -1029,6 +1552,10 @@ export async function createService(service: ServiceProduct): Promise<ServicePro
 }
 
 export async function updateService(id: string, updates: Partial<ServiceProduct>): Promise<ServiceProduct | null> {
+  if (await pgReady()) {
+    const row = await pgPartialUpdate('services_products', id, updates as Record<string, any>);
+    return row ? rowToService(row) : null;
+  }
   const db = loadLocalDB();
   const index = db.services.findIndex(s => s.id === id);
   if (index === -1) return null;
@@ -1038,6 +1565,10 @@ export async function updateService(id: string, updates: Partial<ServiceProduct>
 }
 
 export async function deleteService(id: string): Promise<boolean> {
+  if (await pgReady()) {
+    const res = await pgPool!.query('DELETE FROM services_products WHERE id = $1 RETURNING id', [id]);
+    return (res.rowCount || 0) > 0;
+  }
   const db = loadLocalDB();
   const len = db.services.length;
   db.services = db.services.filter(s => s.id !== id);
@@ -1046,6 +1577,15 @@ export async function deleteService(id: string): Promise<boolean> {
 }
 
 export async function getOrders(partnerId?: string, status?: string): Promise<Order[]> {
+  if (await pgReady()) {
+    const conditions: string[] = [];
+    const params: any[] = [];
+    if (partnerId) { params.push(partnerId); conditions.push(`partner_id = $${params.length}`); }
+    if (status && status !== 'todos') { params.push(status); conditions.push(`status = $${params.length}`); }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const res = await pgPool!.query(`SELECT * FROM orders ${where} ORDER BY created_at DESC`, params);
+    return res.rows.map(rowToOrder);
+  }
   const db = loadLocalDB();
   let list = db.orders;
   if (partnerId) list = list.filter(o => o.partner_id === partnerId);
@@ -1054,6 +1594,14 @@ export async function getOrders(partnerId?: string, status?: string): Promise<Or
 }
 
 export async function createOrder(order: Order): Promise<Order> {
+  if (await pgReady()) {
+    const res = await pgPool!.query(
+      `INSERT INTO orders (id, customer_name, customer_phone, customer_location, destination_location, partner_id, partner_name, category, items, total_price, status, payment_method, notes, driver_or_agent_name, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
+      [order.id, order.customer_name, order.customer_phone, order.customer_location, order.destination_location || null, order.partner_id, order.partner_name || null, order.category, JSON.stringify(order.items || []), order.total_price, order.status, order.payment_method, order.notes || null, order.driver_or_agent_name || null, order.created_at, order.updated_at]
+    );
+    return rowToOrder(res.rows[0]);
+  }
   const db = loadLocalDB();
   db.orders.unshift(order);
   saveLocalDB(db);
@@ -1061,6 +1609,12 @@ export async function createOrder(order: Order): Promise<Order> {
 }
 
 export async function updateOrderStatus(id: string, status: OrderStatus, driverOrAgentName?: string): Promise<Order | null> {
+  if (await pgReady()) {
+    const payload: Record<string, any> = { status, updated_at: new Date().toISOString() };
+    if (driverOrAgentName) payload.driver_or_agent_name = driverOrAgentName;
+    const row = await pgPartialUpdate('orders', id, payload);
+    return row ? rowToOrder(row) : null;
+  }
   const db = loadLocalDB();
   const idx = db.orders.findIndex(o => o.id === id);
   if (idx === -1) return null;
@@ -1079,6 +1633,30 @@ export async function updateOrderStatus(id: string, status: OrderStatus, driverO
 // ==========================================
 
 export async function getAdvertisements(category?: string, onlyActive = true): Promise<Advertisement[]> {
+  if (await pgReady()) {
+    const res = await pgPool!.query('SELECT * FROM advertisements');
+    let list = res.rows.map(rowToAdvertisement);
+
+    if (onlyActive) {
+      const today = new Date().toISOString().split('T')[0];
+      list = list.filter(ad => {
+        if (!ad.is_active) return false;
+        if (ad.start_date && ad.start_date > today) return false;
+        if (ad.end_date && ad.end_date < today) return false;
+        return true;
+      });
+    }
+    if (category && category !== 'todos') {
+      const normTarget = normalizeAdCategory(category);
+      list = list.filter(ad => normalizeAdCategory(ad.category) === normTarget);
+    }
+    return list.sort((a, b) => {
+      if (a.banner_slot && a.banner_slot !== 'nenhum' && (!b.banner_slot || b.banner_slot === 'nenhum')) return -1;
+      if (b.banner_slot && b.banner_slot !== 'nenhum' && (!a.banner_slot || a.banner_slot === 'nenhum')) return 1;
+      return (b.is_highlighted ? 1 : 0) - (a.is_highlighted ? 1 : 0);
+    });
+  }
+
   const db = loadLocalDB();
   let list = db.advertisements || [];
   
@@ -1106,11 +1684,23 @@ export async function getAdvertisements(category?: string, onlyActive = true): P
 }
 
 export async function getAdvertisementById(id: string): Promise<Advertisement | null> {
+  if (await pgReady()) {
+    const res = await pgPool!.query('SELECT * FROM advertisements WHERE id = $1', [id]);
+    return res.rows[0] ? rowToAdvertisement(res.rows[0]) : null;
+  }
   const db = loadLocalDB();
   return db.advertisements.find(a => a.id === id) || null;
 }
 
 export async function createAdvertisement(ad: Advertisement): Promise<Advertisement> {
+  if (await pgReady()) {
+    const res = await pgPool!.query(
+      `INSERT INTO advertisements (id, title, category, partner_id, business_name, tagline, description, image_url, link_url, whatsapp, phone, location, price_starting, badge, event_date, event_venue, banner_slot, plan_type, is_active, is_highlighted, start_date, end_date, views_count, clicks_count, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26) RETURNING *`,
+      [ad.id, ad.title, ad.category, ad.partner_id || null, ad.business_name, ad.tagline || null, ad.description, ad.image_url, ad.link_url || null, ad.whatsapp, ad.phone || null, ad.location, ad.price_starting || 0, ad.badge || null, ad.event_date || null, ad.event_venue || null, ad.banner_slot || 'nenhum', ad.plan_type || null, ad.is_active, ad.is_highlighted, ad.start_date, ad.end_date, ad.views_count || 0, ad.clicks_count || 0, ad.created_at, ad.updated_at]
+    );
+    return rowToAdvertisement(res.rows[0]);
+  }
   const db = loadLocalDB();
   if (!db.advertisements) db.advertisements = [];
   db.advertisements.unshift(ad);
@@ -1119,6 +1709,11 @@ export async function createAdvertisement(ad: Advertisement): Promise<Advertisem
 }
 
 export async function updateAdvertisement(id: string, updates: Partial<Advertisement>): Promise<Advertisement | null> {
+  if (await pgReady()) {
+    const payload = { ...updates, updated_at: new Date().toISOString() } as Record<string, any>;
+    const row = await pgPartialUpdate('advertisements', id, payload);
+    return row ? rowToAdvertisement(row) : null;
+  }
   const db = loadLocalDB();
   if (!db.advertisements) db.advertisements = [];
   const idx = db.advertisements.findIndex(a => a.id === id);
@@ -1134,6 +1729,10 @@ export async function updateAdvertisement(id: string, updates: Partial<Advertise
 }
 
 export async function deleteAdvertisement(id: string): Promise<boolean> {
+  if (await pgReady()) {
+    const res = await pgPool!.query('DELETE FROM advertisements WHERE id = $1 RETURNING id', [id]);
+    return (res.rowCount || 0) > 0;
+  }
   const db = loadLocalDB();
   if (!db.advertisements) return false;
   const initialLen = db.advertisements.length;
@@ -1143,6 +1742,11 @@ export async function deleteAdvertisement(id: string): Promise<boolean> {
 }
 
 export async function incrementAdMetrics(id: string, type: 'view' | 'click'): Promise<void> {
+  if (await pgReady()) {
+    const column = type === 'view' ? 'views_count' : 'clicks_count';
+    await pgPool!.query(`UPDATE advertisements SET ${column} = ${column} + 1 WHERE id = $1`, [id]);
+    return;
+  }
   const db = loadLocalDB();
   const ad = db.advertisements.find(a => a.id === id);
   if (ad) {
@@ -1156,7 +1760,32 @@ export async function incrementAdMetrics(id: string, type: 'view' | 'click'): Pr
 // ADMIN AUTHENTICATION & SETTINGS
 // ==========================================
 
+function rowToAdminSettings(r: any): AdminSettings {
+  return {
+    admin_username: r.admin_username, admin_email: r.admin_email, admin_pin: r.admin_pin,
+    hero_background_url: r.hero_background_url || undefined,
+    hero_rotation_enabled: r.hero_rotation_enabled,
+    hero_active_images: r.hero_active_images || [],
+    hero_custom_images: r.hero_custom_images || [],
+    updated_at: r.updated_at instanceof Date ? r.updated_at.toISOString() : r.updated_at
+  };
+}
+
 export async function getAdminSettings(): Promise<AdminSettings> {
+  if (await pgReady()) {
+    const res = await pgPool!.query('SELECT * FROM admin_settings WHERE id = 1');
+    if (res.rows[0]) {
+      const settings = rowToAdminSettings(res.rows[0]);
+      return {
+        ...DEFAULT_ADMIN_SETTINGS,
+        ...settings,
+        hero_active_images: settings.hero_active_images && settings.hero_active_images.length > 0
+          ? settings.hero_active_images
+          : DEFAULT_HERO_PRESET_URLS
+      };
+    }
+    return DEFAULT_ADMIN_SETTINGS;
+  }
   const db = loadLocalDB();
   const settings = db.admin_settings || DEFAULT_ADMIN_SETTINGS;
   return {
@@ -1170,8 +1799,7 @@ export async function getAdminSettings(): Promise<AdminSettings> {
 }
 
 export async function validateAdminCredentials(usernameOrEmail: string, pinOrPassword: string): Promise<boolean> {
-  const db = loadLocalDB();
-  const settings = db.admin_settings || DEFAULT_ADMIN_SETTINGS;
+  const settings = await getAdminSettings();
   const cleanInput = (usernameOrEmail || '').trim().toLowerCase();
   const cleanPin = (pinOrPassword || '').trim();
 
@@ -1192,6 +1820,20 @@ export async function validateAdminCredentials(usernameOrEmail: string, pinOrPas
 }
 
 export async function updateAdminSettings(newSettings: Partial<AdminSettings>): Promise<AdminSettings> {
+  if (await pgReady()) {
+    const payload = { ...newSettings, updated_at: new Date().toISOString() } as Record<string, any>;
+    if (payload.hero_active_images !== undefined) payload.hero_active_images = JSON.stringify(payload.hero_active_images);
+    if (payload.hero_custom_images !== undefined) payload.hero_custom_images = JSON.stringify(payload.hero_custom_images);
+
+    const entries = Object.entries(payload).filter(([, v]) => v !== undefined);
+    const setClauses = entries.map(([k], i) => `"${k}" = $${i + 1}`);
+    const values = entries.map(([, v]) => v);
+    const res = await pgPool!.query(
+      `UPDATE admin_settings SET ${setClauses.join(', ')} WHERE id = 1 RETURNING *`,
+      values
+    );
+    return rowToAdminSettings(res.rows[0]);
+  }
   const db = loadLocalDB();
   const current = db.admin_settings || DEFAULT_ADMIN_SETTINGS;
   db.admin_settings = {
@@ -1208,6 +1850,74 @@ export async function updateAdminSettings(newSettings: Partial<AdminSettings>): 
 // ==========================================
 
 export async function getTideDays(startDate?: string, endDate?: string): Promise<TideDayEntry[]> {
+  if (await pgReady()) {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const cutoffDate = new Date(today);
+    cutoffDate.setDate(today.getDate() - 2);
+    const cutoffStr = cutoffDate.toISOString().split('T')[0];
+
+    // Prune old rows to keep only a rolling window, same policy as the local store
+    await pgPool!.query('DELETE FROM tide_days WHERE date < $1', [cutoffStr]);
+
+    let res = await pgPool!.query('SELECT * FROM tide_days ORDER BY date ASC');
+    let list = res.rows.map(rowToTideDay);
+
+    if (list.length < 5) {
+      const moonPhases: Array<'Nova' | 'Crescente' | 'Cheia' | 'Minguante'> = ['Cheia', 'Minguante', 'Nova', 'Crescente'];
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const toInsert: TideDayEntry[] = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() + i);
+        const dStr = d.toISOString().split('T')[0];
+        if (!list.some(t => t.date === dStr)) {
+          const coef = 75 + Math.round(Math.sin(i * 0.9) * 18);
+          const highH1 = (4.1 + Math.sin(i * 0.8) * 0.3).toFixed(1);
+          const highH2 = (4.3 + Math.cos(i * 0.8) * 0.2).toFixed(1);
+          const lowH1 = (0.4 + Math.abs(Math.sin(i * 0.5)) * 0.4).toFixed(1);
+          const lowH2 = (0.5 + Math.abs(Math.cos(i * 0.5)) * 0.4).toFixed(1);
+          const hH1 = 4 + Math.floor(i * 0.8);
+          const hM1 = (12 + i * 45) % 60;
+          const hH2 = (16 + Math.floor(i * 0.8)) % 24;
+          const hM2 = (38 + i * 42) % 60;
+          const lH1 = 10 + Math.floor(i * 0.7);
+          const lM1 = (25 + i * 43) % 60;
+          const lH2 = (22 + Math.floor(i * 0.7)) % 24;
+          const lM2 = (50 + i * 42) % 60;
+
+          toInsert.push({
+            id: `tide_${dStr.replace(/-/g, '_')}`,
+            date: dStr,
+            moon_phase: moonPhases[i % 4],
+            coefficient: coef,
+            high_tides: [
+              { time: `${pad(hH1)}:${pad(hM1)}`, height: `${highH1}m` },
+              { time: `${pad(hH2)}:${pad(hM2)}`, height: `${highH2}m` }
+            ],
+            low_tides: [
+              { time: `${pad(lH1)}:${pad(lM1)}`, height: `${lowH1}m` },
+              { time: `${pad(lH2)}:${pad(lM2)}`, height: `${lowH2}m` }
+            ],
+            source: 'tabuademares_marapanim',
+            recommendations: i === 0
+              ? 'Maré de sizígia. Faixa de areia muito ampla na baixa-mar (ótimo para charretes).'
+              : 'Consulte os horários de preamar e baixa-mar para travessias e passeios de barco.'
+          });
+        }
+      }
+      if (toInsert.length) {
+        await bulkImportTides(toInsert);
+        res = await pgPool!.query('SELECT * FROM tide_days ORDER BY date ASC');
+        list = res.rows.map(rowToTideDay);
+      }
+    }
+
+    if (startDate) list = list.filter(t => t.date >= startDate);
+    if (endDate) list = list.filter(t => t.date <= endDate);
+    return list;
+  }
+
   const db = loadLocalDB();
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
@@ -1276,6 +1986,17 @@ export async function getTideDays(startDate?: string, endDate?: string): Promise
 }
 
 export async function saveTideDay(entry: TideDayEntry): Promise<TideDayEntry> {
+  if (await pgReady()) {
+    await pgPool!.query(
+      `INSERT INTO tide_days (id, date, moon_phase, coefficient, high_tides, low_tides, source, recommendations)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       ON CONFLICT (date) DO UPDATE SET
+         id = EXCLUDED.id, moon_phase = EXCLUDED.moon_phase, coefficient = EXCLUDED.coefficient,
+         high_tides = EXCLUDED.high_tides, low_tides = EXCLUDED.low_tides, source = EXCLUDED.source, recommendations = EXCLUDED.recommendations`,
+      [entry.id, entry.date, entry.moon_phase, entry.coefficient || null, JSON.stringify(entry.high_tides), JSON.stringify(entry.low_tides), entry.source, entry.recommendations || null]
+    );
+    return entry;
+  }
   const db = loadLocalDB();
   if (!db.tide_days) db.tide_days = [];
   const idx = db.tide_days.findIndex(t => t.date === entry.date);
@@ -1294,6 +2015,15 @@ export async function saveTideDay(entry: TideDayEntry): Promise<TideDayEntry> {
 }
 
 export async function bulkImportTides(entries: TideDayEntry[]): Promise<number> {
+  if (await pgReady()) {
+    let count = 0;
+    for (const entry of entries) {
+      await saveTideDay(entry);
+      count++;
+    }
+    return count;
+  }
+
   const db = loadLocalDB();
   if (!db.tide_days) db.tide_days = [];
   
@@ -1320,11 +2050,35 @@ export async function bulkImportTides(entries: TideDayEntry[]): Promise<number> 
 // ==========================================
 
 export async function getUsers(): Promise<UserProfile[]> {
+  if (await pgReady()) {
+    const res = await pgPool!.query('SELECT * FROM users ORDER BY created_at DESC');
+    return res.rows.map(rowToUser);
+  }
   const db = loadLocalDB();
   return db.users || [];
 }
 
 export async function findOrCreateUser(profile: UserProfile): Promise<UserProfile> {
+  if (await pgReady()) {
+    const existing = await pgPool!.query(
+      'SELECT * FROM users WHERE email = $1 OR (id = $2 AND provider = $3) LIMIT 1',
+      [profile.email, profile.id, profile.provider]
+    );
+    if (existing.rows[0]) {
+      const row = await pgPartialUpdate('users', existing.rows[0].id, {
+        name: profile.name || existing.rows[0].name,
+        avatar_url: profile.avatar_url || existing.rows[0].avatar_url
+      });
+      return rowToUser(row);
+    }
+    const res = await pgPool!.query(
+      `INSERT INTO users (id, name, email, phone, avatar_url, provider, role, partner_id, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      [profile.id, profile.name, profile.email, profile.phone || null, profile.avatar_url || null, profile.provider, profile.role, profile.partner_id || null, profile.created_at]
+    );
+    return rowToUser(res.rows[0]);
+  }
+
   const db = loadLocalDB();
   if (!db.users) db.users = [];
   const existing = db.users.find(u => u.email === profile.email || (u.id === profile.id && u.provider === profile.provider));
@@ -1340,21 +2094,41 @@ export async function findOrCreateUser(profile: UserProfile): Promise<UserProfil
 }
 
 export async function getIslandSpots(): Promise<IslandSpot[]> {
+  if (await pgReady()) {
+    const res = await pgPool!.query('SELECT * FROM island_spots');
+    return res.rows.map(rowToIslandSpot);
+  }
   const db = loadLocalDB();
   return db.island_spots;
 }
 
 export async function getBoatCrossings(): Promise<BoatCrossingSchedule[]> {
+  if (await pgReady()) {
+    const res = await pgPool!.query('SELECT * FROM boat_crossings');
+    return res.rows.map(rowToBoatCrossing);
+  }
   const db = loadLocalDB();
   return db.boat_crossings;
 }
 
 export async function getUsefulContacts(): Promise<UsefulContact[]> {
+  if (await pgReady()) {
+    const res = await pgPool!.query('SELECT * FROM useful_contacts');
+    return res.rows.map(rowToUsefulContact);
+  }
   const db = loadLocalDB();
   return db.useful_contacts;
 }
 
 export async function getReviews(partnerId?: string): Promise<Review[]> {
+  if (await pgReady()) {
+    if (partnerId) {
+      const res = await pgPool!.query('SELECT * FROM reviews WHERE partner_id = $1 ORDER BY created_at DESC', [partnerId]);
+      return res.rows.map(rowToReview);
+    }
+    const res = await pgPool!.query('SELECT * FROM reviews ORDER BY created_at DESC');
+    return res.rows.map(rowToReview);
+  }
   const db = loadLocalDB();
   if (partnerId) {
     return db.reviews.filter(r => r.partner_id === partnerId);
@@ -1363,6 +2137,24 @@ export async function getReviews(partnerId?: string): Promise<Review[]> {
 }
 
 export async function addReview(review: Review): Promise<Review> {
+  if (await pgReady()) {
+    const res = await pgPool!.query(
+      `INSERT INTO reviews (id, partner_id, customer_name, rating, comment, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [review.id, review.partner_id, review.customer_name, review.rating, review.comment, review.created_at]
+    );
+
+    // recalculate partner rating from all reviews for this partner
+    const agg = await pgPool!.query(
+      'SELECT AVG(rating)::numeric(3,2) AS avg_rating, COUNT(*)::int AS total FROM reviews WHERE partner_id = $1',
+      [review.partner_id]
+    );
+    if (agg.rows[0]) {
+      await pgPool!.query('UPDATE partners SET rating = $1, total_reviews = $2 WHERE id = $3', [agg.rows[0].avg_rating, agg.rows[0].total, review.partner_id]);
+    }
+    return rowToReview(res.rows[0]);
+  }
+
   const db = loadLocalDB();
   db.reviews.unshift(review);
 
@@ -1380,6 +2172,38 @@ export async function addReview(review: Review): Promise<Review> {
 }
 
 export async function getIslandStats() {
+  if (await pgReady()) {
+    const [partners, orders, ads, stories] = await Promise.all([
+      pgPool!.query('SELECT category, is_active FROM partners'),
+      pgPool!.query("SELECT status, total_price FROM orders"),
+      pgPool!.query('SELECT is_active, views_count, clicks_count FROM advertisements'),
+      pgPool!.query('SELECT is_active FROM stories')
+    ]);
+    const partnerRows = partners.rows;
+    const orderRows = orders.rows;
+    const adRows = ads.rows;
+    const storyRows = stories.rows;
+
+    const completedOrders = orderRows.filter((o: any) => o.status === 'concluido');
+    return {
+      totalPartners: partnerRows.length,
+      totalOrders: orderRows.length,
+      totalCompletedOrders: completedOrders.length,
+      totalRevenue: completedOrders.reduce((sum: number, o: any) => sum + Number(o.total_price), 0),
+      activeCarroceiros: partnerRows.filter((p: any) => p.category === 'transporte' && p.is_active).length,
+      activeRabetas: partnerRows.filter((p: any) => p.category === 'passeios' && p.is_active).length,
+      activeRestaurantes: partnerRows.filter((p: any) => p.category === 'alimentacao' && p.is_active).length,
+      activePousadas: partnerRows.filter((p: any) => p.category === 'pousadas' && p.is_active).length,
+      activeLojas: partnerRows.filter((p: any) => p.category === 'compras' && p.is_active).length,
+      totalAds: adRows.length,
+      activeAds: adRows.filter((a: any) => a.is_active).length,
+      totalAdViews: adRows.reduce((acc: number, a: any) => acc + (Number(a.views_count) || 0), 0),
+      totalAdClicks: adRows.reduce((acc: number, a: any) => acc + (Number(a.clicks_count) || 0), 0),
+      totalStories: storyRows.length,
+      activeStories: storyRows.filter((s: any) => s.is_active !== false).length
+    };
+  }
+
   const db = loadLocalDB();
   const totalPartners = db.partners.length;
   const totalOrders = db.orders.length;
@@ -1412,6 +2236,11 @@ export async function getIslandStats() {
 // ==========================================
 
 export async function getStories(onlyActive = false): Promise<IslandStory[]> {
+  if (await pgReady()) {
+    const where = onlyActive ? 'WHERE is_active = TRUE' : '';
+    const res = await pgPool!.query(`SELECT * FROM stories ${where} ORDER BY order_index ASC`);
+    return res.rows.map(rowToStory);
+  }
   const db = loadLocalDB();
   let list = db.stories || SEED_STORIES;
   if (onlyActive) {
@@ -1421,12 +2250,43 @@ export async function getStories(onlyActive = false): Promise<IslandStory[]> {
 }
 
 export async function getStoryById(id: string): Promise<IslandStory | null> {
+  if (await pgReady()) {
+    const res = await pgPool!.query('SELECT * FROM stories WHERE id = $1', [id]);
+    return res.rows[0] ? rowToStory(res.rows[0]) : null;
+  }
   const db = loadLocalDB();
   const list = db.stories || SEED_STORIES;
   return list.find(s => s.id === id) || null;
 }
 
 export async function createStory(storyData: Partial<IslandStory>): Promise<IslandStory> {
+  if (await pgReady()) {
+    const countRes = await pgPool!.query('SELECT COUNT(*)::int AS count FROM stories');
+    const newStory: IslandStory = {
+      id: storyData.id || `story_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      title: storyData.title || 'Novo Destaque',
+      subtitle: storyData.subtitle || 'Destaque de Algodoal',
+      emoji: storyData.emoji || '✨',
+      coverImage: storyData.coverImage || '/imagens/vila2.jpg',
+      fullImage: storyData.fullImage || storyData.coverImage || '/imagens/vila2.jpg',
+      description: storyData.description || 'Conheça as belezas e histórias da Ilha de Algodoal.',
+      location: storyData.location || 'Ilha de Algodoal',
+      tag: storyData.tag || 'Destaque',
+      category: storyData.category || 'todos',
+      whatsapp: storyData.whatsapp || '',
+      is_active: storyData.is_active !== false,
+      order_index: typeof storyData.order_index === 'number' ? storyData.order_index : (countRes.rows[0].count + 1),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    const res = await pgPool!.query(
+      `INSERT INTO stories (id, title, subtitle, emoji, cover_image, full_image, description, location, tag, category, whatsapp, is_active, order_index, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
+      [newStory.id, newStory.title, newStory.subtitle, newStory.emoji, newStory.coverImage, newStory.fullImage, newStory.description, newStory.location, newStory.tag, newStory.category, newStory.whatsapp, newStory.is_active, newStory.order_index, newStory.created_at, newStory.updated_at]
+    );
+    return rowToStory(res.rows[0]);
+  }
+
   const db = loadLocalDB();
   if (!db.stories) db.stories = [...SEED_STORIES];
 
@@ -1454,6 +2314,14 @@ export async function createStory(storyData: Partial<IslandStory>): Promise<Isla
 }
 
 export async function updateStory(id: string, updates: Partial<IslandStory>): Promise<IslandStory | null> {
+  if (await pgReady()) {
+    const payload: Record<string, any> = { ...updates, updated_at: new Date().toISOString() };
+    if (payload.coverImage !== undefined) { payload.cover_image = payload.coverImage; delete payload.coverImage; }
+    if (payload.fullImage !== undefined) { payload.full_image = payload.fullImage; delete payload.fullImage; }
+    const row = await pgPartialUpdate('stories', id, payload);
+    return row ? rowToStory(row) : null;
+  }
+
   const db = loadLocalDB();
   if (!db.stories) db.stories = [...SEED_STORIES];
 
@@ -1471,6 +2339,11 @@ export async function updateStory(id: string, updates: Partial<IslandStory>): Pr
 }
 
 export async function deleteStory(id: string): Promise<boolean> {
+  if (await pgReady()) {
+    const res = await pgPool!.query('DELETE FROM stories WHERE id = $1 RETURNING id', [id]);
+    return (res.rowCount || 0) > 0;
+  }
+
   const db = loadLocalDB();
   if (!db.stories) db.stories = [...SEED_STORIES];
 
