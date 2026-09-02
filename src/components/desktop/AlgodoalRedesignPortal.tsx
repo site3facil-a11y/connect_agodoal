@@ -557,63 +557,6 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
       </section>
 
       {/* ======================================================== */}
-      {/* 5. SECTION: DESTAQUES EM POUSADAS                        */}
-      {/* ======================================================== */}
-      <section className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-8">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-sm sm:text-base font-black uppercase tracking-wider flex items-center gap-2 text-white font-heading">
-            <Star className="w-4 h-4 text-amber-400" />
-            DESTAQUES EM POUSADAS
-          </h2>
-          <button
-            onClick={() => onSelectCategory('pousadas')}
-            className="text-xs font-bold text-teal-400 hover:text-teal-300 flex items-center gap-1 transition cursor-pointer"
-          >
-            <span>Ver todas</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* 4 Visual Pousadas Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative">
-          {POUSADA_HIGHLIGHTS.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => onSelectCategory('pousadas')}
-              className="group relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-900/90 shadow-xl transition-all duration-300 hover:scale-[1.02] hover:border-amber-400/50 cursor-pointer h-52 flex flex-col justify-end p-4"
-            >
-              {/* Background Photo */}
-              <div 
-                className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
-                style={{ backgroundImage: `url('${item.image}')` }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-
-              {/* Optional Top Badge */}
-              {item.badge && (
-                <div className="absolute top-3 left-3 z-10">
-                  <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 shadow-md">
-                    {item.badge}
-                  </span>
-                </div>
-              )}
-
-              {/* Card Bottom Content */}
-              <div className="relative z-10 space-y-1">
-                <h3 className="text-sm font-black text-white leading-tight drop-shadow-md">
-                  {item.name}
-                </h3>
-                <p className="text-[11px] text-slate-300 flex items-center gap-1">
-                  <MapPin className="w-3 h-3 text-amber-400" />
-                  {item.location}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ======================================================== */}
       {/* 6. RESULTS FEED (IF SEARCHING OR FILTERING BY CATEGORY)  */}
       {/* ======================================================== */}
       {(selectedCategory !== 'todos' || searchTerm) && (
