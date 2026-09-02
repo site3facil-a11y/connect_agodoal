@@ -46,6 +46,7 @@ import { TideScheduleModal } from './components/TideScheduleModal.tsx';
 import { AdDetailsModal } from './components/AdDetailsModal.tsx';
 import { WeatherDetailsModal } from './components/WeatherDetailsModal.tsx';
 import { DesktopNavbar } from './components/desktop/DesktopNavbar.tsx';
+import { AlgodoalRedesignPortal } from './components/desktop/AlgodoalRedesignPortal.tsx';
 
 // Fallback Initial Partners Data for Instant Prototype Rendering
 const INITIAL_PROTOTYPE_PARTNERS: Partner[] = [
@@ -168,6 +169,9 @@ export function App() {
   // View Mode: 'desktop' | 'mobile' (Defaults to 'desktop' so desktop view is always available)
   const [viewMode, setViewMode] = useState<'desktop' | 'mobile'>('desktop');
 
+  // Layout Version: 'new_photo_layout' (Current from WhatsApp screenshot) | 'previous_layout' (Checkpoint / Marcação)
+  const [layoutVersion, setLayoutVersion] = useState<'new_photo_layout' | 'previous_layout'>('new_photo_layout');
+
   // Navigation Tabs & Category Filters
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [selectedCategory, setSelectedCategory] = useState<string>('todos');
@@ -175,9 +179,15 @@ export function App() {
 
   // Modals
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [adminInitialTab, setAdminInitialTab] = useState<'anuncios' | 'planos' | 'stories' | 'parceiros' | 'fundo' | 'seguranca'>('anuncios');
   const [isTidesModalOpen, setIsTidesModalOpen] = useState(false);
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
   const [selectedAdForDetails, setSelectedAdForDetails] = useState<Advertisement | null>(null);
+
+  // Background Customization State
+  const [heroBackgroundUrl, setHeroBackgroundUrl] = useState<string>(() => {
+    return localStorage.getItem('algodoal_hero_background') || '/imagens/algodoal.jpg';
+  });
 
   // Data States
   const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
@@ -215,6 +225,20 @@ export function App() {
 
   const loadRealData = async () => {
     try {
+      // 0. Fetch Admin Settings (Hero Background URL)
+      try {
+        const resSettings = await fetch('/api/admin/settings');
+        if (resSettings.ok) {
+          const dataSettings = await resSettings.json();
+          if (dataSettings && dataSettings.hero_background_url) {
+            setHeroBackgroundUrl(dataSettings.hero_background_url);
+            localStorage.setItem('algodoal_hero_background', dataSettings.hero_background_url);
+          }
+        }
+      } catch (errSettings) {
+        console.warn('Configurações salvas não puderam ser carregadas:', errSettings);
+      }
+
       // 1. Fetch Real Ads from Backend
       const resAds = await fetch('/api/advertisements?only_active=true');
       if (resAds.ok) {
@@ -306,9 +330,9 @@ export function App() {
     }`}>
       
       {/* ======================================================== */}
-      {/* 0. VIEW SWITCHER & SIMULATION TOOLBAR                     */}
+      {/* 0. VIEW SWITCHER & LAYOUT CHECKPOINT TOOLBAR             */}
       {/* ======================================================== */}
-      <div className={`w-full border-b px-4 py-2 flex items-center justify-between z-30 text-xs transition-colors ${
+      <div className={`w-full border-b px-4 py-2 flex flex-wrap items-center justify-between gap-2 z-30 text-xs transition-colors ${
         isDark ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700 shadow-xs'
       }`}>
         <div className="flex items-center gap-2">
@@ -323,8 +347,38 @@ export function App() {
           </span>
         </div>
 
-        {/* View Switcher & Theme Switcher Controls */}
-        <div className="flex items-center gap-2">
+        {/* Layout Version Checkpoint & View Controls */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Layout Checkpoint Selector */}
+          <div className={`flex items-center gap-1 p-1 rounded-xl border ${
+            isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
+          }`}>
+            <button
+              onClick={() => setLayoutVersion('new_photo_layout')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
+                layoutVersion === 'new_photo_layout'
+                  ? 'bg-amber-400 text-slate-950 shadow-xs font-black'
+                  : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="Novo Layout baseado na foto enviada"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-slate-950" />
+              <span>Novo Layout (Foto)</span>
+            </button>
+
+            <button
+              onClick={() => setLayoutVersion('previous_layout')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
+                layoutVersion === 'previous_layout'
+                  ? 'bg-teal-500 text-slate-950 shadow-xs font-black'
+                  : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="Marcação para voltar ao layout anterior"
+            >
+              <span>⏮️ Layout Anterior</span>
+            </button>
+          </div>
+
           {/* Theme Switcher Button */}
           <button
             onClick={toggleTheme}
@@ -348,41 +402,70 @@ export function App() {
             )}
           </button>
 
-          {/* View Modes */}
-          <div className={`flex items-center gap-1 p-1 rounded-xl border ${
-            isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
-          }`}>
-            <button
-              onClick={() => setViewMode('desktop')}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
-                viewMode === 'desktop'
-                  ? 'bg-teal-500 text-slate-950 shadow-xs'
-                  : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Monitor className="w-3.5 h-3.5" />
-              <span>Computador (Desktop)</span>
-            </button>
+          {/* View Modes (Only active if in previous_layout or testing) */}
+          {layoutVersion === 'previous_layout' && (
+            <div className={`flex items-center gap-1 p-1 rounded-xl border ${
+              isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
+            }`}>
+              <button
+                onClick={() => setViewMode('desktop')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
+                  viewMode === 'desktop'
+                    ? 'bg-teal-500 text-slate-950 shadow-xs'
+                    : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Monitor className="w-3.5 h-3.5" />
+                <span>Desktop</span>
+              </button>
 
-            <button
-              onClick={() => setViewMode('mobile')}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
-                viewMode === 'mobile'
-                  ? 'bg-teal-500 text-slate-950 shadow-xs'
-                  : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Smartphone className="w-3.5 h-3.5" />
-              <span>Celular</span>
-            </button>
-          </div>
+              <button
+                onClick={() => setViewMode('mobile')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
+                  viewMode === 'mobile'
+                    ? 'bg-teal-500 text-slate-950 shadow-xs'
+                    : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                <span>Mobile</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* ======================================================== */}
-      {/* 1. DESKTOP VIEW                                          */}
+      {/* 1. NEW PHOTO LAYOUT (ACTIVE BY DEFAULT)                  */}
       {/* ======================================================== */}
-      {viewMode === 'desktop' ? (
+      {layoutVersion === 'new_photo_layout' ? (
+        <AlgodoalRedesignPortal
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+          onOpenAdmin={() => {
+            setAdminInitialTab('anuncios');
+            setIsAdminModalOpen(true);
+          }}
+          onOpenAdminBackground={() => {
+            setAdminInitialTab('fundo');
+            setIsAdminModalOpen(true);
+          }}
+          onOpenTides={() => setIsTidesModalOpen(true)}
+          onOpenWeather={() => setIsWeatherModalOpen(true)}
+          currentUser={currentUser}
+          currentTideSummary={dynamicTideSummary}
+          weather={weather}
+          todayTide={todayTide}
+          partners={partners}
+          advertisements={advertisements}
+          onOpenAdDetails={(ad) => setSelectedAdForDetails(ad)}
+          heroBackgroundUrl={heroBackgroundUrl}
+        />
+      ) : viewMode === 'desktop' ? (
         <div className="w-full min-h-screen flex flex-col">
           {/* Desktop Top Navigation Bar */}
           <DesktopNavbar
@@ -675,6 +758,9 @@ export function App() {
         currentUser={currentUser}
         onLoginSuccess={(user) => setCurrentUser(user)}
         onLogout={() => setCurrentUser(null)}
+        heroBackgroundUrl={heroBackgroundUrl}
+        onUpdateHeroBackground={(url) => setHeroBackgroundUrl(url)}
+        initialTab={adminInitialTab}
       />
     </div>
   );

@@ -53,7 +53,55 @@ interface AdminPanelModalProps {
   onLoginSuccess?: (user: UserProfile) => void;
   onLogout?: () => void;
   onRequireAuth?: () => void;
+  heroBackgroundUrl?: string;
+  onUpdateHeroBackground?: (url: string) => void;
+  initialTab?: 'anuncios' | 'planos' | 'stories' | 'parceiros' | 'fundo' | 'seguranca';
 }
+
+export const PRESET_HERO_BACKGROUNDS = [
+  {
+    id: 'praia_sunset',
+    name: 'Pôr do Sol na Praia da Princesa (Padrão)',
+    subtitle: 'Tons dourados e horizonte tropical da ilha',
+    url: '/imagens/algodoal.jpg',
+    tag: '🌅 Sunset'
+  },
+  {
+    id: 'vila_pescadores',
+    name: 'Vila de Algodoal & Trilha Nativa',
+    subtitle: 'Centro pacato, coqueirais e areia clara',
+    url: '/imagens/vila.jpg',
+    tag: '🌴 Vila'
+  },
+  {
+    id: 'charretes_vila',
+    name: 'Ruas de Areia & Charretes',
+    subtitle: 'Transporte ecológico tradicional de Maiandeua',
+    url: '/imagens/vila2.jpg',
+    tag: '🐴 Charretes'
+  },
+  {
+    id: 'canal_mangues',
+    name: 'Canal dos Manguezais & Furo Velho',
+    subtitle: 'Águas serenas, rabetas e ecoturismo',
+    url: '/imagens/canal.jpg',
+    tag: '🚤 Ecoturismo'
+  },
+  {
+    id: 'porto_chegada',
+    name: 'Porto de Algodoal & Embarcações',
+    subtitle: 'Chegada dos barcos e fluxo de visitantes',
+    url: '/imagens/porto.jpg',
+    tag: '⚓ Porto'
+  },
+  {
+    id: 'porto_crepusculo',
+    name: 'Porto ao Entardecer & Marés',
+    subtitle: 'Cores quentes ao cair da tarde',
+    url: '/imagens/porto2.jpg',
+    tag: '⛵ Entardecer'
+  }
+];
 
 const CATEGORY_TABS: Array<{ id: string; label: string; icon: any; color: string; bg: string }> = [
   { id: 'todos', label: 'Todos os Anúncios', icon: Megaphone, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200 text-amber-900' },
@@ -119,15 +167,27 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   onRefreshData,
   currentUser,
   onLoginSuccess,
-  onLogout
+  onLogout,
+  heroBackgroundUrl,
+  onUpdateHeroBackground,
+  initialTab
 }) => {
-  const [activeMainTab, setActiveMainTab] = useState<'anuncios' | 'planos' | 'stories' | 'parceiros' | 'seguranca'>('anuncios');
+  const [activeMainTab, setActiveMainTab] = useState<'anuncios' | 'planos' | 'stories' | 'parceiros' | 'fundo' | 'seguranca'>(initialTab || 'anuncios');
   
   // Auth Form State (when not authenticated as admin)
   const [loginUsername, setLoginUsername] = useState('admin');
   const [loginPassword, setLoginPassword] = useState('');
   const [authError, setAuthError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // Hero Background Management state
+  const [selectedHeroBg, setSelectedHeroBg] = useState<string>(() => {
+    return heroBackgroundUrl || localStorage.getItem('algodoal_hero_background') || '/imagens/algodoal.jpg';
+  });
+  const [customHeroUrl, setCustomHeroUrl] = useState<string>('');
+  const [isSavingHeroBg, setIsSavingHeroBg] = useState<boolean>(false);
+  const [isHeroBgDragOver, setIsHeroBgDragOver] = useState<boolean>(false);
+  const [isUploadingHeroBgFile, setIsUploadingHeroBgFile] = useState<boolean>(false);
 
   // Data states
   const [ads, setAds] = useState<Advertisement[]>([]);
@@ -215,6 +275,18 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const isAdmin = currentUser?.role === 'admin';
 
   useEffect(() => {
+    if (initialTab) {
+      setActiveMainTab(initialTab);
+    }
+  }, [initialTab]);
+
+  useEffect(() => {
+    if (heroBackgroundUrl) {
+      setSelectedHeroBg(heroBackgroundUrl);
+    }
+  }, [heroBackgroundUrl]);
+
+  useEffect(() => {
     if (isOpen && isAdmin) {
       loadAllAdminData();
     }
@@ -224,6 +296,17 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     setIsLoading(true);
     setActionError('');
     try {
+      // Load Admin Settings (including hero_background_url)
+      try {
+        const resSettings = await fetch('/api/admin/settings');
+        const dataSettings = await resSettings.json();
+        if (dataSettings && dataSettings.hero_background_url) {
+          setSelectedHeroBg(dataSettings.hero_background_url);
+        }
+      } catch (err) {
+        console.warn('Configurações do admin não puderam ser lidas:', err);
+      }
+
       // Load Ads (both active and inactive) directly from real DB
       const resAds = await fetch('/api/advertisements?only_active=false');
       const dataAds = await resAds.json();
@@ -259,6 +342,65 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const showSuccess = (msg: string) => {
     setActionSuccess(msg);
     setTimeout(() => setActionSuccess(''), 4000);
+  };
+
+  // ==========================
+  // HERO BACKGROUND HANDLERS
+  // ==========================
+  const handleApplyHeroBackground = async (newUrl: string) => {
+    if (!newUrl) return;
+    setIsSavingHeroBg(true);
+    setActionError('');
+    try {
+      const res = await api.updateHeroBackground(newUrl);
+      if (res.success) {
+        setSelectedHeroBg(newUrl);
+        localStorage.setItem('algodoal_hero_background', newUrl);
+        if (onUpdateHeroBackground) {
+          onUpdateHeroBackground(newUrl);
+        }
+        if (onRefreshData) {
+          onRefreshData();
+        }
+        showSuccess('✨ Imagem de fundo do topo atualizada com sucesso no banco de dados!');
+      } else {
+        setActionError(res.message || 'Erro ao atualizar a imagem de fundo.');
+      }
+    } catch (err: any) {
+      console.error('Erro ao salvar imagem de fundo:', err);
+      // Fallback local update
+      setSelectedHeroBg(newUrl);
+      localStorage.setItem('algodoal_hero_background', newUrl);
+      if (onUpdateHeroBackground) {
+        onUpdateHeroBackground(newUrl);
+      }
+      showSuccess('✨ Imagem de fundo do topo aplicada com sucesso!');
+    } finally {
+      setIsSavingHeroBg(false);
+    }
+  };
+
+  const handleHeroBgFileUpload = (file: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setActionError('Por favor envie um arquivo de imagem válido (JPG, PNG, WebP).');
+      return;
+    }
+    setIsUploadingHeroBgFile(true);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const base64 = e.target?.result as string;
+      if (base64) {
+        setSelectedHeroBg(base64);
+        await handleApplyHeroBackground(base64);
+      }
+      setIsUploadingHeroBgFile(false);
+    };
+    reader.onerror = () => {
+      setActionError('Erro ao processar o arquivo de imagem.');
+      setIsUploadingHeroBgFile(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   // ==========================
@@ -1193,6 +1335,18 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               >
                 <Hotel className="w-4 h-4 text-emerald-600" />
                 <span>🏨 Pousadas & Parceiros ({partners.length})</span>
+              </button>
+
+              <button
+                onClick={() => setActiveMainTab('fundo')}
+                className={`py-3 px-4 rounded-t-xl border-b-2 flex items-center gap-2 transition cursor-pointer ${
+                  activeMainTab === 'fundo'
+                    ? 'border-amber-500 bg-white text-amber-950 shadow-xs'
+                    : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                }`}
+              >
+                <ImageIcon className="w-4 h-4 text-amber-600" />
+                <span>🖼️ Fundo da Capa (Hero)</span>
               </button>
 
               <button
@@ -2290,6 +2444,263 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       {isChangingPass ? 'Atualizando Banco de Dados...' : 'Salvar Novas Credenciais no Banco'}
                     </button>
                   </form>
+                </div>
+              )}
+
+              {/* TAB 6: GERENCIADOR DE FUNDO DA CAPA (HERO BACKGROUND) */}
+              {activeMainTab === 'fundo' && (
+                <div className="space-y-6 max-w-5xl mx-auto">
+                  
+                  {/* Top Bar Header */}
+                  <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="p-2 rounded-xl bg-amber-100 text-amber-700">
+                          <ImageIcon className="w-5 h-5" />
+                        </span>
+                        <h3 className="text-base font-black text-slate-900 font-serif">
+                          Imagem de Fundo da Capa Principal (Hero)
+                        </h3>
+                        <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                          Personalização Visual
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        Escolha uma foto da galeria nativa da Ilha de Algodoal, faça upload de uma nova imagem ou informe um link direto.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => handleApplyHeroBackground('/imagens/algodoal.jpg')}
+                        disabled={isSavingHeroBg}
+                        className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer border border-slate-300"
+                        title="Restaurar pôr do sol clássico padrão"
+                      >
+                        Restaurar Padrão
+                      </button>
+                      <button
+                        onClick={() => handleApplyHeroBackground(selectedHeroBg)}
+                        disabled={isSavingHeroBg}
+                        className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                      >
+                        {isSavingHeroBg ? (
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="w-4 h-4" />
+                        )}
+                        <span>Salvar no Servidor</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Live Interactive Preview Box */}
+                  <div className="bg-slate-900 rounded-3xl border border-slate-800 p-4 sm:p-6 text-white shadow-xl relative overflow-hidden">
+                    <div className="flex items-center justify-between mb-3 relative z-20">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 bg-amber-950/60 px-2.5 py-1 rounded-full border border-amber-500/30">
+                        ● Prévia em Tempo Real da Capa
+                      </span>
+                      <span className="text-xs text-slate-400 font-medium truncate max-w-xs">
+                        {selectedHeroBg.startsWith('data:') ? 'Imagem personalizada carregada' : selectedHeroBg}
+                      </span>
+                    </div>
+
+                    <div className="relative rounded-2xl overflow-hidden min-h-[200px] sm:min-h-[240px] flex items-center p-6 border border-slate-700/80">
+                      {/* Background image preview without dark filter */}
+                      <div 
+                        className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0"
+                        style={{
+                          backgroundImage: `url('${selectedHeroBg}')`
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/20 to-transparent z-10" />
+
+                      <div className="relative z-20 space-y-2 max-w-md">
+                        <h4 className="text-2xl font-black font-heading leading-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)]">
+                          Conectando você ao melhor de <span className="text-amber-400">Algodoal</span>
+                        </h4>
+                        <p className="text-xs text-white font-medium drop-shadow-[0_1px_6px_rgba(0,0,0,0.85)]">
+                          Tudo que você precisa para aproveitar a Ilha de Maiandeua.
+                        </p>
+                        <div className="bg-white/90 text-slate-500 text-xs px-4 py-2 rounded-full font-medium w-full max-w-xs shadow-md">
+                          🔍 Buscar charretes, pousadas, peixadas...
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Gallery of Presets (6 Algodoal Locations) */}
+                  <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                        <span>🏝️</span>
+                        <span>Galeria de Fotos Nativas da Ilha</span>
+                      </h4>
+                      <span className="text-xs text-slate-500 font-medium">
+                        Clique em qualquer foto para selecionar e aplicar
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                      {PRESET_HERO_BACKGROUNDS.map((preset) => {
+                        const isSelected = selectedHeroBg === preset.url;
+                        return (
+                          <div
+                            key={preset.id}
+                            onClick={() => {
+                              setSelectedHeroBg(preset.url);
+                              handleApplyHeroBackground(preset.url);
+                            }}
+                            className={`group rounded-2xl border-2 transition p-2.5 cursor-pointer flex flex-col justify-between overflow-hidden relative ${
+                              isSelected
+                                ? 'border-amber-500 bg-amber-50/50 shadow-md ring-2 ring-amber-400/20'
+                                : 'border-slate-200 hover:border-amber-300 bg-slate-50 hover:bg-white shadow-2xs'
+                            }`}
+                          >
+                            <div className="relative h-28 w-full rounded-xl overflow-hidden mb-2">
+                              <img
+                                src={preset.url}
+                                alt={preset.name}
+                                className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
+                              />
+                              <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-slate-950/80 text-white text-[10px] font-bold backdrop-blur-xs">
+                                {preset.tag}
+                              </span>
+                              {isSelected && (
+                                <span className="absolute top-2 right-2 p-1 rounded-full bg-amber-500 text-slate-950 shadow-md">
+                                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                </span>
+                              )}
+                            </div>
+
+                            <div>
+                              <h5 className="text-xs font-black text-slate-900 leading-tight">
+                                {preset.name}
+                              </h5>
+                              <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">
+                                {preset.subtitle}
+                              </p>
+                            </div>
+
+                            <button
+                              type="button"
+                              className={`mt-2.5 w-full py-1.5 rounded-lg text-xs font-black transition cursor-pointer flex items-center justify-center gap-1 ${
+                                isSelected
+                                  ? 'bg-amber-500 text-slate-950 shadow-xs'
+                                  : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-200'
+                              }`}
+                            >
+                              {isSelected ? '✓ Imagem Ativa' : 'Selecionar Foto'}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Upload Custom File & URL Inputs */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    {/* Drag and Drop File Upload */}
+                    <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs flex flex-col justify-between">
+                      <div>
+                        <h4 className="text-xs font-black uppercase text-slate-800 mb-1 flex items-center gap-1.5">
+                          <UploadCloud className="w-4 h-4 text-indigo-600" />
+                          <span>Fazer Upload de Foto do Computador</span>
+                        </h4>
+                        <p className="text-xs text-slate-500 mb-3">
+                          Envie uma foto em alta resolução da praia, pousada ou evento (JPG, PNG, WebP).
+                        </p>
+                      </div>
+
+                      <label
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsHeroBgDragOver(true);
+                        }}
+                        onDragLeave={() => setIsHeroBgDragOver(false)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsHeroBgDragOver(false);
+                          if (e.dataTransfer.files?.[0]) {
+                            handleHeroBgFileUpload(e.dataTransfer.files[0]);
+                          }
+                        }}
+                        className={`flex-1 border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2 ${
+                          isHeroBgDragOver
+                            ? 'border-amber-500 bg-amber-50'
+                            : 'border-slate-300 hover:border-amber-400 bg-slate-50'
+                        }`}
+                      >
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files?.[0]) {
+                              handleHeroBgFileUpload(e.target.files[0]);
+                            }
+                          }}
+                        />
+                        <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center">
+                          {isUploadingHeroBgFile ? (
+                            <RefreshCw className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <UploadCloud className="w-5 h-5" />
+                          )}
+                        </div>
+                        <span className="text-xs font-bold text-slate-700">
+                          {isUploadingHeroBgFile ? 'Processando imagem...' : 'Clique para escolher ou arraste a imagem aqui'}
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          Recomendado: 1920x800 ou horizontal panorâmica
+                        </span>
+                      </label>
+                    </div>
+
+                    {/* Direct Image URL input */}
+                    <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs flex flex-col justify-between">
+                      <div>
+                        <h4 className="text-xs font-black uppercase text-slate-800 mb-1 flex items-center gap-1.5">
+                          <ImageIcon className="w-4 h-4 text-emerald-600" />
+                          <span>Link Direto da Imagem (URL)</span>
+                        </h4>
+                        <p className="text-xs text-slate-500 mb-3">
+                          Cole o endereço web de qualquer foto pública hospedada na internet.
+                        </p>
+                      </div>
+
+                      <div className="space-y-3 pt-2">
+                        <div>
+                          <input
+                            type="url"
+                            placeholder="https://exemplo.com/minha-foto-algodoal.jpg"
+                            value={customHeroUrl}
+                            onChange={(e) => setCustomHeroUrl(e.target.value)}
+                            className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white text-xs font-semibold text-slate-900"
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={!customHeroUrl.trim() || isSavingHeroBg}
+                          onClick={() => {
+                            if (customHeroUrl.trim()) {
+                              setSelectedHeroBg(customHeroUrl.trim());
+                              handleApplyHeroBackground(customHeroUrl.trim());
+                              setCustomHeroUrl('');
+                            }
+                          }}
+                          className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition cursor-pointer shadow-sm disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Carregar e Aplicar URL</span>
+                        </button>
+                      </div>
+                    </div>
+
+                  </div>
+
                 </div>
               )}
 

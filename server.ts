@@ -206,10 +206,30 @@ async function startServer() {
       res.json({
         admin_username: settings.admin_username,
         admin_email: settings.admin_email,
+        hero_background_url: settings.hero_background_url || '/imagens/algodoal.jpg',
         updated_at: settings.updated_at
       });
     } catch (err: any) {
       res.status(500).json({ error: 'Erro ao buscar configurações', details: err.message });
+    }
+  });
+
+  app.post('/api/admin/settings/background', async (req, res) => {
+    try {
+      const { hero_background_url } = req.body;
+      if (!hero_background_url) {
+        return res.status(400).json({ error: 'URL da imagem de fundo não fornecida.' });
+      }
+      const updated = await updateAdminSettings({
+        hero_background_url
+      });
+      res.json({ 
+        success: true, 
+        hero_background_url: updated.hero_background_url, 
+        message: 'Foto de fundo da capa atualizada com sucesso!' 
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Erro ao atualizar foto de fundo', details: err.message });
     }
   });
 

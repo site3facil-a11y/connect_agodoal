@@ -68,6 +68,17 @@ export const api = {
     return res.json();
   },
 
+  async updateHeroBackground(hero_background_url: string): Promise<{ success: boolean; hero_background_url: string; message: string }> {
+    const res = await fetch(`${API_BASE}/admin/settings/background`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hero_background_url })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro ao atualizar foto de fundo');
+    return data;
+  },
+
   async updateAdminPassword(payload: { currentPassword: string; newPassword?: string; newEmail?: string; newUsername?: string }) {
     const res = await fetch(`${API_BASE}/admin/settings/password`, {
       method: 'POST',

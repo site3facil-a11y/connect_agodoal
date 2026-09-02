@@ -812,6 +812,7 @@ interface AdminSettings {
   admin_username: string;
   admin_email: string;
   admin_pin: string;
+  hero_background_url?: string;
   updated_at: string;
 }
 
@@ -834,6 +835,7 @@ const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
   admin_username: 'admin',
   admin_email: 'admin@algodoalconnect.com.br',
   admin_pin: 'algodoal2026',
+  hero_background_url: '/imagens/algodoal.jpg',
   updated_at: '2026-01-01T00:00:00Z'
 };
 
