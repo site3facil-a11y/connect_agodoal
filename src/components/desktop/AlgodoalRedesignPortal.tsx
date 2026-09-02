@@ -30,6 +30,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { Advertisement, Partner, TideDayEntry, UserProfile, WeatherData } from '../../types/index.ts';
+import { StoriesRow } from '../mobile/StoriesRow.tsx';
 
 interface AlgodoalRedesignPortalProps {
   theme: 'dark' | 'light';
@@ -670,12 +671,44 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
       </section>
 
       {/* ======================================================== */}
-      {/* 5. MAIN SECTION NAVIGATOR (PORTAL ANÚNCIOS vs GUIA ILHA) */}
+      {/* 5. EXPLORAR ANÚNCIOS & SERVIÇOS EM ALGODOAL (MASTER)     */}
       {/* ======================================================== */}
-      <section id="secao-navegacao" className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-6 pb-2">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-2.5 sm:p-3 rounded-3xl bg-slate-900/90 border border-slate-800 backdrop-blur-md shadow-2xl">
+      <section id="secao-explorar" className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-6 pb-2 space-y-6">
+        
+        {/* Section Header Title & Subtitle */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <span className="text-2xl">✨</span>
+              <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white font-heading">
+                Explorar Anúncios & Serviços em Algodoal
+              </h2>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-400 mt-1.5 leading-relaxed">
+              Consulte pousadas, restaurantes, condutores de charretes, barcos e depósitos com contato direto pelo WhatsApp.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+            <span className="px-3.5 py-1.5 rounded-2xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300 shadow-inner">
+              <strong className="text-amber-400 font-black">{activeFilteredAds.length}</strong> anúncios • <strong className="text-teal-400 font-black">{activeFilteredPartners.length}</strong> no guia
+            </span>
+          </div>
+        </div>
+
+        {/* Destaques da Ilha (Stories) Row */}
+        <div className="rounded-3xl overflow-hidden border border-slate-800/90 bg-slate-900/90 shadow-xl">
+          <StoriesRow
+            theme={theme}
+            selectedCategory={selectedCategory}
+            onSelectCategory={onSelectCategory}
+            showHeaderTitle={true}
+          />
+        </div>
+
+        {/* Main View Toggle Buttons */}
+        <div id="secao-navegacao" className="flex flex-col md:flex-row items-center justify-between gap-4 p-2.5 sm:p-3 rounded-3xl bg-slate-900/90 border border-slate-800 backdrop-blur-md shadow-2xl">
           
-          {/* Main View Toggle Buttons */}
           <div className="flex items-center gap-2 w-full md:w-auto">
             <button
               id="tab-btn-portal"
@@ -751,8 +784,8 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
               </div>
             ) : (
               <span className="text-[11px] text-slate-400 hidden sm:inline font-medium">
-                {activeMainView === 'portal' && 'Exibindo todos os anúncios por categoria na mesma página'}
-                {activeMainView === 'guia' && 'Exibindo todos os parceiros por categoria na mesma página'}
+                {activeMainView === 'portal' && 'Exibindo todos os anúncios juntos (sem divisores de categoria)'}
+                {activeMainView === 'guia' && 'Exibindo todos os parceiros credenciados juntos'}
                 {activeMainView === 'todos' && 'Exibindo anúncios e parceiros juntos na mesma página'}
               </span>
             )}
@@ -770,7 +803,7 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
 
         {/* Search notice if active */}
         {searchTerm && (
-          <div className="mt-3 p-3 rounded-2xl bg-slate-900/80 border border-slate-700 flex items-center justify-between text-xs">
+          <div className="p-3 rounded-2xl bg-slate-900/80 border border-slate-700 flex items-center justify-between text-xs">
             <span className="text-slate-300 font-medium">
               Buscando por: <strong className="text-amber-400">"{searchTerm}"</strong> • Encontrados {activeFilteredAds.length} anúncios e {activeFilteredPartners.length} parceiros.
             </span>
@@ -786,13 +819,13 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
       </section>
 
       {/* ======================================================== */}
-      {/* 6. PORTAL DE ANÚNCIOS (TODOS OS ANÚNCIOS POR CATEGORIA) */}
+      {/* 6. PORTAL DE ANÚNCIOS (TODOS OS ANÚNCIOS JUNTOS)         */}
       {/* ======================================================== */}
       {(activeMainView === 'portal' || activeMainView === 'todos') && (
-        <section id="secao-portal-anuncios" className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 space-y-10">
+        <section id="secao-portal-anuncios" className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 space-y-5">
           
           {/* Section Master Header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800 pb-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xl">🌟</span>
@@ -801,202 +834,156 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
                 </h2>
               </div>
               <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-                Todos os anúncios comerciais do portal organizados por categoria na mesma página
+                Todos os anúncios comerciais da ilha reunidos em um só lugar com contato direto pelo WhatsApp
               </p>
             </div>
 
             <div className="flex items-center gap-2 text-xs">
               <span className="text-slate-400">Total no Portal:</span>
-              <span className="px-2.5 py-1 rounded-full bg-amber-400/20 text-amber-400 font-black border border-amber-400/30">
-                {activeFilteredAds.length} anúncios ativos
+              <span className="px-3 py-1 rounded-full bg-amber-400/20 text-amber-400 font-black border border-amber-400/30">
+                {activeFilteredAds.length} {activeFilteredAds.length === 1 ? 'anúncio ativo' : 'anúncios ativos'}
               </span>
             </div>
           </div>
 
-          {/* Iterate Over Each Ad Category */}
-          {AD_CATEGORIES.map((cat) => {
-            const categoryAds = activeFilteredAds.filter(
-              (ad) => normalizeCat(ad.category) === cat.id
-            );
+          {/* Subheader Status Bar */}
+          <div className="flex items-center justify-between py-1 px-1 text-xs border-b border-slate-800/80">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-200 text-sm">
+                {activeFilteredAds.length} {activeFilteredAds.length === 1 ? 'anúncio encontrado' : 'anúncios encontrados'}
+              </span>
+              {selectedCategory !== 'todos' && (
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                  {selectedCategory}
+                </span>
+              )}
+            </div>
+            <span className="text-[11px] font-medium text-slate-400">
+              Preços em Reais (R$) • Contato WhatsApp Direto
+            </span>
+          </div>
 
-            // If a specific category filter is active and doesn't match, skip
-            if (selectedCategory !== 'todos' && normalizeCat(selectedCategory) !== cat.id) {
-              return null;
-            }
+          {/* Unified Grid of All Advertisements Together */}
+          {activeFilteredAds.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {activeFilteredAds.map((ad) => {
+                const cleanPhone = (ad.whatsapp || ad.phone || '').replace(/\D/g, '');
+                const whatsappUrl = `https://wa.me/${cleanPhone || '5591981129988'}?text=${encodeURIComponent(
+                  `Olá! Vi o anúncio de "${ad.title}" no Portal Algodoal Connect e gostaria de informações.`
+                )}`;
 
-            // If no ads in this category and no filter, we can still show an inviting placeholder or show the category
-            if (categoryAds.length === 0 && selectedCategory !== 'todos') {
-              return null;
-            }
+                return (
+                  <div
+                    key={ad.id}
+                    className="group rounded-3xl overflow-hidden border border-slate-800/90 bg-slate-900/90 hover:border-amber-400/50 transition-all duration-300 flex flex-col justify-between shadow-xl hover:-translate-y-1 hover:shadow-2xl hover:shadow-amber-500/10"
+                  >
+                    {/* Card Image Banner */}
+                    <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-slate-950">
+                      <img
+                        src={ad.image_url || '/imagens/algodoal.jpg'}
+                        alt={ad.title}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/imagens/algodoal.jpg';
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
 
-            return (
-              <div key={cat.id} className="space-y-4">
-                {/* Category Header Strip */}
-                <div className={`p-4 rounded-2xl bg-gradient-to-r ${cat.bgHeader} border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3`}>
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl sm:text-3xl p-2 rounded-xl bg-slate-950/40 border border-white/10 shadow-inner">
-                      {cat.emoji}
-                    </span>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-base sm:text-lg font-black text-white font-heading">
-                          {cat.title}
-                        </h3>
-                        <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-white/10 text-slate-200 border border-white/20">
-                          {cat.badge}
+                      {/* Top Badges */}
+                      <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 z-10">
+                        <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-lg bg-amber-400 text-slate-950 shadow-md">
+                          {ad.badge || ad.category || 'Destaque'}
+                        </span>
+
+                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-lg bg-slate-950/80 text-teal-300 border border-teal-500/30 backdrop-blur-xs">
+                          {ad.business_name}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-300 font-medium">
-                        {cat.subtitle}
-                      </p>
+
+                      {/* Starting Price Pill */}
+                      <div className="absolute bottom-3 right-3 z-10">
+                        <span className="text-xs font-black px-3 py-1 rounded-xl bg-slate-950/90 text-amber-400 border border-amber-400/40 backdrop-blur-xs shadow-lg">
+                          {ad.price_starting && ad.price_starting > 0
+                            ? `A partir de R$ ${Number(ad.price_starting).toFixed(2).replace('.', ',')}`
+                            : 'Consulte Valores'}
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-2 self-end sm:self-center">
-                    <span className="text-xs font-black text-slate-200 px-3 py-1 rounded-xl bg-slate-950/60 border border-slate-700/80">
-                      {categoryAds.length} {categoryAds.length === 1 ? 'anúncio' : 'anúncios'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Ad Cards Grid for this Category */}
-                {categoryAds.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {categoryAds.map((ad) => {
-                      const cleanPhone = (ad.whatsapp || ad.phone || '').replace(/\D/g, '');
-                      const whatsappUrl = `https://wa.me/${cleanPhone || '5591981129988'}?text=${encodeURIComponent(
-                        `Olá! Vi o anúncio de "${ad.title}" no Portal Algodoal Connect e gostaria de informações.`
-                      )}`;
-
-                      return (
-                        <div
-                          key={ad.id}
-                          className="group rounded-3xl overflow-hidden border border-slate-800/90 bg-slate-900/90 hover:border-amber-400/50 transition-all duration-300 flex flex-col justify-between shadow-xl hover:-translate-y-1 hover:shadow-2xl hover:shadow-amber-500/10"
-                        >
-                          {/* Card Image Banner */}
-                          <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-slate-950">
-                            <img
-                              src={ad.image_url || '/imagens/algodoal.jpg'}
-                              alt={ad.title}
-                              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
-
-                            {/* Top Badges */}
-                            <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 z-10">
-                              <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-lg bg-amber-400 text-slate-950 shadow-md">
-                                {ad.badge || 'Destaque'}
-                              </span>
-
-                              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-lg bg-slate-950/80 text-teal-300 border border-teal-500/30 backdrop-blur-xs">
-                                {ad.business_name}
-                              </span>
-                            </div>
-
-                            {/* Starting Price Pill */}
-                            <div className="absolute bottom-3 right-3 z-10">
-                              <span className="text-xs font-black px-3 py-1 rounded-xl bg-slate-950/90 text-amber-400 border border-amber-400/40 backdrop-blur-xs shadow-lg">
-                                {ad.price_starting && ad.price_starting > 0
-                                  ? `A partir de R$ ${Number(ad.price_starting).toFixed(2).replace('.', ',')}`
-                                  : 'Consulte Valores'}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Card Body */}
-                          <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
-                            <div className="space-y-1.5">
-                              <div className="flex items-center gap-1.5 text-[11px] text-amber-400 font-semibold">
-                                <MapPin className="w-3.5 h-3.5 shrink-0" />
-                                <span className="truncate">{ad.location || 'Ilha de Maiandeua'}</span>
-                              </div>
-
-                              <h4 className="text-base font-black text-white leading-snug group-hover:text-amber-400 transition">
-                                {ad.title}
-                              </h4>
-
-                              {ad.tagline && (
-                                <p className="text-xs font-bold text-teal-300 leading-tight">
-                                  {ad.tagline}
-                                </p>
-                              )}
-
-                              <p className="text-xs text-slate-300 leading-relaxed line-clamp-2">
-                                {ad.description}
-                              </p>
-                            </div>
-
-                            {/* Action Buttons: Ver Detalhes + WhatsApp */}
-                            <div className="pt-3 border-t border-slate-800/80 flex items-center gap-2">
-                              <button
-                                onClick={() => onOpenAdDetails(ad)}
-                                className="flex-1 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 transition text-center cursor-pointer"
-                              >
-                                Ver Detalhes
-                              </button>
-
-                              <a
-                                href={whatsappUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md transition"
-                              >
-                                <MessageCircle className="w-4 h-4" />
-                                <span>WhatsApp</span>
-                              </a>
-                            </div>
-                          </div>
+                    {/* Card Body */}
+                    <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-1.5 text-[11px] text-amber-400 font-semibold">
+                          <MapPin className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">{ad.location || 'Ilha de Maiandeua'}</span>
                         </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800 text-center space-y-2">
-                    <p className="text-xs text-slate-400">
-                      Nenhum anúncio comercial cadastrado nesta categoria no momento.
-                    </p>
-                    <button
-                      onClick={onOpenAdmin}
-                      className="text-xs font-black text-amber-400 hover:underline cursor-pointer"
-                    >
-                      Clique aqui para anunciar seu negócio em {cat.title}
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
 
-          {/* Uncategorized Ads Safety Block */}
-          {(() => {
-            const uncatAds = activeFilteredAds.filter(
-              (ad) => !AD_CATEGORIES.some((c) => c.id === normalizeCat(ad.category))
-            );
-            if (uncatAds.length === 0) return null;
-            return (
-              <div className="space-y-4 pt-4 border-t border-slate-800">
-                <div className="p-4 rounded-2xl bg-slate-900 border border-slate-700 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-base font-black text-white">Outros Anúncios da Ilha</h3>
-                    <p className="text-xs text-slate-400">Serviços e comércios adicionais cadastrados</p>
-                  </div>
-                  <span className="text-xs font-bold text-amber-400">{uncatAds.length} anúncios</span>
-                </div>
+                        <h4 className="text-base font-black text-white leading-snug group-hover:text-amber-400 transition">
+                          {ad.title}
+                        </h4>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {uncatAds.map((ad) => (
-                    <div key={ad.id} className="rounded-3xl border border-slate-800 bg-slate-900/90 p-4 space-y-3">
-                      <h4 className="text-sm font-black text-white">{ad.title}</h4>
-                      <p className="text-xs text-slate-300">{ad.description}</p>
-                      <button onClick={() => onOpenAdDetails(ad)} className="w-full py-2 bg-slate-800 text-xs font-bold rounded-xl text-white">
-                        Ver Anúncio
-                      </button>
+                        {ad.tagline && (
+                          <p className="text-xs font-bold text-teal-300 leading-tight">
+                            {ad.tagline}
+                          </p>
+                        )}
+
+                        <p className="text-xs text-slate-300 leading-relaxed line-clamp-2">
+                          {ad.description}
+                        </p>
+                      </div>
+
+                      {/* Action Buttons: Ver Detalhes + WhatsApp */}
+                      <div className="pt-3 border-t border-slate-800/80 flex items-center gap-2">
+                        <button
+                          onClick={() => onOpenAdDetails(ad)}
+                          className="flex-1 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 transition text-center cursor-pointer"
+                        >
+                          Ver Detalhes
+                        </button>
+
+                        <a
+                          href={whatsappUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md transition"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          <span>WhatsApp</span>
+                        </a>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="p-12 rounded-3xl bg-slate-900/60 border border-slate-800 text-center space-y-3">
+              <Compass className="w-10 h-10 mx-auto text-amber-400" />
+              <h4 className="text-base font-black text-white">Nenhum anúncio comercial encontrado</h4>
+              <p className="text-xs text-slate-400 max-w-md mx-auto">
+                {selectedCategory !== 'todos'
+                  ? `Não há anúncios ativos na categoria "${selectedCategory}". Experimente selecionar outra ou ver todos.`
+                  : 'Nenhum anúncio comercial corresponde à sua busca.'}
+              </p>
+              <div className="flex items-center justify-center gap-3 pt-2">
+                {selectedCategory !== 'todos' && (
+                  <button
+                    onClick={() => onSelectCategory('todos')}
+                    className="text-xs font-black bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-xl transition cursor-pointer"
+                  >
+                    Ver Todos os Anúncios
+                  </button>
+                )}
+                <button
+                  onClick={onOpenAdmin}
+                  className="text-xs font-black bg-amber-400 hover:bg-amber-300 text-slate-950 px-4 py-2 rounded-xl transition cursor-pointer shadow-md"
+                >
+                  Anunciar Meu Negócio
+                </button>
               </div>
-            );
-          })()}
+            </div>
+          )}
 
         </section>
       )}
@@ -1029,161 +1016,135 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
             </div>
           </div>
 
-          {/* Iterate Over Each Partner Category */}
-          {PARTNER_CATEGORIES.map((cat) => {
-            const categoryPartners = activeFilteredPartners.filter(
-              (p) => normalizeCat(p.category) === cat.id
-            );
+          {/* Subheader Status Bar */}
+          <div className="flex items-center justify-between py-1 px-1 text-xs border-b border-slate-800/80">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-200 text-sm">
+                {activeFilteredPartners.length} {activeFilteredPartners.length === 1 ? 'profissional encontrado' : 'profissionais encontrados'}
+              </span>
+              {selectedCategory !== 'todos' && (
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-teal-400/20 text-teal-300 border border-teal-400/30">
+                  {selectedCategory}
+                </span>
+              )}
+            </div>
+            <span className="text-[11px] font-medium text-slate-400">
+              Profissionais Locais Credenciados • Sem Taxa de Intermediação
+            </span>
+          </div>
 
-            // If a specific category filter is active and doesn't match, skip
-            if (selectedCategory !== 'todos' && normalizeCat(selectedCategory) !== cat.id) {
-              return null;
-            }
+          {/* Unified Grid of All Partners Together */}
+          {activeFilteredPartners.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {activeFilteredPartners.map((partner) => {
+                const cleanPhone = (partner.whatsapp || partner.phone || '').replace(/\D/g, '');
+                const whatsappUrl = `https://wa.me/${cleanPhone || '5591981129988'}?text=${encodeURIComponent(
+                  `Olá! Encontrei seu contato no Guia da Ilha de Algodoal e gostaria de mais informações sobre seus serviços.`
+                )}`;
 
-            if (categoryPartners.length === 0 && selectedCategory !== 'todos') {
-              return null;
-            }
+                return (
+                  <div
+                    key={partner.id}
+                    className="bg-slate-900/90 border border-slate-800 hover:border-teal-400/50 rounded-3xl p-5 transition-all duration-300 flex flex-col justify-between space-y-4 shadow-xl hover:-translate-y-1 hover:shadow-2xl hover:shadow-teal-500/10"
+                  >
+                    <div className="space-y-3">
+                      {/* Partner Header with Photo & Subcategory */}
+                      <div className="flex items-start gap-3">
+                        <img
+                          src={partner.photo_url || '/imagens/algodoal.jpg'}
+                          alt={partner.name}
+                          className="w-16 h-16 rounded-2xl object-cover shrink-0 border-2 border-slate-700 shadow-md"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/imagens/algodoal.jpg';
+                          }}
+                        />
+                        <div className="space-y-1 min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-[10px] font-black uppercase text-teal-400 truncate">
+                              {partner.subcategory || partner.category}
+                            </span>
+                            {partner.verified && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30 flex items-center gap-0.5">
+                                <CheckCircle className="w-2.5 h-2.5 text-teal-400" />
+                                Verificado
+                              </span>
+                            )}
+                          </div>
 
-            return (
-              <div key={cat.id} className="space-y-4">
-                {/* Category Header Strip */}
-                <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl sm:text-3xl p-2 rounded-xl bg-slate-950 border border-slate-700 shadow-inner">
-                      {cat.emoji}
-                    </span>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-base sm:text-lg font-black text-white font-heading">
-                          {cat.title}
-                        </h3>
-                        <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-teal-500/20 text-teal-300 border border-teal-500/30">
-                          {cat.tag}
+                          <h4 className="text-sm font-black text-white leading-tight truncate">
+                            {partner.name}
+                          </h4>
+
+                          <p className="text-[11px] text-slate-400 flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-amber-400 shrink-0" />
+                            <span className="truncate">{partner.location}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
+                        {partner.description}
+                      </p>
+
+                      {/* Rating and Amenities tags */}
+                      <div className="flex items-center justify-between text-xs pt-1">
+                        <div className="flex items-center gap-1 font-bold text-amber-400">
+                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                          <span>{partner.rating || 4.9}</span>
+                          <span className="text-slate-500 text-[11px]">
+                            ({partner.total_reviews || 25})
+                          </span>
+                        </div>
+
+                        {partner.vehicle_badge && (
+                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-slate-800 text-amber-300 border border-slate-700">
+                            {partner.vehicle_badge}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Footer with Price and Contact */}
+                    <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-medium">Tabela a partir de:</span>
+                        <span className="text-xs font-black text-amber-400">
+                          {partner.price_starting && partner.price_starting > 0
+                            ? `R$ ${Number(partner.price_starting).toFixed(2).replace('.', ',')}`
+                            : 'Sob Consulta'}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400 font-medium">
-                        {cat.subtitle}
-                      </p>
+
+                      <a
+                        href={whatsappUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md transition"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        <span>WhatsApp</span>
+                      </a>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2 self-end sm:self-center">
-                    <span className="text-xs font-black text-teal-300 px-3 py-1 rounded-xl bg-slate-950 border border-teal-500/30">
-                      {categoryPartners.length} {categoryPartners.length === 1 ? 'parceiro' : 'parceiros'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Partners Cards Grid */}
-                {categoryPartners.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {categoryPartners.map((partner) => {
-                      const cleanPhone = (partner.whatsapp || partner.phone || '').replace(/\D/g, '');
-                      const whatsappUrl = `https://wa.me/${cleanPhone || '5591981129988'}?text=${encodeURIComponent(
-                        `Olá! Encontrei seu contato no Guia da Ilha de Algodoal e gostaria de mais informações sobre seus serviços.`
-                      )}`;
-
-                      return (
-                        <div
-                          key={partner.id}
-                          className="bg-slate-900/90 border border-slate-800 hover:border-teal-400/50 rounded-3xl p-5 transition-all duration-300 flex flex-col justify-between space-y-4 shadow-xl hover:-translate-y-1 hover:shadow-2xl hover:shadow-teal-500/10"
-                        >
-                          <div className="space-y-3">
-                            {/* Partner Header with Photo & Subcategory */}
-                            <div className="flex items-start gap-3">
-                              <img
-                                src={partner.photo_url || '/imagens/algodoal.jpg'}
-                                alt={partner.name}
-                                className="w-16 h-16 rounded-2xl object-cover shrink-0 border-2 border-slate-700 shadow-md"
-                              />
-                              <div className="space-y-1 min-w-0 flex-1">
-                                <div className="flex items-center justify-between gap-1">
-                                  <span className="text-[10px] font-black uppercase text-teal-400 truncate">
-                                    {partner.subcategory || partner.category}
-                                  </span>
-                                  {partner.verified && (
-                                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30 flex items-center gap-0.5">
-                                      <CheckCircle className="w-2.5 h-2.5 text-teal-400" />
-                                      Verificado
-                                    </span>
-                                  )}
-                                </div>
-
-                                <h4 className="text-sm font-black text-white leading-tight truncate">
-                                  {partner.name}
-                                </h4>
-
-                                <p className="text-[11px] text-slate-400 flex items-center gap-1">
-                                  <MapPin className="w-3 h-3 text-amber-400 shrink-0" />
-                                  <span className="truncate">{partner.location}</span>
-                                </p>
-                              </div>
-                            </div>
-
-                            {/* Description */}
-                            <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
-                              {partner.description}
-                            </p>
-
-                            {/* Rating and Amenities tags */}
-                            <div className="flex items-center justify-between text-xs pt-1">
-                              <div className="flex items-center gap-1 font-bold text-amber-400">
-                                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                                <span>{partner.rating || 4.9}</span>
-                                <span className="text-slate-500 text-[11px]">
-                                  ({partner.total_reviews || 25})
-                                </span>
-                              </div>
-
-                              {partner.vehicle_badge && (
-                                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-slate-800 text-amber-300 border border-slate-700">
-                                  {partner.vehicle_badge}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Footer with Price and Contact */}
-                          <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
-                            <div>
-                              <span className="text-[10px] text-slate-400 block font-medium">Tabela a partir de:</span>
-                              <span className="text-xs font-black text-amber-400">
-                                {partner.price_starting && partner.price_starting > 0
-                                  ? `R$ ${Number(partner.price_starting).toFixed(2).replace('.', ',')}`
-                                  : 'Sob Consulta'}
-                              </span>
-                            </div>
-
-                            <a
-                              href={whatsappUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md transition"
-                            >
-                              <MessageCircle className="w-3.5 h-3.5" />
-                              <span>WhatsApp</span>
-                            </a>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800 text-center space-y-2">
-                    <p className="text-xs text-slate-400">
-                      Nenhum parceiro cadastrado nesta categoria no momento.
-                    </p>
-                    <button
-                      onClick={onOpenAdmin}
-                      className="text-xs font-black text-teal-400 hover:underline cursor-pointer"
-                    >
-                      Cadastre-se como parceiro profissional da ilha
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          ) : (
+            <div className="p-12 rounded-2xl bg-slate-900/40 border border-slate-800 text-center space-y-2">
+              <p className="text-xs text-slate-400">
+                {selectedCategory !== 'todos'
+                  ? `Nenhum parceiro cadastrado na categoria "${selectedCategory}".`
+                  : 'Nenhum parceiro credenciado cadastrado no momento.'}
+              </p>
+              <button
+                onClick={onOpenAdmin}
+                className="text-xs font-black text-teal-400 hover:underline cursor-pointer"
+              >
+                Cadastre-se como parceiro profissional da ilha
+              </button>
+            </div>
+          )}
 
         </section>
       )}
