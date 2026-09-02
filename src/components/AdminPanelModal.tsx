@@ -466,25 +466,44 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
   const handleResetToDefaultRotation = async () => {
     const defaultUrls = PRESET_HERO_BACKGROUNDS.map(p => p.url);
-    setSelectedHeroBg('/imagens/algodoal.jpg');
+    const defaultHero = defaultUrls[0] || '/imagens/algodoal_hd.jpg';
+    setSelectedHeroBg(defaultHero);
     setIsHeroRotationEnabled(true);
     setActiveHeroImages(defaultUrls);
     setDeletedHeroPresets([]);
-    await handleSaveHeroFullSettings('/imagens/algodoal.jpg', true, defaultUrls, customHeroImages, []);
-    showSuccess('Galeria restaurada para o padrão com todas as fotos nativas e rotação ativada!');
+    await handleSaveHeroFullSettings(defaultHero, true, defaultUrls, customHeroImages, []);
+    showSuccess('Galeria restaurada para o padrão com todas as fotos nativas em alta resolução!');
   };
 
   const handleDeletePresetHeroImage = async (presetId: string, name: string, url: string) => {
     if (!window.confirm(`Deseja excluir a foto "${name}" da galeria da capa? Ela não aparecerá mais na galeria nem na rotação.`)) return;
     const nextDeleted = Array.from(new Set([...deletedHeroPresets, presetId]));
-    const nextActive = activeHeroImages.filter(u => u !== url);
     setDeletedHeroPresets(nextDeleted);
-    const safeActive = nextActive.length > 0 
-      ? nextActive 
-      : (customHeroImages.length > 0 ? [customHeroImages[0].url] : ['/imagens/algodoal.jpg']);
+
+    // Remaining pool of available images in the system
+    const remainingPresets = PRESET_HERO_BACKGROUNDS.filter(p => !nextDeleted.includes(p.id));
+    const allRemainingUrls = [
+      ...remainingPresets.map(p => p.url),
+      ...customHeroImages.map(c => c.url)
+    ];
+
+    // Keep only active images that actually still exist
+    const safeActive = activeHeroImages.filter(u => u !== url && allRemainingUrls.includes(u));
     setActiveHeroImages(safeActive);
-    const nextSelectedBg = selectedHeroBg === url ? safeActive[0] : selectedHeroBg;
+
+    // Determine what image to preview
+    let nextSelectedBg = '';
+    if (selectedHeroBg !== url && allRemainingUrls.includes(selectedHeroBg)) {
+      nextSelectedBg = selectedHeroBg;
+    } else if (safeActive.length > 0) {
+      nextSelectedBg = safeActive[0];
+    } else if (allRemainingUrls.length > 0) {
+      nextSelectedBg = allRemainingUrls[0];
+    } else {
+      nextSelectedBg = ''; // Everything was deleted!
+    }
     setSelectedHeroBg(nextSelectedBg);
+
     await handleSaveHeroFullSettings(
       nextSelectedBg,
       isHeroRotationEnabled,
@@ -499,13 +518,31 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     if (!window.confirm(`Deseja remover a foto "${name}" da galeria?`)) return;
     const itemToDelete = customHeroImages.find(c => c.id === id);
     const nextCustom = customHeroImages.filter(c => c.id !== id);
-    const nextActive = itemToDelete ? activeHeroImages.filter(u => u !== itemToDelete.url) : activeHeroImages;
     setCustomHeroImages(nextCustom);
-    setActiveHeroImages(nextActive.length > 0 ? nextActive : ['/imagens/algodoal.jpg']);
+
+    const remainingPresets = PRESET_HERO_BACKGROUNDS.filter(p => !deletedHeroPresets.includes(p.id));
+    const allRemainingUrls = [
+      ...remainingPresets.map(p => p.url),
+      ...nextCustom.map(c => c.url)
+    ];
+
+    const safeActive = activeHeroImages.filter(u => (itemToDelete ? u !== itemToDelete.url : true) && allRemainingUrls.includes(u));
+    setActiveHeroImages(safeActive);
+
+    let nextSelectedBg = '';
+    if (itemToDelete && selectedHeroBg === itemToDelete.url) {
+      nextSelectedBg = safeActive[0] || allRemainingUrls[0] || '';
+    } else if (allRemainingUrls.includes(selectedHeroBg)) {
+      nextSelectedBg = selectedHeroBg;
+    } else {
+      nextSelectedBg = safeActive[0] || allRemainingUrls[0] || '';
+    }
+    setSelectedHeroBg(nextSelectedBg);
+
     await handleSaveHeroFullSettings(
-      selectedHeroBg === itemToDelete?.url ? '/imagens/algodoal.jpg' : selectedHeroBg,
+      nextSelectedBg,
       isHeroRotationEnabled,
-      nextActive.length > 0 ? nextActive : ['/imagens/algodoal.jpg'],
+      safeActive,
       nextCustom,
       deletedHeroPresets
     );
@@ -542,20 +579,25 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
         name: file.name.replace(/\.[^/.]+$/, "") || 'Foto Personalizada',
         url: finalUrl,
         tag: '📸 Upload',
-        subtitle: 'Adicionada ao portal',
+        subtitle: 'Foto enviada em alta resolução',
         created_at: new Date().toISOString()
       };
 
       const nextCustom = [newCustomEntry, ...customHeroImages];
-      const nextActive = Array.from(new Set([...activeHeroImages, finalUrl]));
+      
+      // Clean active pool to only include valid existing images plus the new one
+      const remainingPresets = PRESET_HERO_BACKGROUNDS.filter(p => !deletedHeroPresets.includes(p.id));
+      const validPool = [...remainingPresets.map(p => p.url), ...customHeroImages.map(c => c.url)];
+      const cleanedActive = activeHeroImages.filter(u => validPool.includes(u));
+      const nextActive = Array.from(new Set([...cleanedActive, finalUrl]));
       
       setSelectedHeroBg(finalUrl);
       setCustomHeroImages(nextCustom);
       setActiveHeroImages(nextActive);
 
-      await handleSaveHeroFullSettings(finalUrl, isHeroRotationEnabled, nextActive, nextCustom);
+      await handleSaveHeroFullSettings(finalUrl, isHeroRotationEnabled, nextActive, nextCustom, deletedHeroPresets);
       setIsUploadingHeroBgFile(false);
-      showSuccess(`Nova foto "${file.name}" adicionada à galeria e incluída na rotação!`);
+      showSuccess(`Nova foto "${file.name}" definida com sucesso como capa da ilha!`);
     };
     reader.onerror = () => {
       setActionError('Erro ao processar o arquivo de imagem.');
@@ -2759,20 +2801,29 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           </button>
                         )}
                         <span className="text-xs text-slate-400 font-medium truncate max-w-xs">
-                          {selectedHeroBg.startsWith('data:') ? 'Foto personalizada carregada' : selectedHeroBg}
+                          {selectedHeroBg ? (selectedHeroBg.startsWith('data:') ? 'Foto personalizada carregada' : selectedHeroBg) : 'Nenhuma imagem definida'}
                         </span>
                       </div>
                     </div>
 
                     <div className="relative rounded-2xl overflow-hidden min-h-[200px] sm:min-h-[240px] flex items-center p-6 border border-slate-700/80">
-                      {/* Background image preview without dark filter */}
-                      <div 
-                        className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0"
-                        style={{
-                          backgroundImage: `url('${selectedHeroBg}')`
-                        }}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/20 to-transparent z-10" />
+                      {/* Background image preview without distortion */}
+                      {selectedHeroBg ? (
+                        <img 
+                          src={selectedHeroBg}
+                          alt="Prévia da capa"
+                          className="absolute inset-0 w-full h-full object-cover object-center z-0 select-none"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center text-center p-6 z-0">
+                          <Sparkles className="w-8 h-8 text-amber-400 mb-2 opacity-80" />
+                          <span className="text-sm font-black text-white">Nenhuma foto selecionada para a capa</span>
+                          <span className="text-xs text-slate-400 max-w-sm mt-1">
+                            Envie a sua foto no formulário de upload abaixo ou clique em "Restaurar Padrão" para reativar as fotos originais.
+                          </span>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/25 to-transparent z-10" />
 
                       <div className="relative z-20 space-y-2 max-w-md">
                         <h4 className="text-2xl font-black font-heading leading-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)]">
@@ -2790,208 +2841,240 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
                   {/* Gallery of Images (Native Presets + Custom Uploads) with Rotation Checkboxes */}
                   <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div>
-                        <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                          <span>🏖️</span>
-                          <span>Galeria de Imagens da Ilha</span>
-                        </h4>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          {isHeroRotationEnabled
-                            ? 'Marque/desmarque as caixas de seleção para definir quais fotos farão parte da rotação a cada atualização.'
-                            : 'Clique na foto desejada para defini-la como fundo fixo permanente da capa.'}
-                        </p>
-                      </div>
-                      <span className="text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 shrink-0">
-                        {activeHeroImages.length} de {PRESET_HERO_BACKGROUNDS.filter(p => !deletedHeroPresets.includes(p.id)).length + customHeroImages.length} ativas na rotação
-                      </span>
-                    </div>
+                    {(() => {
+                      const availablePresets = PRESET_HERO_BACKGROUNDS.filter(p => !deletedHeroPresets.includes(p.id));
+                      const totalAvailable = availablePresets.length + customHeroImages.length;
+                      const validUrls = [...availablePresets.map(p => p.url), ...customHeroImages.map(c => c.url)];
+                      const activeValidCount = activeHeroImages.filter(u => validUrls.includes(u)).length;
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                      {/* 1. Native Preset Images */}
-                      {PRESET_HERO_BACKGROUNDS.filter((preset) => !deletedHeroPresets.includes(preset.id)).map((preset) => {
-                        const isInRotation = activeHeroImages.includes(preset.url);
-                        const isCurrentlyPreviewed = selectedHeroBg === preset.url;
-
-                        return (
-                          <div
-                            key={preset.id}
-                            onClick={() => {
-                              setSelectedHeroBg(preset.url);
-                              if (isHeroRotationEnabled) {
-                                handleToggleImageInRotation(preset.url);
-                              } else {
-                                handleSaveHeroFullSettings(preset.url, false, [preset.url], customHeroImages, deletedHeroPresets);
-                              }
-                            }}
-                            className={`group rounded-2xl border-2 transition p-3 cursor-pointer flex flex-col justify-between overflow-hidden relative ${
-                              isInRotation
-                                ? 'border-amber-500 bg-amber-50/40 shadow-sm ring-2 ring-amber-400/20'
-                                : 'border-slate-200 hover:border-slate-300 bg-slate-50/70 hover:bg-white opacity-70'
-                            }`}
-                          >
-                            <div className="relative h-32 w-full rounded-xl overflow-hidden mb-2.5">
-                              <img
-                                src={preset.url}
-                                alt={preset.name}
-                                className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
-                              />
-                              <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-slate-950/80 text-white text-[10px] font-bold backdrop-blur-xs">
-                                {preset.tag}
-                              </span>
-
-                              {/* Checkbox / Active Status Badge */}
-                              <div className="absolute top-2 right-2">
-                                {isHeroRotationEnabled ? (
-                                  <div
-                                    className={`w-6 h-6 rounded-lg flex items-center justify-center transition shadow-md ${
-                                      isInRotation
-                                        ? 'bg-amber-500 text-slate-950'
-                                        : 'bg-black/60 text-white/40 border border-white/30'
-                                    }`}
-                                  >
-                                    {isInRotation && <Check className="w-4 h-4 stroke-[3]" />}
-                                  </div>
-                                ) : (
-                                  isCurrentlyPreviewed && (
-                                    <div className="w-6 h-6 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center shadow-md">
-                                      <Check className="w-4 h-4 stroke-[3]" />
-                                    </div>
-                                  )
-                                )}
-                              </div>
-                            </div>
-
+                      return (
+                        <>
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <div>
-                              <div className="flex items-center justify-between gap-1">
-                                <h5 className="text-xs font-black text-slate-900 leading-tight line-clamp-1">
-                                  {preset.name}
-                                </h5>
-                              </div>
-                              <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">
-                                {preset.subtitle}
+                              <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                                <span>🏖️</span>
+                                <span>Galeria de Imagens da Ilha</span>
+                              </h4>
+                              <p className="text-xs text-slate-500 mt-0.5">
+                                {isHeroRotationEnabled
+                                  ? 'Marque/desmarque as caixas de seleção para definir quais fotos farão parte da rotação a cada atualização.'
+                                  : 'Clique na foto desejada para defini-la como fundo fixo permanente da capa.'}
                               </p>
                             </div>
+                            <span className="text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 shrink-0">
+                              {activeValidCount} de {totalAvailable} ativas na rotação
+                            </span>
+                          </div>
 
-                            <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
-                              <span className={`text-[11px] font-bold ${isInRotation ? 'text-amber-700' : 'text-slate-400'}`}>
-                                {isInRotation ? '✓ Incluída na Rotação' : '✕ Fora da Rotação'}
-                              </span>
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] text-slate-400 font-medium">Nativa da Ilha</span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                            {totalAvailable === 0 ? (
+                              <div className="col-span-full p-8 text-center bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl">
+                                <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto mb-3">
+                                  <Sparkles className="w-6 h-6 text-amber-600" />
+                                </div>
+                                <h5 className="text-sm font-black text-slate-800">Todas as fotos da galeria foram removidas</h5>
+                                <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-4">
+                                  A galeria está vazia. Você pode enviar a sua foto em alta resolução no campo abaixo para definir a nova capa, ou restaurar as fotos padrão da plataforma a qualquer momento.
+                                </p>
                                 <button
                                   type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeletePresetHeroImage(preset.id, preset.name, preset.url);
-                                  }}
-                                  className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
-                                  title="Excluir esta foto da galeria"
+                                  onClick={handleResetToDefaultRotation}
+                                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-sm transition cursor-pointer"
                                 >
-                                  <Trash2 className="w-3.5 h-3.5" />
+                                  Restaurar Fotos Padrão da Ilha
                                 </button>
                               </div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                            ) : (
+                              <>
+                                {/* 1. Native Preset Images */}
+                                {availablePresets.map((preset) => {
+                                  const isInRotation = activeHeroImages.includes(preset.url);
+                                  const isCurrentlyPreviewed = selectedHeroBg === preset.url;
 
-                      {/* 2. Custom Uploaded Images */}
-                      {customHeroImages.map((custom) => {
-                        const isInRotation = activeHeroImages.includes(custom.url);
-                        const isCurrentlyPreviewed = selectedHeroBg === custom.url;
+                                  return (
+                                    <div
+                                      key={preset.id}
+                                      onClick={() => {
+                                        setSelectedHeroBg(preset.url);
+                                        if (isHeroRotationEnabled) {
+                                          handleToggleImageInRotation(preset.url);
+                                        } else {
+                                          handleSaveHeroFullSettings(preset.url, false, [preset.url], customHeroImages, deletedHeroPresets);
+                                        }
+                                      }}
+                                      className={`group rounded-2xl border-2 transition p-3 cursor-pointer flex flex-col justify-between overflow-hidden relative ${
+                                        isInRotation
+                                          ? 'border-amber-500 bg-amber-50/40 shadow-sm ring-2 ring-amber-400/20'
+                                          : 'border-slate-200 hover:border-slate-300 bg-slate-50/70 hover:bg-white opacity-70'
+                                      }`}
+                                    >
+                                      <div className="relative h-32 w-full rounded-xl overflow-hidden mb-2.5">
+                                        <img
+                                          src={preset.url}
+                                          alt={preset.name}
+                                          className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
+                                        />
+                                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-slate-950/80 text-white text-[10px] font-bold backdrop-blur-xs">
+                                          {preset.tag}
+                                        </span>
 
-                        return (
-                          <div
-                            key={custom.id}
-                            className={`group rounded-2xl border-2 transition p-3 flex flex-col justify-between overflow-hidden relative ${
-                              isInRotation
-                                ? 'border-amber-500 bg-amber-50/40 shadow-sm ring-2 ring-amber-400/20'
-                                : 'border-slate-200 hover:border-slate-300 bg-slate-50/70 hover:bg-white opacity-70'
-                            }`}
-                          >
-                            <div 
-                              className="relative h-32 w-full rounded-xl overflow-hidden mb-2.5 cursor-pointer"
-                              onClick={() => {
-                                setSelectedHeroBg(custom.url);
-                                if (isHeroRotationEnabled) {
-                                  handleToggleImageInRotation(custom.url);
-                                } else {
-                                  handleSaveHeroFullSettings(custom.url, false, [custom.url], customHeroImages, deletedHeroPresets);
-                                }
-                              }}
-                            >
-                              <img
-                                src={custom.url}
-                                alt={custom.name}
-                                className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
-                              />
-                              <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-indigo-950/80 text-white text-[10px] font-bold backdrop-blur-xs">
-                                {custom.tag || '📸 Enviada'}
-                              </span>
+                                        {/* Checkbox / Active Status Badge */}
+                                        <div className="absolute top-2 right-2">
+                                          {isHeroRotationEnabled ? (
+                                            <div
+                                              className={`w-6 h-6 rounded-lg flex items-center justify-center transition shadow-md ${
+                                                isInRotation
+                                                  ? 'bg-amber-500 text-slate-950'
+                                                  : 'bg-black/60 text-white/40 border border-white/30'
+                                              }`}
+                                            >
+                                              {isInRotation && <Check className="w-4 h-4 stroke-[3]" />}
+                                            </div>
+                                          ) : (
+                                            isCurrentlyPreviewed && (
+                                              <div className="w-6 h-6 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center shadow-md">
+                                                <Check className="w-4 h-4 stroke-[3]" />
+                                              </div>
+                                            )
+                                          )}
+                                        </div>
+                                      </div>
 
-                              {/* Checkbox / Active Status Badge */}
-                              <div className="absolute top-2 right-2">
-                                {isHeroRotationEnabled ? (
-                                  <div
-                                    className={`w-6 h-6 rounded-lg flex items-center justify-center transition shadow-md ${
-                                      isInRotation
-                                        ? 'bg-amber-500 text-slate-950'
-                                        : 'bg-black/60 text-white/40 border border-white/30'
-                                    }`}
-                                  >
-                                    {isInRotation && <Check className="w-4 h-4 stroke-[3]" />}
-                                  </div>
-                                ) : (
-                                  isCurrentlyPreviewed && (
-                                    <div className="w-6 h-6 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center shadow-md">
-                                      <Check className="w-4 h-4 stroke-[3]" />
+                                      <div>
+                                        <div className="flex items-center justify-between gap-1">
+                                          <h5 className="text-xs font-black text-slate-900 leading-tight line-clamp-1">
+                                            {preset.name}
+                                          </h5>
+                                        </div>
+                                        <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">
+                                          {preset.subtitle}
+                                        </p>
+                                      </div>
+
+                                      <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
+                                        <span className={`text-[11px] font-bold ${isInRotation ? 'text-amber-700' : 'text-slate-400'}`}>
+                                          {isInRotation ? '✓ Incluída na Rotação' : '✕ Fora da Rotação'}
+                                        </span>
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-[10px] text-slate-400 font-medium">Nativa da Ilha</span>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDeletePresetHeroImage(preset.id, preset.name, preset.url);
+                                            }}
+                                            className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                                            title="Excluir esta foto da galeria"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      </div>
                                     </div>
-                                  )
-                                )}
-                              </div>
-                            </div>
+                                  );
+                                })}
 
-                            <div 
-                              className="cursor-pointer"
-                              onClick={() => {
-                                setSelectedHeroBg(custom.url);
-                                if (isHeroRotationEnabled) {
-                                  handleToggleImageInRotation(custom.url);
-                                } else {
-                                  handleSaveHeroFullSettings(custom.url, false, [custom.url], customHeroImages, deletedHeroPresets);
-                                }
-                              }}
-                            >
-                              <h5 className="text-xs font-black text-slate-900 leading-tight line-clamp-1">
-                                {custom.name}
-                              </h5>
-                              <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">
-                                {custom.subtitle || 'Foto enviada pelo administrador'}
-                              </p>
-                            </div>
+                                {/* 2. Custom Uploaded Images */}
+                                {customHeroImages.map((custom) => {
+                                  const isInRotation = activeHeroImages.includes(custom.url);
+                                  const isCurrentlyPreviewed = selectedHeroBg === custom.url;
 
-                            <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
-                              <span className={`text-[11px] font-bold ${isInRotation ? 'text-amber-700' : 'text-slate-400'}`}>
-                                {isInRotation ? '✓ Incluída na Rotação' : '✕ Fora da Rotação'}
-                              </span>
+                                  return (
+                                    <div
+                                      key={custom.id}
+                                      className={`group rounded-2xl border-2 transition p-3 flex flex-col justify-between overflow-hidden relative ${
+                                        isInRotation
+                                          ? 'border-amber-500 bg-amber-50/40 shadow-sm ring-2 ring-amber-400/20'
+                                          : 'border-slate-200 hover:border-slate-300 bg-slate-50/70 hover:bg-white opacity-70'
+                                      }`}
+                                    >
+                                      <div 
+                                        className="relative h-32 w-full rounded-xl overflow-hidden mb-2.5 cursor-pointer"
+                                        onClick={() => {
+                                          setSelectedHeroBg(custom.url);
+                                          if (isHeroRotationEnabled) {
+                                            handleToggleImageInRotation(custom.url);
+                                          } else {
+                                            handleSaveHeroFullSettings(custom.url, false, [custom.url], customHeroImages, deletedHeroPresets);
+                                          }
+                                        }}
+                                      >
+                                        <img
+                                          src={custom.url}
+                                          alt={custom.name}
+                                          className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
+                                        />
+                                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-indigo-950/80 text-white text-[10px] font-bold backdrop-blur-xs">
+                                          {custom.tag || '📸 Enviada'}
+                                        </span>
 
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteCustomHeroImage(custom.id, custom.name);
-                                }}
-                                className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
-                                title="Excluir esta foto da galeria"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
+                                        {/* Checkbox / Active Status Badge */}
+                                        <div className="absolute top-2 right-2">
+                                          {isHeroRotationEnabled ? (
+                                            <div
+                                              className={`w-6 h-6 rounded-lg flex items-center justify-center transition shadow-md ${
+                                                isInRotation
+                                                  ? 'bg-amber-500 text-slate-950'
+                                                  : 'bg-black/60 text-white/40 border border-white/30'
+                                              }`}
+                                            >
+                                              {isInRotation && <Check className="w-4 h-4 stroke-[3]" />}
+                                            </div>
+                                          ) : (
+                                            isCurrentlyPreviewed && (
+                                              <div className="w-6 h-6 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center shadow-md">
+                                                <Check className="w-4 h-4 stroke-[3]" />
+                                              </div>
+                                            )
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div 
+                                        className="cursor-pointer"
+                                        onClick={() => {
+                                          setSelectedHeroBg(custom.url);
+                                          if (isHeroRotationEnabled) {
+                                            handleToggleImageInRotation(custom.url);
+                                          } else {
+                                            handleSaveHeroFullSettings(custom.url, false, [custom.url], customHeroImages, deletedHeroPresets);
+                                          }
+                                        }}
+                                      >
+                                        <h5 className="text-xs font-black text-slate-900 leading-tight line-clamp-1">
+                                          {custom.name}
+                                        </h5>
+                                        <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">
+                                          {custom.subtitle || 'Foto enviada pelo administrador'}
+                                        </p>
+                                      </div>
+
+                                      <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
+                                        <span className={`text-[11px] font-bold ${isInRotation ? 'text-amber-700' : 'text-slate-400'}`}>
+                                          {isInRotation ? '✓ Incluída na Rotação' : '✕ Fora da Rotação'}
+                                        </span>
+
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteCustomHeroImage(custom.id, custom.name);
+                                          }}
+                                          className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                                          title="Excluir esta foto da galeria"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </>
+                            )}
                           </div>
-                        );
-                      })}
-                    </div>
+                        </>
+                      );
+                    })()}
                   </div>
 
                   {/* Upload New Custom Photo to Gallery (No Direct URL input as requested) */}
