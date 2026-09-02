@@ -60,6 +60,13 @@ interface AdminPanelModalProps {
 
 export const PRESET_HERO_BACKGROUNDS = [
   {
+    id: 'praia_princesa_hd',
+    name: 'Praia da Princesa & Dunas (Alta Resolução HD)',
+    subtitle: 'Águas cristalinas, areia dourada e coqueiros de Maiandeua',
+    url: '/imagens/algodoal_hd.jpg',
+    tag: '✨ Ultra HD'
+  },
+  {
     id: 'praia_sunset',
     name: 'Pôr do Sol na Praia da Princesa (Padrão)',
     subtitle: 'Tons dourados e horizonte tropical da ilha',
@@ -2997,6 +3004,47 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       <p className="text-xs text-slate-500 mb-4">
                         Adicione fotos de alta resolução da Ilha de Algodoal (praias, pousadas, passeios de barco ou pôr do sol). A imagem será adicionada à galeria e automaticamente incluída na rotação.
                       </p>
+                    </div>
+
+                    {/* GUIA DE TAMANHO E QUALIDADE DE IMAGEM */}
+                    <div className="mb-5 p-4 rounded-2xl bg-gradient-to-r from-amber-50/80 via-sky-50/60 to-emerald-50/80 border border-amber-200/70 text-slate-800">
+                      <div className="flex items-center gap-2 mb-2 text-xs font-black uppercase tracking-wider text-amber-950">
+                        <Sparkles className="w-4 h-4 text-amber-600" />
+                        <span>Recomendações para a Imagem Ficar Perfeita e Sem Distorção</span>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs mt-3">
+                        <div className="bg-white/90 p-3 rounded-xl border border-amber-200/60 shadow-2xs">
+                          <span className="text-[10px] font-black uppercase text-amber-700 block">📐 Tamanho Recomendado</span>
+                          <p className="font-extrabold text-slate-900 mt-0.5">1920 × 800 px</p>
+                          <span className="text-[10px] text-slate-500 block">Mínimo: 1600 × 700 px (Panorâmica)</span>
+                        </div>
+
+                        <div className="bg-white/90 p-3 rounded-xl border border-sky-200/60 shadow-2xs">
+                          <span className="text-[10px] font-black uppercase text-sky-700 block">🔄 Proporção Ideal</span>
+                          <p className="font-extrabold text-slate-900 mt-0.5">16:9 ou 21:9 (Horizontal)</p>
+                          <span className="text-[10px] text-slate-500 block">Evite fotos em pé (verticais de celular)</span>
+                        </div>
+
+                        <div className="bg-white/90 p-3 rounded-xl border border-emerald-200/60 shadow-2xs">
+                          <span className="text-[10px] font-black uppercase text-emerald-700 block">💾 Formato & Peso</span>
+                          <p className="font-extrabold text-slate-900 mt-0.5">WebP ou JPG (300KB a 2MB)</p>
+                          <span className="text-[10px] text-slate-500 block">Qualidade 85% a 92% para carregar rápido</span>
+                        </div>
+
+                        <div className="bg-white/90 p-3 rounded-xl border border-purple-200/60 shadow-2xs">
+                          <span className="text-[10px] font-black uppercase text-purple-700 block">🎯 Enquadramento</span>
+                          <p className="font-extrabold text-slate-900 mt-0.5">Horizonte Centralizado</p>
+                          <span className="text-[10px] text-slate-500 block">Mantenha o assunto na faixa central</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 pt-2.5 border-t border-amber-200/50 flex items-start gap-2 text-[11px] text-slate-700">
+                        <span className="font-bold text-amber-800 shrink-0">💡 Por que a imagem distorce?</span>
+                        <span>
+                          Se a foto for vertical (tirada em pé no celular) ou quadrada (1:1), o navegador precisa cortar até 70% da altura e dar zoom no centro para cobrir a largura da tela do computador, causando corte de cabeças ou pixelamento. Use sempre fotos tiradas com o celular deitado (horizontal) com boa luz natural.
+                        </span>
+                      </div>
                     </div>
 
                     <label

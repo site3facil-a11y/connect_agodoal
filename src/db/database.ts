@@ -1296,6 +1296,7 @@ interface LocalDatabaseState {
 }
 
 export const DEFAULT_HERO_PRESET_URLS = [
+  '/imagens/algodoal_hd.jpg',
   '/imagens/algodoal.jpg',
   '/imagens/vila.jpg',
   '/imagens/vila2.jpg',
@@ -1308,7 +1309,7 @@ const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
   admin_username: 'admin',
   admin_email: 'admin@algodoalconnect.com.br',
   admin_pin: 'algodoal2026',
-  hero_background_url: '/imagens/algodoal.jpg',
+  hero_background_url: '/imagens/algodoal_hd.jpg',
   hero_rotation_enabled: true,
   hero_active_images: DEFAULT_HERO_PRESET_URLS,
   hero_custom_images: [],

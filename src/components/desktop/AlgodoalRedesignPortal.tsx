@@ -445,17 +445,18 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
       {/* 2. HERO SECTION WITH VIVID NATURAL BACKGROUND & SEARCH   */}
       {/* ======================================================== */}
       <section className="relative w-full min-h-[380px] sm:min-h-[440px] flex items-center overflow-hidden border-b border-slate-800">
-        {/* Natural Background Image without Dark Filters */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0 scale-105 transition-transform duration-1000"
-          style={{
-            backgroundImage: `url('${activeHeroBg}')`
-          }}
+        {/* High-Resolution Responsive Background Image with Object-Cover (Zero Distortion) */}
+        <img
+          src={activeHeroBg}
+          alt="Paisagem da Ilha de Algodoal"
+          decoding="async"
+          className="absolute inset-0 w-full h-full object-cover object-center z-0 select-none pointer-events-none transition-opacity duration-700"
+          style={{ imageRendering: 'auto' }}
         />
         
-        {/* Soft subtle gradient only for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/20 to-transparent z-10" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent z-10" />
+        {/* Soft subtle gradient for premium text readability and crisp contrast */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/75 via-slate-950/35 to-transparent z-10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-black/20 z-10" />
 
         <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-12 relative z-20 flex flex-col md:flex-row items-start md:items-end justify-between gap-8">
           

@@ -377,7 +377,7 @@ export function App() {
             const isRotation = dataSettings.hero_rotation_enabled !== false;
             const activePool: string[] = dataSettings.hero_active_images && dataSettings.hero_active_images.length > 0
               ? dataSettings.hero_active_images
-              : ['/imagens/algodoal.jpg', '/imagens/vila.jpg', '/imagens/vila2.jpg', '/imagens/canal.jpg', '/imagens/porto.jpg', '/imagens/porto2.jpg'];
+              : ['/imagens/algodoal_hd.jpg', '/imagens/algodoal.jpg', '/imagens/vila.jpg', '/imagens/vila2.jpg', '/imagens/canal.jpg', '/imagens/porto.jpg', '/imagens/porto2.jpg'];
 
             if (isRotation && activePool.length > 0) {
               // Pick random image from active pool every time the page is opened or refreshed
