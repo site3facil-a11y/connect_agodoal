@@ -421,7 +421,7 @@ async function startServer() {
   // =====================================
   app.get('/api/tides', async (req, res) => {
     try {
-      const tides = getLiveTideSchedule();
+      const tides = await getLiveTideSchedule();
       res.json(tides);
     } catch (err: any) {
       res.status(500).json({ error: 'Erro ao buscar tábua de marés', details: err.message });
