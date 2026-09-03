@@ -1206,7 +1206,7 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
       {/* ======================================================== */}
       {/* 8. FOOTER (DARK CLEAN WITH SOCIALS & ATTRIBUTION)        */}
       {/* ======================================================== */}
-      <footer className="w-full bg-[#020408] border-t border-slate-900 py-6 text-xs text-slate-400">
+      <footer className="w-full bg-[#020408] border-t border-slate-900 pt-6 pb-24 md:pb-6 text-xs text-slate-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           
           {/* Social Icons */}

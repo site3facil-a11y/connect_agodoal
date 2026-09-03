@@ -430,18 +430,33 @@ export function App() {
     setActiveTab(tab);
     if (tab === 'home') {
       setSelectedCategory('todos');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (tab === 'pousadas') {
       setSelectedCategory('pousadas');
+      const el = document.getElementById('secao-explorar') || document.getElementById('secao-portal-anuncios') || document.getElementById('secao-guia-parceiros');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } else if (tab === 'transporte') {
       setSelectedCategory('transporte');
+      const el = document.getElementById('secao-explorar') || document.getElementById('secao-portal-anuncios') || document.getElementById('secao-guia-parceiros');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } else if (tab === 'compras') {
       setSelectedCategory('compras');
+      const el = document.getElementById('secao-explorar') || document.getElementById('secao-portal-anuncios') || document.getElementById('secao-guia-parceiros');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } else if (tab === 'mares') {
       setIsTidesModalOpen(true);
     } else if (tab === 'admin') {
       setIsAdminModalOpen(true);
     }
   };
+
+  // Sync activeTab when category is changed from elsewhere
+  useEffect(() => {
+    if (selectedCategory === 'pousadas') setActiveTab('pousadas');
+    else if (selectedCategory === 'transporte') setActiveTab('transporte');
+    else if (selectedCategory === 'compras') setActiveTab('compras');
+    else if (selectedCategory === 'todos') setActiveTab('home');
+  }, [selectedCategory]);
 
   // Find today's tide or closest available day
   const todayStr = new Date().toISOString().split('T')[0];
@@ -595,32 +610,43 @@ export function App() {
       {/* 1. NEW PHOTO LAYOUT (ACTIVE BY DEFAULT)                  */}
       {/* ======================================================== */}
       {layoutVersion === 'new_photo_layout' ? (
-        <AlgodoalRedesignPortal
-          theme={theme}
-          onToggleTheme={toggleTheme}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
-          onOpenAdmin={() => {
-            setAdminInitialTab('anuncios');
-            setIsAdminModalOpen(true);
-          }}
-          onOpenAdminBackground={() => {
-            setAdminInitialTab('fundo');
-            setIsAdminModalOpen(true);
-          }}
-          onOpenTides={() => setIsTidesModalOpen(true)}
-          onOpenWeather={() => setIsWeatherModalOpen(true)}
-          currentUser={currentUser}
-          currentTideSummary={dynamicTideSummary}
-          weather={weather}
-          todayTide={todayTide}
-          partners={partners}
-          advertisements={advertisements}
-          onOpenAdDetails={(ad) => setSelectedAdForDetails(ad)}
-          heroBackgroundUrl={heroBackgroundUrl}
-        />
+        <>
+          <AlgodoalRedesignPortal
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            onOpenAdmin={() => {
+              setAdminInitialTab('anuncios');
+              setIsAdminModalOpen(true);
+            }}
+            onOpenAdminBackground={() => {
+              setAdminInitialTab('fundo');
+              setIsAdminModalOpen(true);
+            }}
+            onOpenTides={() => setIsTidesModalOpen(true)}
+            onOpenWeather={() => setIsWeatherModalOpen(true)}
+            currentUser={currentUser}
+            currentTideSummary={dynamicTideSummary}
+            weather={weather}
+            todayTide={todayTide}
+            partners={partners}
+            advertisements={advertisements}
+            onOpenAdDetails={(ad) => setSelectedAdForDetails(ad)}
+            heroBackgroundUrl={heroBackgroundUrl}
+          />
+          {/* Mobile Bottom Navigation Bar (Visible on mobile viewports) */}
+          <div className="md:hidden">
+            <MobileBottomNav
+              theme={theme}
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+              isAdminLoggedIn={currentUser?.role === 'admin'}
+            />
+          </div>
+        </>
       ) : viewMode === 'desktop' ? (
         <div className="w-full min-h-screen flex flex-col">
           {/* Desktop Top Navigation Bar */}
