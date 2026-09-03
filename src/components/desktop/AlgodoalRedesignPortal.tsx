@@ -27,7 +27,14 @@ import {
   PartyPopper,
   Truck,
   Layers,
-  CheckCircle
+  CheckCircle,
+  Home,
+  Tag,
+  Award,
+  Check,
+  Building2,
+  Store,
+  DollarSign
 } from 'lucide-react';
 import { Advertisement, Partner, TideDayEntry, UserProfile, WeatherData } from '../../types/index.ts';
 import { StoriesRow } from '../mobile/StoriesRow.tsx';
@@ -159,18 +166,30 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
     {
       id: 'anuncie',
       title: 'Anuncie Conosco',
-      subtitle: 'Painel do Gestor',
-      badge: 'GESTOR',
-      emoji: '🛡️',
+      subtitle: 'Quadro de Valores',
+      badge: 'R$ 30/MÊS',
+      emoji: '💎',
       // Indigo Tint
       bg: 'bg-[#EEF2FF] hover:bg-[#E0E7FF] text-slate-900 border-[#C7D2FE]',
       badgeBg: 'bg-white/95 text-indigo-950 border-indigo-300/80',
-      action: onOpenAdmin
+      action: () => {
+        setActiveMainView('anuncie');
+        onSelectCategory('todos');
+        onSearchChange('');
+        setTimeout(() => {
+          const el = document.getElementById('secao-quadro-valores') || document.getElementById('secao-navegacao');
+          el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 50);
+      }
     }
   ];
 
-  // Active View Tab: 'portal' (All ads categorized on same page) | 'guia' (All partners categorized on same page) | 'todos' (Both on same page)
-  const [activeMainView, setActiveMainView] = useState<'portal' | 'guia' | 'todos'>('portal');
+  // Active View Tab:
+  // 'inicio': Carrega TODOS os anúncios E parceiros juntos na página inicial
+  // 'portal': Carrega SÓ os anúncios comerciais
+  // 'guia': Carrega SÓ os parceiros credenciados
+  // 'anuncie': Carrega o QUADRO DE VALORES (Plano Mensal R$ 30, Plano Free, Divulgação)
+  const [activeMainView, setActiveMainView] = useState<'inicio' | 'portal' | 'guia' | 'anuncie'>('inicio');
 
   // Category normalization helper
   const normalizeCat = (cat?: string): string => {
@@ -366,17 +385,19 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
           {/* Center Navigation Links */}
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
             <button 
+              id="nav-btn-inicio"
               onClick={() => {
-                setActiveMainView('portal');
+                setActiveMainView('inicio');
                 onSelectCategory('todos');
                 onSearchChange('');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className={`hover:text-amber-400 transition cursor-pointer ${
-                activeMainView === 'portal' && selectedCategory === 'todos' && !searchTerm ? 'text-amber-400 font-bold' : ''
+              className={`hover:text-amber-400 transition cursor-pointer flex items-center gap-1.5 ${
+                activeMainView === 'inicio' ? 'text-amber-400 font-bold' : ''
               }`}
             >
-              Início
+              <Home className="w-3.5 h-3.5 text-amber-400" />
+              <span>Início</span>
             </button>
             <button 
               id="nav-btn-portal"
@@ -384,14 +405,17 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
                 setActiveMainView('portal');
                 onSelectCategory('todos');
                 onSearchChange('');
-                document.getElementById('secao-portal-anuncios')?.scrollIntoView({ behavior: 'smooth' });
+                setTimeout(() => {
+                  const el = document.getElementById('secao-portal-anuncios') || document.getElementById('secao-navegacao');
+                  el?.scrollIntoView({ behavior: 'smooth' });
+                }, 50);
               }}
               className={`hover:text-amber-400 transition cursor-pointer flex items-center gap-1.5 ${
                 activeMainView === 'portal' ? 'text-amber-400 font-bold' : ''
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>Portal (Anúncios)</span>
+              <span>Portal de Anúncios</span>
             </button>
             <button 
               id="nav-btn-guia"
@@ -399,7 +423,10 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
                 setActiveMainView('guia');
                 onSelectCategory('todos');
                 onSearchChange('');
-                document.getElementById('secao-guia-parceiros')?.scrollIntoView({ behavior: 'smooth' });
+                setTimeout(() => {
+                  const el = document.getElementById('secao-guia-parceiros') || document.getElementById('secao-navegacao');
+                  el?.scrollIntoView({ behavior: 'smooth' });
+                }, 50);
               }}
               className={`hover:text-teal-300 transition cursor-pointer flex items-center gap-1.5 ${
                 activeMainView === 'guia' ? 'text-teal-400 font-bold' : ''
@@ -409,22 +436,22 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
               <span>Guia da Ilha (Parceiros)</span>
             </button>
             <button 
+              id="nav-btn-anuncie"
               onClick={() => {
-                setActiveMainView('portal');
-                onSelectCategory('eventos');
+                setActiveMainView('anuncie');
+                onSelectCategory('todos');
                 onSearchChange('');
+                setTimeout(() => {
+                  const el = document.getElementById('secao-quadro-valores') || document.getElementById('secao-navegacao');
+                  el?.scrollIntoView({ behavior: 'smooth' });
+                }, 50);
               }}
-              className={`hover:text-amber-400 transition cursor-pointer ${
-                selectedCategory === 'eventos' ? 'text-amber-400 font-bold' : ''
+              className={`hover:text-amber-400 transition cursor-pointer flex items-center gap-1.5 ${
+                activeMainView === 'anuncie' ? 'text-amber-400 font-bold' : ''
               }`}
             >
-              Agenda
-            </button>
-            <button 
-              onClick={onOpenAdmin}
-              className="hover:text-amber-400 transition cursor-pointer text-slate-300"
-            >
-              Anuncie
+              <Tag className="w-3.5 h-3.5 text-amber-400" />
+              <span>Anuncie</span>
             </button>
           </nav>
 
@@ -708,70 +735,100 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
         </div>
 
         {/* Main View Toggle Buttons */}
-        <div id="secao-navegacao" className="flex flex-col md:flex-row items-center justify-between gap-4 p-2.5 sm:p-3 rounded-3xl bg-slate-900/90 border border-slate-800 backdrop-blur-md shadow-2xl">
+        <div id="secao-navegacao" className="flex flex-col xl:flex-row items-center justify-between gap-3 p-2.5 sm:p-3 rounded-3xl bg-slate-900/90 border border-slate-800 backdrop-blur-md shadow-2xl">
           
-          <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full xl:w-auto">
+            {/* Tab 1: Início (Todos) */}
+            <button
+              id="tab-btn-inicio"
+              onClick={() => {
+                setActiveMainView('inicio');
+                onSelectCategory('todos');
+              }}
+              className={`px-3.5 sm:px-4 py-2.5 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                activeMainView === 'inicio'
+                  ? 'bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/20 scale-[1.02]'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+              }`}
+            >
+              <Home className="w-4 h-4" />
+              <span>Início (Tudo)</span>
+              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                activeMainView === 'inicio' ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-800 text-amber-400'
+              }`}>
+                {activeFilteredAds.length + activeFilteredPartners.length}
+              </span>
+            </button>
+
+            {/* Tab 2: Portal de Anúncios */}
             <button
               id="tab-btn-portal"
               onClick={() => {
                 setActiveMainView('portal');
                 onSelectCategory('todos');
               }}
-              className={`flex-1 md:flex-none px-5 py-3 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer ${
+              className={`px-3.5 sm:px-4 py-2.5 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
                 activeMainView === 'portal'
                   ? 'bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/20 scale-[1.02]'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
               }`}
             >
-              <Sparkles className="w-4 h-4 text-slate-950" />
+              <Sparkles className="w-4 h-4" />
               <span>Portal de Anúncios</span>
-              <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
                 activeMainView === 'portal' ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-800 text-amber-400'
               }`}>
                 {activeFilteredAds.length}
               </span>
             </button>
 
+            {/* Tab 3: Guia da Ilha (Parceiros) */}
             <button
               id="tab-btn-guia"
               onClick={() => {
                 setActiveMainView('guia');
                 onSelectCategory('todos');
               }}
-              className={`flex-1 md:flex-none px-5 py-3 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer ${
+              className={`px-3.5 sm:px-4 py-2.5 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
                 activeMainView === 'guia'
                   ? 'bg-teal-400 text-slate-950 shadow-lg shadow-teal-400/20 scale-[1.02]'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
               }`}
             >
-              <Compass className="w-4 h-4 text-slate-950" />
+              <Compass className="w-4 h-4" />
               <span>Guia da Ilha</span>
-              <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
                 activeMainView === 'guia' ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-800 text-teal-400'
               }`}>
                 {activeFilteredPartners.length}
               </span>
             </button>
 
+            {/* Tab 4: Anuncie (Quadro de Valores) */}
             <button
-              id="tab-btn-todos"
+              id="tab-btn-anuncie"
               onClick={() => {
-                setActiveMainView('todos');
+                setActiveMainView('anuncie');
                 onSelectCategory('todos');
               }}
-              className={`hidden lg:flex px-4 py-3 rounded-2xl font-bold text-xs items-center gap-1.5 transition cursor-pointer ${
-                activeMainView === 'todos'
-                  ? 'bg-slate-800 text-white border border-slate-700 shadow-inner'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+              className={`px-3.5 sm:px-4 py-2.5 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                activeMainView === 'anuncie'
+                  ? 'bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 shadow-lg shadow-amber-400/20 scale-[1.02]'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
               }`}
             >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Ver Tudo Junto</span>
+              <Tag className="w-4 h-4" />
+              <span>Anuncie (Valores)</span>
+              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                activeMainView === 'anuncie' ? 'bg-slate-950/20 text-slate-950' : 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
+              }`}>
+                R$ 30/mês
+              </span>
             </button>
           </div>
 
           {/* Active Filter Badge & Anuncie CTA */}
-          <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end text-xs">
+          <div className="flex items-center gap-3 w-full xl:w-auto justify-between xl:justify-end text-xs">
             {selectedCategory !== 'todos' ? (
               <div className="flex items-center gap-2 bg-amber-500/15 border border-amber-500/30 px-3.5 py-2 rounded-2xl text-amber-300 font-bold">
                 <span>Filtrando por categoria</span>
@@ -785,19 +842,33 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
               </div>
             ) : (
               <span className="text-[11px] text-slate-400 hidden sm:inline font-medium">
-                {activeMainView === 'portal' && 'Exibindo todos os anúncios juntos (sem divisores de categoria)'}
-                {activeMainView === 'guia' && 'Exibindo todos os parceiros credenciados juntos'}
-                {activeMainView === 'todos' && 'Exibindo anúncios e parceiros juntos na mesma página'}
+                {activeMainView === 'inicio' && 'Página Inicial: Exibindo todos os anúncios e parceiros juntos'}
+                {activeMainView === 'portal' && 'Portal: Exibindo somente os anúncios comerciais e banners'}
+                {activeMainView === 'guia' && 'Guia: Exibindo somente os parceiros credenciados na ilha'}
+                {activeMainView === 'anuncie' && 'Anuncie: Quadro de valores e planos comerciais'}
               </span>
             )}
 
-            <button
-              onClick={onOpenAdmin}
-              className="font-black text-xs text-slate-950 bg-amber-400 hover:bg-amber-300 px-4 py-2.5 rounded-2xl shadow-md flex items-center gap-2 transition cursor-pointer active:scale-95"
-            >
-              <Megaphone className="w-3.5 h-3.5" />
-              <span>Anuncie</span>
-            </button>
+            {activeMainView !== 'anuncie' ? (
+              <button
+                onClick={() => {
+                  setActiveMainView('anuncie');
+                  onSelectCategory('todos');
+                }}
+                className="font-black text-xs text-slate-950 bg-amber-400 hover:bg-amber-300 px-4 py-2.5 rounded-2xl shadow-md flex items-center gap-2 transition cursor-pointer active:scale-95"
+              >
+                <Tag className="w-3.5 h-3.5" />
+                <span>Quadro de Valores</span>
+              </button>
+            ) : (
+              <button
+                onClick={onOpenAdmin}
+                className="font-black text-xs text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2.5 rounded-2xl shadow-md flex items-center gap-2 transition cursor-pointer active:scale-95"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                <span>Painel Admin</span>
+              </button>
+            )}
           </div>
 
         </div>
@@ -822,7 +893,7 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
       {/* ======================================================== */}
       {/* 6. PORTAL DE ANÚNCIOS (TODOS OS ANÚNCIOS JUNTOS)         */}
       {/* ======================================================== */}
-      {(activeMainView === 'portal' || activeMainView === 'todos') && (
+      {(activeMainView === 'inicio' || activeMainView === 'portal') && (
         <section id="secao-portal-anuncios" className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 space-y-5">
           
           {/* Section Master Header */}
@@ -992,7 +1063,7 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
       {/* ======================================================== */}
       {/* 7. GUIA DA ILHA (TODOS OS PARCEIROS POR CATEGORIA)       */}
       {/* ======================================================== */}
-      {(activeMainView === 'guia' || activeMainView === 'todos') && (
+      {(activeMainView === 'inicio' || activeMainView === 'guia') && (
         <section id="secao-guia-parceiros" className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 space-y-10 border-t border-slate-800/80">
           
           {/* Section Master Header */}
@@ -1148,6 +1219,483 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
           )}
 
         </section>
+      )}
+
+      {/* ======================================================== */}
+      {/* 8. QUADRO DE VALORES & PLANOS (ANUNCIE)                  */}
+      {/* ======================================================== */}
+      {activeMainView === 'anuncie' && (
+        <section id="secao-quadro-valores" className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-8 space-y-10">
+          
+          {/* Header do Quadro de Valores */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">💎</span>
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white font-heading">
+                  QUADRO DE VALORES • PLANOS DE DIVULGAÇÃO NA ILHA
+                </h2>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-3xl leading-relaxed">
+                Conecte seu estabelecimento, transporte ou atração turística a milhares de visitantes em tempo real. Sem intermediários, sem comissões e com contato 100% direto no seu WhatsApp.
+              </p>
+            </div>
+
+            <button
+              onClick={onOpenAdmin}
+              className="px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-2 transition cursor-pointer shrink-0"
+            >
+              <ShieldCheck className="w-4 h-4 text-amber-400" />
+              <span>Painel do Administrador</span>
+            </button>
+          </div>
+
+          {/* Value Highlights Pill Bar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
+                <Tag className="w-4 h-4 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white">R$ 30 por mês</p>
+                <p className="text-[11px] text-slate-400">Preço justo e acessível</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center shrink-0">
+                <MessageCircle className="w-4 h-4 text-teal-400" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white">WhatsApp Direto</p>
+                <p className="text-[11px] text-slate-400">Sem taxas nem comissões</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center shrink-0">
+                <Sparkles className="w-4 h-4 text-purple-400" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white">Hero Carousel Topo</p>
+                <p className="text-[11px] text-slate-400">Máxima visibilidade</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-4 h-4 text-blue-400" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white">Sem Fidelidade</p>
+                <p className="text-[11px] text-slate-400">Cancele quando quiser</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Cards dos 3 Planos Oficiais */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+            
+            {/* 1. PLANO MENSAL - MAIS RECOMENDADO (R$ 30/mês) */}
+            <div className="rounded-3xl p-6 sm:p-7 bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-400/80 shadow-2xl shadow-amber-400/10 flex flex-col justify-between relative overflow-hidden">
+              <div className="absolute -top-1 right-6">
+                <span className="px-3.5 py-1 rounded-b-xl bg-amber-400 text-slate-950 text-[10px] font-black tracking-wider uppercase shadow-md flex items-center gap-1">
+                  <Award className="w-3 h-3" />
+                  MAIS RECOMENDADO
+                </span>
+              </div>
+
+              <div className="space-y-5">
+                {/* Plan Header */}
+                <div>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-2xl shadow-inner mb-3">
+                    🏆
+                  </div>
+                  <h3 className="text-xl font-black text-white font-heading">Plano Mensal</h3>
+                  <p className="text-xs text-amber-300 font-semibold">Destaque Total & Hero Banner</p>
+                </div>
+
+                {/* Price Display */}
+                <div className="p-4 rounded-2xl bg-amber-400/10 border border-amber-400/20">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-3xl sm:text-4xl font-black text-amber-400">R$ 30</span>
+                    <span className="text-xs text-slate-300 font-bold">/mês</span>
+                  </div>
+                  <p className="text-[11px] text-amber-200/80 mt-1">
+                    Sem taxa de adesão • Pagamento via PIX direto
+                  </p>
+                </div>
+
+                {/* Indicado Para */}
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    INDICADO PARA:
+                  </span>
+                  <p className="text-xs font-bold text-slate-200">
+                    Pousadas e Restaurantes Principais
+                  </p>
+                </div>
+
+                {/* O Que Inclui */}
+                <div className="space-y-2.5 pt-2 border-t border-slate-800">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    O QUE INCLUI:
+                  </span>
+                  <ul className="space-y-2 text-xs text-slate-300">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <span><strong>Banner rotativo no topo</strong> (Hero Carousel da tela inicial)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <span><strong>Destaque 1º lugar</strong> na categoria</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <span><strong>Saiba mais:</strong> página completa com fotos e detalhes</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <span><strong>Botão de WhatsApp direto</strong> para reservas e pedidos</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <span>Selo de Estabelecimento Oficial Verificado</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Card Footer & CTA */}
+              <div className="pt-6 mt-6 border-t border-slate-800 space-y-3">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span>Empresas neste plano:</span>
+                  <span className="font-black text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-lg">
+                    {advertisements.filter(a => a.active).length || 3} ativas
+                  </span>
+                </div>
+
+                <a
+                  href={`https://wa.me/5591981129988?text=${encodeURIComponent('Olá! Quero contratar o Plano Mensal de R$ 30/mês no Algodoal Connect para meu negócio.')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs sm:text-sm text-center flex items-center justify-center gap-2 shadow-xl shadow-amber-400/20 transition-transform active:scale-95 cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Quero Este Plano (WhatsApp)</span>
+                </a>
+              </div>
+            </div>
+
+            {/* 2. PLANO FREE - COMUNITÁRIO (Grátis) */}
+            <div className="rounded-3xl p-6 sm:p-7 bg-slate-900/90 border border-slate-800 flex flex-col justify-between relative shadow-xl">
+              <div className="absolute -top-1 right-6">
+                <span className="px-3 py-1 rounded-b-xl bg-slate-800 text-slate-300 text-[10px] font-black tracking-wider uppercase border border-slate-700 flex items-center gap-1">
+                  <Store className="w-3 h-3" />
+                  COMUNITÁRIO
+                </span>
+              </div>
+
+              <div className="space-y-5">
+                {/* Plan Header */}
+                <div>
+                  <div className="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-2xl mb-3">
+                    🏪
+                  </div>
+                  <h3 className="text-xl font-black text-white font-heading">Plano Free</h3>
+                  <p className="text-xs text-slate-400 font-semibold">Cadastro Gratuito no Guia</p>
+                </div>
+
+                {/* Price Display */}
+                <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-3xl sm:text-4xl font-black text-slate-100">Grátis</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Apoio aos trabalhadores autônomos da ilha
+                  </p>
+                </div>
+
+                {/* Indicado Para */}
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    INDICADO PARA:
+                  </span>
+                  <p className="text-xs font-bold text-slate-200">
+                    Barracas, Depósitos e Passeios de Barco
+                  </p>
+                </div>
+
+                {/* O Que Inclui */}
+                <div className="space-y-2.5 pt-2 border-t border-slate-800">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    O QUE INCLUI:
+                  </span>
+                  <ul className="space-y-2 text-xs text-slate-300">
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
+                      <span>Anúncio padrão na listagem da categoria</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
+                      <span>Botão de WhatsApp direto com o cliente</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
+                      <span>Localização, horários e contato no guia da ilha</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
+                      <span>Inclusão na busca rápida e catálogo de serviços</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Card Footer & CTA */}
+              <div className="pt-6 mt-6 border-t border-slate-800 space-y-3">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span>Estabelecimentos:</span>
+                  <span className="font-black text-teal-400 bg-teal-400/10 px-2 py-0.5 rounded-lg">
+                    {partners.length || 3} cadastrados
+                  </span>
+                </div>
+
+                <a
+                  href={`https://wa.me/5591981129988?text=${encodeURIComponent('Olá! Gostaria de cadastrar meu negócio gratuitamente no Guia da Ilha de Algodoal.')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-teal-300 border border-teal-500/30 font-bold text-xs sm:text-sm text-center flex items-center justify-center gap-2 transition cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Cadastrar Gratuitamente no Guia</span>
+                </a>
+              </div>
+            </div>
+
+            {/* 3. PLANO DIVULGAÇÃO - CULTURAL / EVENTOS (Grátis) */}
+            <div className="rounded-3xl p-6 sm:p-7 bg-slate-900/90 border border-slate-800 flex flex-col justify-between relative shadow-xl">
+              <div className="absolute -top-1 right-6">
+                <span className="px-3 py-1 rounded-b-xl bg-purple-900/80 text-purple-300 text-[10px] font-black tracking-wider uppercase border border-purple-700/80 flex items-center gap-1">
+                  <PartyPopper className="w-3 h-3" />
+                  CULTURAL / EVENTOS
+                </span>
+              </div>
+
+              <div className="space-y-5">
+                {/* Plan Header */}
+                <div>
+                  <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-2xl mb-3">
+                    🎉
+                  </div>
+                  <h3 className="text-xl font-black text-white font-heading">Divulgação</h3>
+                  <p className="text-xs text-purple-300 font-semibold">Apoio Cultural & Atrações</p>
+                </div>
+
+                {/* Price Display */}
+                <div className="p-4 rounded-2xl bg-purple-950/40 border border-purple-800/40">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-3xl sm:text-4xl font-black text-purple-300">Grátis</span>
+                  </div>
+                  <p className="text-[11px] text-purple-200/80 mt-1">
+                    Apoio a artistas, mestres de carimbó e produtores locais
+                  </p>
+                </div>
+
+                {/* Indicado Para */}
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    INDICADO PARA:
+                  </span>
+                  <p className="text-xs font-bold text-slate-200">
+                    Luau, Shows de Reggae, Festas e Artesanato
+                  </p>
+                </div>
+
+                {/* O Que Inclui */}
+                <div className="space-y-2.5 pt-2 border-t border-slate-800">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    O QUE INCLUI:
+                  </span>
+                  <ul className="space-y-2 text-xs text-slate-300">
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                      <span>Banner rotativo na página inicial e eventos</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                      <span>Divulgação cultural e apoio a artistas locais</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                      <span>Data, local e WhatsApp dos organizadores</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                      <span>Destaque na Agenda Cultural da Ilha</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Card Footer & CTA */}
+              <div className="pt-6 mt-6 border-t border-slate-800 space-y-3">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span>Eventos ativos:</span>
+                  <span className="font-black text-purple-400 bg-purple-400/10 px-2 py-0.5 rounded-lg">
+                    Apoio Aberto
+                  </span>
+                </div>
+
+                <a
+                  href={`https://wa.me/5591981129988?text=${encodeURIComponent('Olá! Gostaria de divulgar um evento cultural ou luau gratuitamente no Algodoal Connect.')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-purple-900/30 hover:bg-purple-900/50 text-purple-300 border border-purple-500/40 font-bold text-xs sm:text-sm text-center flex items-center justify-center gap-2 transition cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Divulgar Evento Cultural (Grátis)</span>
+                </a>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Tabela Comparativa de Recursos */}
+          <div className="rounded-3xl p-6 sm:p-8 bg-slate-900/90 border border-slate-800 shadow-xl space-y-5">
+            <h4 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+              <span>📊</span>
+              <span>Comparativo Detalhado dos Planos</span>
+            </h4>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-800 text-slate-400">
+                    <th className="py-3 px-4 font-bold">Recurso / Vantagem</th>
+                    <th className="py-3 px-4 font-black text-amber-400">Plano Mensal (R$ 30)</th>
+                    <th className="py-3 px-4 font-bold text-slate-300">Plano Free (Grátis)</th>
+                    <th className="py-3 px-4 font-bold text-purple-400">Divulgação Cultural</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 text-slate-300">
+                  <tr>
+                    <td className="py-3 px-4 font-semibold">Banner no Topo (Hero Carousel)</td>
+                    <td className="py-3 px-4 font-bold text-amber-400">✅ Sim (Rotativo Destaque)</td>
+                    <td className="py-3 px-4 text-slate-500">— Não</td>
+                    <td className="py-3 px-4 text-purple-300">✅ Sim (Semana do Evento)</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4 font-semibold">Posição de Destaque nas Buscas</td>
+                    <td className="py-3 px-4 font-bold text-amber-400">✅ 1º Lugar Prioritário</td>
+                    <td className="py-3 px-4 text-slate-400">Padrão da Categoria</td>
+                    <td className="py-3 px-4 text-purple-300">Aba Eventos & Agenda</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4 font-semibold">Botão de WhatsApp Direto</td>
+                    <td className="py-3 px-4 font-bold text-amber-400">✅ Sim (Sem comissão)</td>
+                    <td className="py-3 px-4 font-semibold text-teal-400">✅ Sim (Sem comissão)</td>
+                    <td className="py-3 px-4 font-semibold text-purple-400">✅ Sim (Organizadores)</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4 font-semibold">Galeria de Fotos em Alta Definição</td>
+                    <td className="py-3 px-4 font-bold text-amber-400">✅ Completa (Fotos & Detalhes)</td>
+                    <td className="py-3 px-4 text-slate-400">1 Foto de Perfil</td>
+                    <td className="py-3 px-4 text-purple-300">Cartaz / Flyer Oficial</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4 font-semibold">Suporte do Gestor da Ilha</td>
+                    <td className="py-3 px-4 font-bold text-amber-400">✅ Prioritário via WhatsApp</td>
+                    <td className="py-3 px-4 text-slate-400">Comunitário</td>
+                    <td className="py-3 px-4 text-purple-300">Apoio Cultural</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Botões de Ação para Navegação */}
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
+            <button
+              onClick={() => {
+                setActiveMainView('portal');
+                onSelectCategory('todos');
+                setTimeout(() => {
+                  const el = document.getElementById('secao-portal-anuncios') || document.getElementById('secao-navegacao');
+                  el?.scrollIntoView({ behavior: 'smooth' });
+                }, 50);
+              }}
+              className="px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-amber-400 font-bold text-xs flex items-center gap-2 cursor-pointer transition shadow-md"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Ver Portal de Anúncios</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveMainView('guia');
+                onSelectCategory('todos');
+                setTimeout(() => {
+                  const el = document.getElementById('secao-guia-parceiros') || document.getElementById('secao-navegacao');
+                  el?.scrollIntoView({ behavior: 'smooth' });
+                }, 50);
+              }}
+              className="px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-teal-400 font-bold text-xs flex items-center gap-2 cursor-pointer transition shadow-md"
+            >
+              <Compass className="w-4 h-4" />
+              <span>Ver Guia da Ilha (Parceiros)</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveMainView('inicio');
+                onSelectCategory('todos');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="px-5 py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs flex items-center gap-2 cursor-pointer transition shadow-lg shadow-amber-400/20"
+            >
+              <Home className="w-4 h-4" />
+              <span>Voltar para Página Inicial</span>
+            </button>
+          </div>
+
+        </section>
+      )}
+
+      {/* ======================================================== */}
+      {/* BANNER CTA QUANDO NA PÁGINA INICIAL                      */}
+      {/* ======================================================== */}
+      {activeMainView === 'inicio' && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-8">
+          <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-amber-500/15 via-slate-900 to-teal-500/10 border border-amber-400/30 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xl">
+            <div className="space-y-1.5 text-center sm:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 text-xs font-black">
+                <Tag className="w-3.5 h-3.5" />
+                <span>PLANOS COMERCIAIS & DIVULGAÇÃO</span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black text-white font-heading">
+                Quer anunciar sua Pousada, Restaurante ou Barco no Algodoal Connect?
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
+                Plano com destaque total por apenas <strong className="text-amber-400 font-bold">R$ 30/mês</strong>, banner no topo da página e contato direto no seu WhatsApp sem intermediários.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setActiveMainView('anuncie');
+                onSelectCategory('todos');
+                setTimeout(() => {
+                  const el = document.getElementById('secao-quadro-valores') || document.getElementById('secao-navegacao');
+                  el?.scrollIntoView({ behavior: 'smooth' });
+                }, 50);
+              }}
+              className="px-6 py-3.5 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs sm:text-sm shadow-xl shadow-amber-400/20 flex items-center gap-2 transition cursor-pointer shrink-0 active:scale-95"
+            >
+              <Tag className="w-4 h-4" />
+              <span>Ver Quadro de Valores</span>
+            </button>
+          </div>
+        </div>
       )}
 
       {/* ======================================================== */}
