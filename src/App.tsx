@@ -317,6 +317,7 @@ export function App() {
 
   // Navigation Tabs & Category Filters
   const [activeTab, setActiveTab] = useState<TabType>('home');
+  const [activeMainView, setActiveMainView] = useState<'inicio' | 'portal' | 'guia' | 'anuncie'>('inicio');
   const [selectedCategory, setSelectedCategory] = useState<string>('todos');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
@@ -429,9 +430,22 @@ export function App() {
     }
   };
 
-  const handleTabChange = (tab: TabType) => {
+  const handleTabChange = (tab: any) => {
     setActiveTab(tab);
-    if (tab === 'home') {
+    if (tab === 'home' || tab === 'inicio') {
+      setActiveMainView('inicio');
+      setSelectedCategory('todos');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (tab === 'portal') {
+      setActiveMainView('portal');
+      setSelectedCategory('todos');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (tab === 'guia') {
+      setActiveMainView('guia');
+      setSelectedCategory('todos');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (tab === 'anuncie') {
+      setActiveMainView('anuncie');
       setSelectedCategory('todos');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (tab === 'pousadas') {
@@ -639,12 +653,14 @@ export function App() {
             advertisements={advertisements}
             onOpenAdDetails={(ad) => setSelectedAdForDetails(ad)}
             heroBackgroundUrl={heroBackgroundUrl}
+            activeMainView={activeMainView}
+            onMainViewChange={setActiveMainView}
           />
           {/* Mobile Bottom Navigation Bar (Visible on mobile viewports) */}
           <div className="md:hidden">
             <MobileBottomNav
               theme={theme}
-              activeTab={activeTab}
+              activeTab={activeMainView}
               onTabChange={handleTabChange}
               isAdminLoggedIn={currentUser?.role === 'admin'}
             />

@@ -58,6 +58,8 @@ interface AlgodoalRedesignPortalProps {
   advertisements: Advertisement[];
   onOpenAdDetails: (ad: Advertisement) => void;
   heroBackgroundUrl?: string;
+  activeMainView?: 'inicio' | 'portal' | 'guia' | 'anuncie';
+  onMainViewChange?: (view: 'inicio' | 'portal' | 'guia' | 'anuncie') => void;
 }
 
 export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
@@ -78,7 +80,9 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
   partners,
   advertisements,
   onOpenAdDetails,
-  heroBackgroundUrl
+  heroBackgroundUrl,
+  activeMainView: propActiveMainView,
+  onMainViewChange
 }) => {
   const [selectedPartnerForModal, setSelectedPartnerForModal] = useState<Partner | null>(null);
 
@@ -189,7 +193,12 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
   // 'portal': Carrega SÓ os anúncios comerciais
   // 'guia': Carrega SÓ os parceiros credenciados
   // 'anuncie': Carrega o QUADRO DE VALORES (Plano Mensal R$ 30, Plano Free, Divulgação)
-  const [activeMainView, setActiveMainView] = useState<'inicio' | 'portal' | 'guia' | 'anuncie'>('inicio');
+  const [internalMainView, setInternalMainView] = useState<'inicio' | 'portal' | 'guia' | 'anuncie'>('inicio');
+  const activeMainView = propActiveMainView !== undefined ? propActiveMainView : internalMainView;
+  const setActiveMainView = (view: 'inicio' | 'portal' | 'guia' | 'anuncie') => {
+    if (onMainViewChange) onMainViewChange(view);
+    setInternalMainView(view);
+  };
 
   // Category normalization helper
   const normalizeCat = (cat?: string): string => {
@@ -469,17 +478,147 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
       </header>
 
       {/* ======================================================== */}
-      {/* 2. HERO SECTION WITH VIVID NATURAL BACKGROUND & SEARCH   */}
+      {/* STICKY MAIN VIEW BAR (INÍCIO | PORTAL | GUIA | ANUNCIE)  */}
       {/* ======================================================== */}
-      <section className="relative w-full min-h-[380px] sm:min-h-[440px] flex items-center overflow-hidden border-b border-slate-800">
-        {/* High-Resolution Responsive Background Image with Object-Cover (Zero Distortion) */}
-        <img
-          src={activeHeroBg}
-          alt="Paisagem da Ilha de Algodoal"
-          decoding="async"
-          className="absolute inset-0 w-full h-full object-cover object-center z-0 select-none pointer-events-none transition-opacity duration-700"
-          style={{ imageRendering: 'auto' }}
-        />
+      <nav className="sticky top-18 z-40 bg-[#080d18]/95 border-b border-slate-800/90 backdrop-blur-md px-3 sm:px-6 py-2.5 shadow-xl">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Tab 1: Início (Tudo) */}
+            <button
+              id="sticky-btn-inicio"
+              onClick={() => {
+                setActiveMainView('inicio');
+                onSelectCategory('todos');
+                onSearchChange('');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`px-3.5 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-black flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+                activeMainView === 'inicio'
+                  ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20 ring-2 ring-amber-300'
+                  : 'bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/60'
+              }`}
+            >
+              <Home className="w-4 h-4" />
+              <span>Início (Tudo)</span>
+              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                activeMainView === 'inicio' ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-900 text-amber-400'
+              }`}>
+                {activeFilteredAds.length + activeFilteredPartners.length}
+              </span>
+            </button>
+
+            {/* Tab 2: Portal de Anúncios */}
+            <button
+              id="sticky-btn-portal"
+              onClick={() => {
+                setActiveMainView('portal');
+                onSelectCategory('todos');
+                onSearchChange('');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`px-3.5 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-black flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+                activeMainView === 'portal'
+                  ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20 ring-2 ring-amber-300'
+                  : 'bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/60'
+              }`}
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Portal de Anúncios</span>
+              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                activeMainView === 'portal' ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-900 text-amber-400'
+              }`}>
+                {activeFilteredAds.length}
+              </span>
+            </button>
+
+            {/* Tab 3: Guia da Ilha (Parceiros) */}
+            <button
+              id="sticky-btn-guia"
+              onClick={() => {
+                setActiveMainView('guia');
+                onSelectCategory('todos');
+                onSearchChange('');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`px-3.5 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-black flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+                activeMainView === 'guia'
+                  ? 'bg-teal-400 text-slate-950 shadow-md shadow-teal-400/20 ring-2 ring-teal-300'
+                  : 'bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/60'
+              }`}
+            >
+              <Compass className="w-4 h-4" />
+              <span>Guia da Ilha</span>
+              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                activeMainView === 'guia' ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-900 text-teal-400'
+              }`}>
+                {activeFilteredPartners.length}
+              </span>
+            </button>
+
+            {/* Tab 4: Anuncie (Valores) */}
+            <button
+              id="sticky-btn-anuncie"
+              onClick={() => {
+                setActiveMainView('anuncie');
+                onSelectCategory('todos');
+                onSearchChange('');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`px-3.5 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-black flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+                activeMainView === 'anuncie'
+                  ? 'bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 shadow-md shadow-amber-400/20 ring-2 ring-amber-300'
+                  : 'bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/60'
+              }`}
+            >
+              <Tag className="w-4 h-4" />
+              <span>Anuncie (Valores)</span>
+              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                activeMainView === 'anuncie' ? 'bg-slate-950/20 text-slate-950' : 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
+              }`}>
+                R$ 30/mês
+              </span>
+            </button>
+          </div>
+
+          <div className="hidden lg:flex items-center gap-2 text-xs shrink-0">
+            {activeMainView === 'inicio' && (
+              <span className="px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-300 text-[11px] font-medium">
+                Página Inicial: <strong className="text-amber-400">Todos os anúncios</strong> + <strong className="text-teal-400">parceiros do guia</strong>
+              </span>
+            )}
+            {activeMainView === 'portal' && (
+              <span className="px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-300 text-[11px] font-medium">
+                Portal: <strong className="font-bold text-amber-300">Somente anúncios comerciais ativos</strong>
+              </span>
+            )}
+            {activeMainView === 'guia' && (
+              <span className="px-3 py-1 rounded-full bg-teal-400/10 border border-teal-400/30 text-teal-300 text-[11px] font-medium">
+                Guia: <strong className="font-bold text-teal-300">Somente parceiros e trabalhadores credenciados</strong>
+              </span>
+            )}
+            {activeMainView === 'anuncie' && (
+              <span className="px-3 py-1 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-300 text-[11px] font-medium">
+                Anuncie: <strong className="font-bold text-amber-300">Planos comerciais e quadro de valores</strong>
+              </span>
+            )}
+          </div>
+        </div>
+      </nav>
+
+      {/* ======================================================== */}
+      {/* 2. HERO, SERVIÇOS & MARÉS (APENAS NA PÁGINA INICIAL)     */}
+      {/* ======================================================== */}
+      {activeMainView === 'inicio' && (
+        <>
+          <section className="relative w-full min-h-[380px] sm:min-h-[440px] flex items-center overflow-hidden border-b border-slate-800">
+            {/* High-Resolution Responsive Background Image with Object-Cover (Zero Distortion) */}
+            <img
+              src={activeHeroBg}
+              alt="Paisagem da Ilha de Algodoal"
+              decoding="async"
+              className="absolute inset-0 w-full h-full object-cover object-center z-0 select-none pointer-events-none transition-opacity duration-700"
+              style={{ imageRendering: 'auto' }}
+            />
         
         {/* Soft subtle gradient for premium text readability and crisp contrast */}
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950/75 via-slate-950/35 to-transparent z-10" />
@@ -889,6 +1028,101 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
           </div>
         )}
       </section>
+      </>
+      )}
+
+      {/* ======================================================== */}
+      {/* DEDICATED HEADER: PORTAL DE ANÚNCIOS (QUANDO EM PORTAL)  */}
+      {/* ======================================================== */}
+      {activeMainView === 'portal' && (
+        <section className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-6 pb-2">
+          <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-amber-500/20 via-slate-900 to-slate-900 border border-amber-500/30 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2.5 rounded-2xl bg-amber-400 text-slate-950 font-black text-xl shadow-md">
+                  🌟
+                </span>
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-black text-white font-heading">
+                    Portal de Anúncios Comerciais
+                  </h1>
+                  <p className="text-xs sm:text-sm text-slate-300">
+                    Exibindo <strong>somente os anúncios comerciais</strong> da Ilha de Algodoal com contato direto pelo WhatsApp
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 self-start md:self-center">
+              <span className="px-4 py-2 rounded-2xl bg-slate-950/80 border border-amber-500/30 text-xs font-bold text-amber-300 shadow-inner">
+                <strong className="text-white font-black">{activeFilteredAds.length}</strong> {activeFilteredAds.length === 1 ? 'anúncio comercial ativo' : 'anúncios comerciais ativos'}
+              </span>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ======================================================== */}
+      {/* DEDICATED HEADER: GUIA DA ILHA (QUANDO EM GUIA)          */}
+      {/* ======================================================== */}
+      {activeMainView === 'guia' && (
+        <section className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-6 pb-2">
+          <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-teal-500/20 via-slate-900 to-slate-900 border border-teal-500/30 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2.5 rounded-2xl bg-teal-400 text-slate-950 font-black text-xl shadow-md">
+                  🌴
+                </span>
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-black text-white font-heading">
+                    Guia da Ilha de Algodoal
+                  </h1>
+                  <p className="text-xs sm:text-sm text-slate-300">
+                    Exibindo <strong>somente os parceiros credenciados</strong> da ilha (charreteiros, barcos, pousadas e barracas)
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 self-start md:self-center">
+              <span className="px-4 py-2 rounded-2xl bg-slate-950/80 border border-teal-500/30 text-xs font-bold text-teal-300 shadow-inner">
+                <strong className="text-white font-black">{activeFilteredPartners.length}</strong> parceiros cadastrados
+              </span>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ======================================================== */}
+      {/* DEDICATED HEADER: ANUNCIE (QUANDO EM ANUNCIE)            */}
+      {/* ======================================================== */}
+      {activeMainView === 'anuncie' && (
+        <section className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-6 pb-2">
+          <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-amber-500/25 via-slate-900 to-amber-950/30 border border-amber-400/40 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2.5 rounded-2xl bg-amber-400 text-slate-950 font-black text-xl shadow-md">
+                  💎
+                </span>
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-black text-white font-heading">
+                    Quadro de Valores & Planos de Anúncio
+                  </h1>
+                  <p className="text-xs sm:text-sm text-slate-300">
+                    Divulgue seu comércio, transporte ou pousada na Ilha de Algodoal • Contato 100% direto no seu WhatsApp
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 self-start md:self-center">
+              <span className="px-4 py-2 rounded-2xl bg-amber-400 text-slate-950 font-black text-xs shadow-md">
+                Plano Destaque: R$ 30/mês
+              </span>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ======================================================== */}
       {/* 6. PORTAL DE ANÚNCIOS (TODOS OS ANÚNCIOS JUNTOS)         */}
