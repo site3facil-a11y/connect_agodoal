@@ -397,5 +397,22 @@ export const api = {
     });
     if (!res.ok) throw new Error('Falha ao atualizar configurações de fundo');
     return res.json();
+  },
+
+  // Database Backup & Restore
+  async getDatabaseBackup(): Promise<any> {
+    const res = await fetch(`${API_BASE}/database/backup`);
+    if (!res.ok) throw new Error('Falha ao exportar backup do banco de dados');
+    return res.json();
+  },
+
+  async restoreDatabaseBackup(backupData: any): Promise<{ success: boolean; count: number }> {
+    const res = await fetch(`${API_BASE}/database/restore`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(backupData)
+    });
+    if (!res.ok) throw new Error('Falha ao restaurar backup');
+    return res.json();
   }
 };

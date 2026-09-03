@@ -40,7 +40,11 @@ import {
   BarChart2,
   TrendingUp,
   Image as ImageIcon,
-  Info
+  Info,
+  Download,
+  Upload,
+  Database,
+  Save
 } from 'lucide-react';
 import { Advertisement, AdCategory, TideDayEntry, Partner, UserProfile, ServiceCategory, IslandStory, AdPlan, AdPlanType } from '../types/index.ts';
 import { api } from '../services/api.ts';
@@ -251,12 +255,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     end_date: '2026-12-31'
   });
 
-  // Password Change state
+  // Password Change & Backup states
   const [currentAdminPass, setCurrentAdminPass] = useState('');
   const [newAdminPass, setNewAdminPass] = useState('');
   const [confirmAdminPass, setConfirmAdminPass] = useState('');
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [isChangingPass, setIsChangingPass] = useState(false);
+  const [isExportingBackup, setIsExportingBackup] = useState(false);
+  const [isRestoringBackup, setIsRestoringBackup] = useState(false);
 
   // Tide Form & Bulk Import states
   const [isAddingTideDay, setIsAddingTideDay] = useState(false);
@@ -660,6 +666,48 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       alert(err.message || 'Erro ao alterar credenciais.');
     } finally {
       setIsChangingPass(false);
+    }
+  };
+
+  const handleExportBackup = async () => {
+    try {
+      setIsExportingBackup(true);
+      const data = await api.getDatabaseBackup();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `algodoal_connect_backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showSuccess('Backup completo baixado com sucesso!');
+    } catch (err: any) {
+      alert('Erro ao baixar backup: ' + err.message);
+    } finally {
+      setIsExportingBackup(false);
+    }
+  };
+
+  const handleRestoreBackupFile = async (file: File) => {
+    if (!file) return;
+    try {
+      setIsRestoringBackup(true);
+      const text = await file.text();
+      const json = JSON.parse(text);
+      if (!json || typeof json !== 'object') {
+        throw new Error('Formato de arquivo inválido. Deve ser um JSON válido.');
+      }
+      const res = await api.restoreDatabaseBackup(json);
+      showSuccess(`Backup restaurado com sucesso! ${res.count || 0} registros sincronizados.`);
+      if (onRefreshData) onRefreshData();
+      const updatedAds = await api.getAdvertisements();
+      setAds(updatedAds);
+    } catch (err: any) {
+      alert('Falha ao restaurar backup: ' + err.message);
+    } finally {
+      setIsRestoringBackup(false);
     }
   };
 
@@ -2570,83 +2618,180 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
               {/* TAB 4: SEGURANÇA & CREDENCIAIS */}
               {activeMainTab === 'seguranca' && (
-                <div className="max-w-xl mx-auto bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm">
-                  <div className="flex items-center gap-3 mb-4 pb-4 border-b border-slate-100">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-black">
-                      <KeyRound className="w-6 h-6" />
+                <div className="max-w-4xl mx-auto space-y-6">
+                  
+                  {/* CARD 1: BACKUP & PREVENÇÃO DE PERDA DE DADOS */}
+                  <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-black">
+                          <Database className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-black text-slate-900 font-serif flex items-center gap-2">
+                            Backup & Salvaguarda dos Dados
+                            <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              🛡️ Proteção Ativa
+                            </span>
+                          </h3>
+                          <p className="text-xs text-slate-500">
+                            Evite perdas acidentais de anúncios, imagens enviadas e dados dos parceiros.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Botão Baixar Backup */}
+                        <button
+                          type="button"
+                          onClick={handleExportBackup}
+                          disabled={isExportingBackup}
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition cursor-pointer disabled:opacity-50"
+                        >
+                          {isExportingBackup ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Download className="w-4 h-4" />
+                          )}
+                          <span>Baixar Backup (.JSON)</span>
+                        </button>
+
+                        {/* Botão Restaurar Backup */}
+                        <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs shadow-xs transition cursor-pointer disabled:opacity-50">
+                          {isRestoringBackup ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Upload className="w-4 h-4" />
+                          )}
+                          <span>Restaurar Backup</span>
+                          <input
+                            type="file"
+                            accept=".json,application/json"
+                            className="hidden"
+                            disabled={isRestoringBackup}
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                handleRestoreBackupFile(e.target.files[0]);
+                                e.target.value = '';
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-base font-black text-slate-900 font-serif">
-                        Segurança & Senha Master do Admin
-                      </h3>
-                      <p className="text-xs text-slate-500">
-                        Altere os dados de acesso salvos no banco de dados do servidor.
-                      </p>
+
+                    <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                      <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-100">
+                        <div className="font-black text-emerald-950 flex items-center gap-1.5 mb-1">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          Espelho Automático Ativo
+                        </div>
+                        <p className="text-slate-600 text-[11px] leading-relaxed">
+                          Toda gravação cria automaticamente uma réplica idêntica em <code>data/algodoal_db.backup.json</code>.
+                        </p>
+                      </div>
+
+                      <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-100">
+                        <div className="font-black text-amber-950 flex items-center gap-1.5 mb-1">
+                          <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
+                          Anti-Sobrescrita Inteligente
+                        </div>
+                        <p className="text-slate-600 text-[11px] leading-relaxed">
+                          Mesmo se o servidor reiniciar, anúncios personalizados e fotos enviadas nunca são apagados pelo padrão de fábrica.
+                        </p>
+                      </div>
+
+                      <div className="p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-100">
+                        <div className="font-black text-indigo-950 flex items-center gap-1.5 mb-1">
+                          <Save className="w-4 h-4 text-indigo-600 shrink-0" />
+                          Cópia Local no seu PC
+                        </div>
+                        <p className="text-slate-600 text-[11px] leading-relaxed">
+                          Clique em "Baixar Backup" após cadastrar novos parceiros ou fotos para ter um arquivo de segurança no seu computador.
+                        </p>
+                      </div>
                     </div>
                   </div>
 
-                  <form onSubmit={handleChangePassword} className="space-y-4 text-xs font-bold text-slate-700">
-                    <div>
-                      <label className="block mb-1 text-slate-900 uppercase tracking-wider text-[10px]">
-                        Senha / PIN Atual
-                      </label>
-                      <input
-                        type="password"
-                        required
-                        value={currentAdminPass}
-                        onChange={(e) => setCurrentAdminPass(e.target.value)}
-                        placeholder="Digite a senha atual"
-                        className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white text-slate-900"
-                      />
+                  {/* CARD 2: SENHA MASTER DO ADMIN */}
+                  <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-3 mb-4 pb-4 border-b border-slate-100">
+                      <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-black">
+                        <KeyRound className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-black text-slate-900 font-serif">
+                          Segurança & Senha Master do Admin
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                          Altere os dados de acesso salvos no banco de dados do servidor.
+                        </p>
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="block mb-1 text-slate-900 uppercase tracking-wider text-[10px]">
-                        Novo Email de Administrador (Opcional)
-                      </label>
-                      <input
-                        type="email"
-                        value={newAdminEmail}
-                        onChange={(e) => setNewAdminEmail(e.target.value)}
-                        placeholder="admin@algodoalconnect.com.br"
-                        className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white text-slate-900"
-                      />
-                    </div>
+                    <form onSubmit={handleChangePassword} className="space-y-4 text-xs font-bold text-slate-700 max-w-xl">
+                      <div>
+                        <label className="block mb-1 text-slate-900 uppercase tracking-wider text-[10px]">
+                          Senha / PIN Atual
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          value={currentAdminPass}
+                          onChange={(e) => setCurrentAdminPass(e.target.value)}
+                          placeholder="Digite a senha atual"
+                          className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white text-slate-900"
+                        />
+                      </div>
 
-                    <div>
-                      <label className="block mb-1 text-slate-900 uppercase tracking-wider text-[10px]">
-                        Nova Senha / PIN Master
-                      </label>
-                      <input
-                        type="password"
-                        value={newAdminPass}
-                        onChange={(e) => setNewAdminPass(e.target.value)}
-                        placeholder="Deixe em branco se não desejar alterar a senha"
-                        className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white text-slate-900"
-                      />
-                    </div>
+                      <div>
+                        <label className="block mb-1 text-slate-900 uppercase tracking-wider text-[10px]">
+                          Novo Email de Administrador (Opcional)
+                        </label>
+                        <input
+                          type="email"
+                          value={newAdminEmail}
+                          onChange={(e) => setNewAdminEmail(e.target.value)}
+                          placeholder="admin@algodoalconnect.com.br"
+                          className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white text-slate-900"
+                        />
+                      </div>
 
-                    <div>
-                      <label className="block mb-1 text-slate-900 uppercase tracking-wider text-[10px]">
-                        Confirmar Nova Senha
-                      </label>
-                      <input
-                        type="password"
-                        value={confirmAdminPass}
-                        onChange={(e) => setConfirmAdminPass(e.target.value)}
-                        placeholder="Repita a nova senha"
-                        className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white text-slate-900"
-                      />
-                    </div>
+                      <div>
+                        <label className="block mb-1 text-slate-900 uppercase tracking-wider text-[10px]">
+                          Nova Senha / PIN Master
+                        </label>
+                        <input
+                          type="password"
+                          value={newAdminPass}
+                          onChange={(e) => setNewAdminPass(e.target.value)}
+                          placeholder="Deixe em branco se não desejar alterar a senha"
+                          className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white text-slate-900"
+                        />
+                      </div>
 
-                    <button
-                      type="submit"
-                      disabled={isChangingPass}
-                      className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs transition cursor-pointer shadow-md"
-                    >
-                      {isChangingPass ? 'Atualizando Banco de Dados...' : 'Salvar Novas Credenciais no Banco'}
-                    </button>
-                  </form>
+                      <div>
+                        <label className="block mb-1 text-slate-900 uppercase tracking-wider text-[10px]">
+                          Confirmar Nova Senha
+                        </label>
+                        <input
+                          type="password"
+                          value={confirmAdminPass}
+                          onChange={(e) => setConfirmAdminPass(e.target.value)}
+                          placeholder="Repita a nova senha"
+                          className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white text-slate-900"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={isChangingPass}
+                        className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs transition cursor-pointer shadow-md"
+                      >
+                        {isChangingPass ? 'Atualizando Banco de Dados...' : 'Salvar Novas Credenciais no Banco'}
+                      </button>
+                    </form>
+                  </div>
                 </div>
               )}
 

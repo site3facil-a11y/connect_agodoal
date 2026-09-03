@@ -19,6 +19,7 @@ import {
 } from '../types/index';
 
 const DB_FILE = path.join(process.cwd(), 'data', 'algodoal_db.json');
+const DB_BACKUP_FILE = path.join(process.cwd(), 'data', 'algodoal_db.backup.json');
 
 // Ensure data folder exists
 if (!fs.existsSync(path.join(process.cwd(), 'data'))) {
@@ -1360,13 +1361,57 @@ export function normalizeAdCategory(cat?: string): string {
 
 function loadLocalDB(): LocalDatabaseState {
   try {
+    let candidateData: any = null;
     if (fs.existsSync(DB_FILE)) {
-      const data = fs.readFileSync(DB_FILE, 'utf-8');
-      const parsed = JSON.parse(data);
-      // Ensure all collections are valid arrays
-      if (!Array.isArray(parsed.advertisements) || parsed.advertisements.length === 0) {
-        parsed.advertisements = SEED_ADVERTISEMENTS;
+      const raw = fs.readFileSync(DB_FILE, 'utf-8');
+      try {
+        candidateData = JSON.parse(raw);
+      } catch (e) {
+        console.warn('⚠️ Erro de parse no algodoal_db.json principal, tentando backup...', e);
       }
+    }
+
+    // Se o arquivo principal não existe ou falhou, tenta ler o backup
+    if (!candidateData && fs.existsSync(DB_BACKUP_FILE)) {
+      try {
+        const rawBackup = fs.readFileSync(DB_BACKUP_FILE, 'utf-8');
+        candidateData = JSON.parse(rawBackup);
+        console.log('✅ Restaurado dados locais com sucesso a partir de algodoal_db.backup.json');
+      } catch (e) {
+        console.error('Erro ao ler backup:', e);
+      }
+    }
+
+    if (candidateData) {
+      const parsed = candidateData;
+
+      // Recuperar anúncios preservando personalizações e imagens customizadas do usuário
+      if (!Array.isArray(parsed.advertisements) || parsed.advertisements.length === 0) {
+        // Tenta buscar no backup se o principal tinha anúncios vazios
+        let restoredFromBackup = false;
+        if (fs.existsSync(DB_BACKUP_FILE)) {
+          try {
+            const bkp = JSON.parse(fs.readFileSync(DB_BACKUP_FILE, 'utf-8'));
+            if (Array.isArray(bkp.advertisements) && bkp.advertisements.length > 0) {
+              parsed.advertisements = bkp.advertisements;
+              restoredFromBackup = true;
+            }
+          } catch { /* ignore */ }
+        }
+        if (!restoredFromBackup) {
+          parsed.advertisements = SEED_ADVERTISEMENTS;
+        }
+      } else {
+        // Garantir que nenhum anúncio existente tenha sua imagem/dados sobrescritos
+        const existingIds = new Set(parsed.advertisements.map((a: any) => a.id));
+        // Apenas adiciona novos seeds se faltar algum id sem tocar nos existentes
+        for (const seedAd of SEED_ADVERTISEMENTS) {
+          if (!existingIds.has(seedAd.id)) {
+            parsed.advertisements.push(seedAd);
+          }
+        }
+      }
+
       if (!Array.isArray(parsed.partners) || parsed.partners.length === 0) {
         parsed.partners = SEED_PARTNERS;
       }
@@ -1411,10 +1456,84 @@ function loadLocalDB(): LocalDatabaseState {
 
 function saveLocalDB(state: LocalDatabaseState) {
   try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(state, null, 2), 'utf-8');
+    const jsonStr = JSON.stringify(state, null, 2);
+    fs.writeFileSync(DB_FILE, jsonStr, 'utf-8');
+    // Cria cópia de segurança automática simultânea
+    fs.writeFileSync(DB_BACKUP_FILE, jsonStr, 'utf-8');
   } catch (err) {
     console.error('Error writing to local DB file:', err);
   }
+}
+
+export async function exportDatabaseBackup(): Promise<LocalDatabaseState> {
+  if (await pgReady()) {
+    const p = await pgPool!.query('SELECT * FROM partners');
+    const s = await pgPool!.query('SELECT * FROM services_products');
+    const o = await pgPool!.query('SELECT * FROM orders');
+    const sp = await pgPool!.query('SELECT * FROM island_spots');
+    const b = await pgPool!.query('SELECT * FROM boat_crossings');
+    const c = await pgPool!.query('SELECT * FROM useful_contacts');
+    const r = await pgPool!.query('SELECT * FROM reviews');
+    const a = await pgPool!.query('SELECT * FROM advertisements');
+    const t = await pgPool!.query('SELECT * FROM tide_days');
+    const u = await pgPool!.query('SELECT * FROM users');
+    const st = await pgPool!.query('SELECT * FROM stories');
+
+    return {
+      partners: p.rows.map(rowToPartner),
+      services: s.rows.map(rowToService),
+      orders: o.rows.map(rowToOrder),
+      island_spots: sp.rows.map(rowToIslandSpot),
+      boat_crossings: b.rows.map(rowToBoatCrossing),
+      useful_contacts: c.rows.map(rowToUsefulContact),
+      reviews: r.rows.map(rowToReview),
+      advertisements: a.rows.map(rowToAdvertisement),
+      tide_days: t.rows.map(rowToTideDay),
+      users: u.rows.map(rowToUser),
+      stories: st.rows.map(rowToStory),
+    };
+  }
+
+  return loadLocalDB();
+}
+
+export async function restoreDatabaseBackup(backup: Partial<LocalDatabaseState>): Promise<{ success: boolean; count: number }> {
+  let count = 0;
+  if (await pgReady()) {
+    if (Array.isArray(backup.advertisements)) {
+      for (const a of backup.advertisements) {
+        await pgPool!.query(
+          `INSERT INTO advertisements (id, title, category, partner_id, business_name, tagline, description, image_url, link_url, whatsapp, phone, location, price_starting, badge, event_date, event_venue, banner_slot, plan_type, is_active, is_highlighted, start_date, end_date, views_count, clicks_count, created_at, updated_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
+           ON CONFLICT (id) DO UPDATE SET
+             title = EXCLUDED.title,
+             image_url = EXCLUDED.image_url,
+             description = EXCLUDED.description,
+             whatsapp = EXCLUDED.whatsapp,
+             business_name = EXCLUDED.business_name,
+             category = EXCLUDED.category,
+             updated_at = NOW()`,
+          [a.id, a.title, a.category, a.partner_id || null, a.business_name, a.tagline || null, a.description, a.image_url, a.link_url || null, a.whatsapp, a.phone || null, a.location, a.price_starting || 0, a.badge || null, a.event_date || null, a.event_venue || null, a.banner_slot || 'nenhum', a.plan_type || null, a.is_active, a.is_highlighted, a.start_date, a.end_date, a.views_count || 0, a.clicks_count || 0, a.created_at || new Date().toISOString(), a.updated_at || new Date().toISOString()]
+        );
+        count++;
+      }
+    }
+  }
+
+  const db = loadLocalDB();
+  if (Array.isArray(backup.advertisements) && backup.advertisements.length > 0) {
+    const existingMap = new Map(db.advertisements.map(a => [a.id, a]));
+    for (const ad of backup.advertisements) {
+      existingMap.set(ad.id, { ...ad, updated_at: new Date().toISOString() });
+    }
+    db.advertisements = Array.from(existingMap.values());
+    count = db.advertisements.length;
+  }
+  if (Array.isArray(backup.partners) && backup.partners.length > 0) {
+    db.partners = backup.partners;
+  }
+  saveLocalDB(db);
+  return { success: true, count };
 }
 
 // Compute live tide schedule for Algodoal

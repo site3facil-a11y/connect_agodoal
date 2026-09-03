@@ -50,7 +50,9 @@ import {
   getStoryById,
   createStory,
   updateStory,
-  deleteStory
+  deleteStory,
+  exportDatabaseBackup,
+  restoreDatabaseBackup
 } from './src/db/database';
 
 async function startServer() {
@@ -363,6 +365,33 @@ async function startServer() {
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: 'Erro ao atualizar métricas do anúncio', details: err.message });
+    }
+  });
+
+  // =====================================
+  // DATABASE BACKUP & RESTORE
+  // =====================================
+  app.get('/api/database/backup', async (req, res) => {
+    try {
+      const backup = await exportDatabaseBackup();
+      res.setHeader('Content-Disposition', `attachment; filename="algodoal_backup_${Date.now()}.json"`);
+      res.setHeader('Content-Type', 'application/json');
+      res.json(backup);
+    } catch (err: any) {
+      res.status(500).json({ error: 'Erro ao exportar backup', details: err.message });
+    }
+  });
+
+  app.post('/api/database/restore', async (req, res) => {
+    try {
+      const payload = req.body;
+      if (!payload || typeof payload !== 'object') {
+        return res.status(400).json({ error: 'Arquivo de backup inválido.' });
+      }
+      const result = await restoreDatabaseBackup(payload);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: 'Erro ao restaurar backup', details: err.message });
     }
   });
 
