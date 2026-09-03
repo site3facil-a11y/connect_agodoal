@@ -252,111 +252,139 @@ async function initPostgres(): Promise<void> {
 }
 
 async function seedPostgresIfEmpty(): Promise<void> {
-  const { rows } = await pgPool!.query('SELECT COUNT(*)::int AS count FROM partners');
-  if (rows[0].count > 0) {
-    console.log('✅ PostgreSQL já contém dados — seed inicial ignorado.');
-    return;
+  // Check and seed each table independently to ensure all collections exist even if another table already had data
+  const { rows: pRows } = await pgPool!.query('SELECT COUNT(*)::int AS count FROM partners');
+  if (pRows[0].count === 0) {
+    console.log('🌱 Semeando partners no PostgreSQL...');
+    for (const p of SEED_PARTNERS) {
+      await pgPool!.query(
+        `INSERT INTO partners (id, name, category, subcategory, phone, whatsapp, description, photo_url, location, rating, total_reviews, is_active, verified, plan_type, price_starting, vehicle_badge, opening_hours, amenities, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+         ON CONFLICT (id) DO NOTHING`,
+        [p.id, p.name, p.category, p.subcategory || null, p.phone, p.whatsapp, p.description, p.photo_url, p.location, p.rating, p.total_reviews, p.is_active, p.verified, p.plan_type || null, p.price_starting, p.vehicle_badge || null, p.opening_hours || null, JSON.stringify(p.amenities || []), p.created_at]
+      );
+    }
   }
 
-  console.log('🌱 Banco PostgreSQL vazio. Semeando dados iniciais de Algodoal Connect...');
-
-  for (const p of SEED_PARTNERS) {
-    await pgPool!.query(
-      `INSERT INTO partners (id, name, category, subcategory, phone, whatsapp, description, photo_url, location, rating, total_reviews, is_active, verified, plan_type, price_starting, vehicle_badge, opening_hours, amenities, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
-       ON CONFLICT (id) DO NOTHING`,
-      [p.id, p.name, p.category, p.subcategory || null, p.phone, p.whatsapp, p.description, p.photo_url, p.location, p.rating, p.total_reviews, p.is_active, p.verified, p.plan_type || null, p.price_starting, p.vehicle_badge || null, p.opening_hours || null, JSON.stringify(p.amenities || []), p.created_at]
-    );
+  const { rows: sRows } = await pgPool!.query('SELECT COUNT(*)::int AS count FROM services_products');
+  if (sRows[0].count === 0) {
+    for (const s of SEED_SERVICES) {
+      await pgPool!.query(
+        `INSERT INTO services_products (id, partner_id, name, description, price, unit, category, image_url, available, estimated_time)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+         ON CONFLICT (id) DO NOTHING`,
+        [s.id, s.partner_id, s.name, s.description, s.price, s.unit, s.category, s.image_url, s.available, s.estimated_time || null]
+      );
+    }
   }
 
-  for (const s of SEED_SERVICES) {
-    await pgPool!.query(
-      `INSERT INTO services_products (id, partner_id, name, description, price, unit, category, image_url, available, estimated_time)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-       ON CONFLICT (id) DO NOTHING`,
-      [s.id, s.partner_id, s.name, s.description, s.price, s.unit, s.category, s.image_url, s.available, s.estimated_time || null]
-    );
+  const { rows: oRows } = await pgPool!.query('SELECT COUNT(*)::int AS count FROM orders');
+  if (oRows[0].count === 0) {
+    for (const o of SEED_ORDERS) {
+      await pgPool!.query(
+        `INSERT INTO orders (id, customer_name, customer_phone, customer_location, destination_location, partner_id, partner_name, category, items, total_price, status, payment_method, notes, driver_or_agent_name, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+         ON CONFLICT (id) DO NOTHING`,
+        [o.id, o.customer_name, o.customer_phone, o.customer_location, o.destination_location || null, o.partner_id, o.partner_name || null, o.category, JSON.stringify(o.items || []), o.total_price, o.status, o.payment_method, o.notes || null, o.driver_or_agent_name || null, o.created_at, o.updated_at]
+      );
+    }
   }
 
-  for (const o of SEED_ORDERS) {
-    await pgPool!.query(
-      `INSERT INTO orders (id, customer_name, customer_phone, customer_location, destination_location, partner_id, partner_name, category, items, total_price, status, payment_method, notes, driver_or_agent_name, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
-       ON CONFLICT (id) DO NOTHING`,
-      [o.id, o.customer_name, o.customer_phone, o.customer_location, o.destination_location || null, o.partner_id, o.partner_name || null, o.category, JSON.stringify(o.items || []), o.total_price, o.status, o.payment_method, o.notes || null, o.driver_or_agent_name || null, o.created_at, o.updated_at]
-    );
+  const { rows: spRows } = await pgPool!.query('SELECT COUNT(*)::int AS count FROM island_spots');
+  if (spRows[0].count === 0) {
+    for (const sp of SEED_ISLAND_SPOTS) {
+      await pgPool!.query(
+        `INSERT INTO island_spots (id, name, category, description, image_url, distance_from_port, walking_time, cart_time, tips, coordinates)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+         ON CONFLICT (id) DO NOTHING`,
+        [sp.id, sp.name, sp.category, sp.description, sp.image_url, sp.distance_from_port, sp.walking_time, sp.cart_time, sp.tips, JSON.stringify(sp.coordinates)]
+      );
+    }
   }
 
-  for (const sp of SEED_ISLAND_SPOTS) {
-    await pgPool!.query(
-      `INSERT INTO island_spots (id, name, category, description, image_url, distance_from_port, walking_time, cart_time, tips, coordinates)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-       ON CONFLICT (id) DO NOTHING`,
-      [sp.id, sp.name, sp.category, sp.description, sp.image_url, sp.distance_from_port, sp.walking_time, sp.cart_time, sp.tips, JSON.stringify(sp.coordinates)]
-    );
+  const { rows: bRows } = await pgPool!.query('SELECT COUNT(*)::int AS count FROM boat_crossings');
+  if (bRows[0].count === 0) {
+    for (const b of SEED_BOAT_CROSSINGS) {
+      await pgPool!.query(
+        `INSERT INTO boat_crossings (id, origin, destination, departure_times, price, duration, association, phone, notes)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+         ON CONFLICT (id) DO NOTHING`,
+        [b.id, b.origin, b.destination, JSON.stringify(b.departure_times), b.price, b.duration, b.association, b.phone, b.notes]
+      );
+    }
   }
 
-  for (const b of SEED_BOAT_CROSSINGS) {
-    await pgPool!.query(
-      `INSERT INTO boat_crossings (id, origin, destination, departure_times, price, duration, association, phone, notes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-       ON CONFLICT (id) DO NOTHING`,
-      [b.id, b.origin, b.destination, JSON.stringify(b.departure_times), b.price, b.duration, b.association, b.phone, b.notes]
-    );
+  const { rows: cRows } = await pgPool!.query('SELECT COUNT(*)::int AS count FROM useful_contacts');
+  if (cRows[0].count === 0) {
+    for (const c of SEED_USEFUL_CONTACTS) {
+      await pgPool!.query(
+        `INSERT INTO useful_contacts (id, title, category, phone, whatsapp, location, description, available_hours)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+         ON CONFLICT (id) DO NOTHING`,
+        [c.id, c.title, c.category, c.phone, c.whatsapp || null, c.location, c.description, c.available_hours]
+      );
+    }
   }
 
-  for (const c of SEED_USEFUL_CONTACTS) {
-    await pgPool!.query(
-      `INSERT INTO useful_contacts (id, title, category, phone, whatsapp, location, description, available_hours)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-       ON CONFLICT (id) DO NOTHING`,
-      [c.id, c.title, c.category, c.phone, c.whatsapp || null, c.location, c.description, c.available_hours]
-    );
+  const { rows: rRows } = await pgPool!.query('SELECT COUNT(*)::int AS count FROM reviews');
+  if (rRows[0].count === 0) {
+    for (const r of SEED_REVIEWS) {
+      await pgPool!.query(
+        `INSERT INTO reviews (id, partner_id, customer_name, rating, comment, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6)
+         ON CONFLICT (id) DO NOTHING`,
+        [r.id, r.partner_id, r.customer_name, r.rating, r.comment, r.created_at]
+      );
+    }
   }
 
-  for (const r of SEED_REVIEWS) {
-    await pgPool!.query(
-      `INSERT INTO reviews (id, partner_id, customer_name, rating, comment, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6)
-       ON CONFLICT (id) DO NOTHING`,
-      [r.id, r.partner_id, r.customer_name, r.rating, r.comment, r.created_at]
-    );
+  const { rows: aRows } = await pgPool!.query('SELECT COUNT(*)::int AS count FROM advertisements');
+  if (aRows[0].count === 0) {
+    console.log('🌱 Semeando anúncios no PostgreSQL...');
+    for (const a of SEED_ADVERTISEMENTS) {
+      await pgPool!.query(
+        `INSERT INTO advertisements (id, title, category, partner_id, business_name, tagline, description, image_url, link_url, whatsapp, phone, location, price_starting, badge, event_date, event_venue, banner_slot, plan_type, is_active, is_highlighted, start_date, end_date, views_count, clicks_count, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
+         ON CONFLICT (id) DO NOTHING`,
+        [a.id, a.title, a.category, a.partner_id || null, a.business_name, a.tagline || null, a.description, a.image_url, a.link_url || null, a.whatsapp, a.phone || null, a.location, a.price_starting || 0, a.badge || null, a.event_date || null, a.event_venue || null, a.banner_slot || 'nenhum', a.plan_type || null, a.is_active, a.is_highlighted, a.start_date, a.end_date, a.views_count || 0, a.clicks_count || 0, a.created_at, a.updated_at]
+      );
+    }
   }
 
-  for (const a of SEED_ADVERTISEMENTS) {
-    await pgPool!.query(
-      `INSERT INTO advertisements (id, title, category, partner_id, business_name, tagline, description, image_url, link_url, whatsapp, phone, location, price_starting, badge, event_date, event_venue, banner_slot, plan_type, is_active, is_highlighted, start_date, end_date, views_count, clicks_count, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
-       ON CONFLICT (id) DO NOTHING`,
-      [a.id, a.title, a.category, a.partner_id || null, a.business_name, a.tagline || null, a.description, a.image_url, a.link_url || null, a.whatsapp, a.phone || null, a.location, a.price_starting || 0, a.badge || null, a.event_date || null, a.event_venue || null, a.banner_slot || 'nenhum', a.plan_type || null, a.is_active, a.is_highlighted, a.start_date, a.end_date, a.views_count || 0, a.clicks_count || 0, a.created_at, a.updated_at]
-    );
+  const { rows: tRows } = await pgPool!.query('SELECT COUNT(*)::int AS count FROM tide_days');
+  if (tRows[0].count === 0) {
+    for (const t of SEED_TIDE_DAYS) {
+      await pgPool!.query(
+        `INSERT INTO tide_days (id, date, moon_phase, coefficient, high_tides, low_tides, source, recommendations)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+         ON CONFLICT (date) DO NOTHING`,
+        [t.id, t.date, t.moon_phase, t.coefficient || null, JSON.stringify(t.high_tides), JSON.stringify(t.low_tides), t.source, t.recommendations || null]
+      );
+    }
   }
 
-  for (const t of SEED_TIDE_DAYS) {
-    await pgPool!.query(
-      `INSERT INTO tide_days (id, date, moon_phase, coefficient, high_tides, low_tides, source, recommendations)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-       ON CONFLICT (date) DO NOTHING`,
-      [t.id, t.date, t.moon_phase, t.coefficient || null, JSON.stringify(t.high_tides), JSON.stringify(t.low_tides), t.source, t.recommendations || null]
-    );
+  const { rows: uRows } = await pgPool!.query('SELECT COUNT(*)::int AS count FROM users');
+  if (uRows[0].count === 0) {
+    for (const u of SEED_USERS) {
+      await pgPool!.query(
+        `INSERT INTO users (id, name, email, phone, avatar_url, provider, role, partner_id, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+         ON CONFLICT (id) DO NOTHING`,
+        [u.id, u.name, u.email, u.phone || null, u.avatar_url || null, u.provider, u.role, u.partner_id || null, u.created_at]
+      );
+    }
   }
 
-  for (const u of SEED_USERS) {
-    await pgPool!.query(
-      `INSERT INTO users (id, name, email, phone, avatar_url, provider, role, partner_id, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-       ON CONFLICT (id) DO NOTHING`,
-      [u.id, u.name, u.email, u.phone || null, u.avatar_url || null, u.provider, u.role, u.partner_id || null, u.created_at]
-    );
-  }
-
-  for (const st of SEED_STORIES) {
-    await pgPool!.query(
-      `INSERT INTO stories (id, title, subtitle, emoji, cover_image, full_image, description, location, tag, category, whatsapp, is_active, order_index, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
-       ON CONFLICT (id) DO NOTHING`,
-      [st.id, st.title, st.subtitle, st.emoji || null, st.coverImage, st.fullImage, st.description, st.location, st.tag, st.category || 'todos', st.whatsapp || null, st.is_active !== false, st.order_index || 0, st.created_at || new Date().toISOString(), st.updated_at || new Date().toISOString()]
-    );
+  const { rows: stRows } = await pgPool!.query('SELECT COUNT(*)::int AS count FROM stories');
+  if (stRows[0].count === 0) {
+    for (const st of SEED_STORIES) {
+      await pgPool!.query(
+        `INSERT INTO stories (id, title, subtitle, emoji, cover_image, full_image, description, location, tag, category, whatsapp, is_active, order_index, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+         ON CONFLICT (id) DO NOTHING`,
+        [st.id, st.title, st.subtitle, st.emoji || null, st.coverImage, st.fullImage, st.description, st.location, st.tag, st.category || 'todos', st.whatsapp || null, st.is_active !== false, st.order_index || 0, st.created_at || new Date().toISOString(), st.updated_at || new Date().toISOString()]
+      );
+    }
   }
 
   await pgPool!.query(
@@ -366,7 +394,7 @@ async function seedPostgresIfEmpty(): Promise<void> {
     [JSON.stringify(['/imagens/algodoal.jpg', '/imagens/vila.jpg', '/imagens/vila2.jpg', '/imagens/canal.jpg', '/imagens/porto.jpg', '/imagens/porto2.jpg'])]
   );
 
-  console.log('✅ Seed inicial do PostgreSQL concluído com sucesso.');
+  console.log('✅ Verificação de integridade e seed do PostgreSQL concluídos.');
 }
 
 // Ensures the schema/seed step has finished before any DAL function issues a query.
@@ -1335,22 +1363,28 @@ function loadLocalDB(): LocalDatabaseState {
     if (fs.existsSync(DB_FILE)) {
       const data = fs.readFileSync(DB_FILE, 'utf-8');
       const parsed = JSON.parse(data);
-      // Ensure all collections are valid arrays without resurrecting deleted items
-      if (!Array.isArray(parsed.advertisements)) parsed.advertisements = [];
-      if (!Array.isArray(parsed.partners)) parsed.partners = [];
-      if (!Array.isArray(parsed.services)) parsed.services = [];
+      // Ensure all collections are valid arrays
+      if (!Array.isArray(parsed.advertisements) || parsed.advertisements.length === 0) {
+        parsed.advertisements = SEED_ADVERTISEMENTS;
+      }
+      if (!Array.isArray(parsed.partners) || parsed.partners.length === 0) {
+        parsed.partners = SEED_PARTNERS;
+      }
+      if (!Array.isArray(parsed.services)) parsed.services = SEED_SERVICES;
       if (!Array.isArray(parsed.orders)) parsed.orders = [];
-      if (!Array.isArray(parsed.island_spots)) parsed.island_spots = [];
-      if (!Array.isArray(parsed.boat_crossings)) parsed.boat_crossings = [];
-      if (!Array.isArray(parsed.useful_contacts)) parsed.useful_contacts = [];
-      if (!Array.isArray(parsed.reviews)) parsed.reviews = [];
+      if (!Array.isArray(parsed.island_spots)) parsed.island_spots = SEED_ISLAND_SPOTS;
+      if (!Array.isArray(parsed.boat_crossings)) parsed.boat_crossings = SEED_BOAT_CROSSINGS;
+      if (!Array.isArray(parsed.useful_contacts)) parsed.useful_contacts = SEED_USEFUL_CONTACTS;
+      if (!Array.isArray(parsed.reviews)) parsed.reviews = SEED_REVIEWS;
       if (!Array.isArray(parsed.tide_days) || parsed.tide_days.length === 0) {
         parsed.tide_days = SEED_TIDE_DAYS;
       }
       if (!Array.isArray(parsed.users) || parsed.users.length === 0) {
         parsed.users = SEED_USERS;
       }
-      if (!Array.isArray(parsed.stories)) parsed.stories = [];
+      if (!Array.isArray(parsed.stories) || parsed.stories.length === 0) {
+        parsed.stories = SEED_STORIES;
+      }
       return parsed;
     }
   } catch (err) {
@@ -1365,7 +1399,7 @@ function loadLocalDB(): LocalDatabaseState {
     boat_crossings: SEED_BOAT_CROSSINGS,
     useful_contacts: SEED_USEFUL_CONTACTS,
     reviews: SEED_REVIEWS,
-    advertisements: [],
+    advertisements: SEED_ADVERTISEMENTS,
     tide_days: SEED_TIDE_DAYS,
     users: SEED_USERS,
     stories: SEED_STORIES
@@ -1635,6 +1669,19 @@ export async function updateOrderStatus(id: string, status: OrderStatus, driverO
 
 export async function getAdvertisements(category?: string, onlyActive = true): Promise<Advertisement[]> {
   if (await pgReady()) {
+    const countCheck = await pgPool!.query('SELECT COUNT(*)::int AS count FROM advertisements');
+    if ((countCheck.rows[0]?.count || 0) === 0) {
+      console.log('🌱 Tabela advertisements vazia no PostgreSQL. Inserindo SEED_ADVERTISEMENTS...');
+      for (const a of SEED_ADVERTISEMENTS) {
+        await pgPool!.query(
+          `INSERT INTO advertisements (id, title, category, partner_id, business_name, tagline, description, image_url, link_url, whatsapp, phone, location, price_starting, badge, event_date, event_venue, banner_slot, plan_type, is_active, is_highlighted, start_date, end_date, views_count, clicks_count, created_at, updated_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
+           ON CONFLICT (id) DO NOTHING`,
+          [a.id, a.title, a.category, a.partner_id || null, a.business_name, a.tagline || null, a.description, a.image_url, a.link_url || null, a.whatsapp, a.phone || null, a.location, a.price_starting || 0, a.badge || null, a.event_date || null, a.event_venue || null, a.banner_slot || 'nenhum', a.plan_type || null, a.is_active, a.is_highlighted, a.start_date, a.end_date, a.views_count || 0, a.clicks_count || 0, a.created_at, a.updated_at]
+        );
+      }
+    }
+
     const res = await pgPool!.query('SELECT * FROM advertisements');
     let list = res.rows.map(rowToAdvertisement);
 
@@ -1659,6 +1706,10 @@ export async function getAdvertisements(category?: string, onlyActive = true): P
   }
 
   const db = loadLocalDB();
+  if (!Array.isArray(db.advertisements) || db.advertisements.length === 0) {
+    db.advertisements = SEED_ADVERTISEMENTS;
+    saveLocalDB(db);
+  }
   let list = db.advertisements || [];
   
   if (onlyActive) {

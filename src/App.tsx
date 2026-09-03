@@ -399,8 +399,11 @@ export function App() {
       const resAds = await fetch('/api/advertisements');
       if (resAds.ok) {
         const dataAds = await resAds.json();
-        if (Array.isArray(dataAds)) {
+        if (Array.isArray(dataAds) && dataAds.length > 0) {
           setAdvertisements(dataAds);
+        } else if (Array.isArray(dataAds) && dataAds.length === 0) {
+          console.warn('Backend retornou 0 anúncios. Preservando catálogo de anúncios ativos para evitar desaparecimento.');
+          setAdvertisements(INITIAL_PROTOTYPE_ADVERTISEMENTS);
         }
       }
 
@@ -408,7 +411,7 @@ export function App() {
       const resPartners = await fetch('/api/partners');
       if (resPartners.ok) {
         const dataPartners = await resPartners.json();
-        if (Array.isArray(dataPartners)) {
+        if (Array.isArray(dataPartners) && dataPartners.length > 0) {
           setPartners(dataPartners);
         }
       }
