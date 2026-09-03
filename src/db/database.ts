@@ -29,11 +29,12 @@ if (!fs.existsSync(path.join(process.cwd(), 'data'))) {
 let pgPool: pg.Pool | null = null;
 const databaseUrl = process.env.DATABASE_URL;
 
-if (databaseUrl && !databaseUrl.includes('localhost:5432')) {
+if (databaseUrl && databaseUrl.trim() !== '') {
   try {
+    const isLocal = databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1') || databaseUrl.includes('sslmode=disable');
     pgPool = new pg.Pool({
       connectionString: databaseUrl,
-      ssl: databaseUrl.includes('sslmode=disable') ? false : { rejectUnauthorized: false },
+      ssl: isLocal ? false : { rejectUnauthorized: false },
     });
     console.log('🔗 PostgreSQL pool initialized with connection string');
   } catch (err) {
@@ -240,6 +241,31 @@ async function initPostgres(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_orders_partner ON orders(partner_id);
       CREATE INDEX IF NOT EXISTS idx_advertisements_category ON advertisements(category);
       CREATE INDEX IF NOT EXISTS idx_reviews_partner ON reviews(partner_id);
+
+      -- Migrações incrementais seguras para a tabela advertisements caso já existisse
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS partner_id VARCHAR(64);
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS business_name VARCHAR(255) DEFAULT '';
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS tagline VARCHAR(255);
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS description TEXT;
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS image_url TEXT;
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS link_url TEXT;
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(50);
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS location VARCHAR(255);
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS price_starting NUMERIC(10,2) DEFAULT 0;
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS badge VARCHAR(100);
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS event_date VARCHAR(50);
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS event_venue VARCHAR(255);
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS banner_slot VARCHAR(30) DEFAULT 'nenhum';
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS plan_type VARCHAR(20);
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS is_highlighted BOOLEAN DEFAULT FALSE;
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS start_date VARCHAR(20);
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS end_date VARCHAR(20);
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS views_count INTEGER DEFAULT 0;
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS clicks_count INTEGER DEFAULT 0;
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
     `);
 
     console.log('🗄️  Tabelas PostgreSQL verificadas/criadas com sucesso.');
@@ -1786,32 +1812,74 @@ export async function updateOrderStatus(id: string, status: OrderStatus, driverO
 // ADVERTISEMENTS & ANNOUNCEMENTS (ADMIN DAL)
 // ==========================================
 
+export async function resetAdvertisementsToDefault(): Promise<Advertisement[]> {
+  if (await pgReady()) {
+    for (const a of SEED_ADVERTISEMENTS) {
+      await pgPool!.query(
+        `INSERT INTO advertisements (id, title, category, partner_id, business_name, tagline, description, image_url, link_url, whatsapp, phone, location, price_starting, badge, event_date, event_venue, banner_slot, plan_type, is_active, is_highlighted, start_date, end_date, views_count, clicks_count, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
+         ON CONFLICT (id) DO UPDATE SET
+           title = EXCLUDED.title,
+           category = EXCLUDED.category,
+           business_name = EXCLUDED.business_name,
+           tagline = EXCLUDED.tagline,
+           description = EXCLUDED.description,
+           image_url = EXCLUDED.image_url,
+           whatsapp = EXCLUDED.whatsapp,
+           phone = EXCLUDED.phone,
+           location = EXCLUDED.location,
+           price_starting = EXCLUDED.price_starting,
+           badge = EXCLUDED.badge,
+           event_date = EXCLUDED.event_date,
+           event_venue = EXCLUDED.event_venue,
+           banner_slot = EXCLUDED.banner_slot,
+           is_active = true,
+           is_highlighted = EXCLUDED.is_highlighted,
+           start_date = EXCLUDED.start_date,
+           end_date = EXCLUDED.end_date,
+           updated_at = NOW()`,
+        [a.id, a.title, a.category, a.partner_id || null, a.business_name, a.tagline || null, a.description, a.image_url, a.link_url || null, a.whatsapp, a.phone || null, a.location, a.price_starting || 0, a.badge || null, a.event_date || null, a.event_venue || null, a.banner_slot || 'nenhum', a.plan_type || null, true, a.is_highlighted, a.start_date, a.end_date, a.views_count || 0, a.clicks_count || 0, a.created_at, a.updated_at]
+      );
+    }
+  }
+
+  const db = loadLocalDB();
+  const existingMap = new Map((db.advertisements || []).map(a => [a.id, a]));
+  for (const seedAd of SEED_ADVERTISEMENTS) {
+    if (!existingMap.has(seedAd.id)) {
+      existingMap.set(seedAd.id, { ...seedAd, is_active: true });
+    } else {
+      const cur = existingMap.get(seedAd.id)!;
+      cur.is_active = true;
+      existingMap.set(seedAd.id, cur);
+    }
+  }
+  db.advertisements = Array.from(existingMap.values());
+  saveLocalDB(db);
+
+  return getAdvertisements(undefined, false);
+}
+
 export async function getAdvertisements(category?: string, onlyActive = true): Promise<Advertisement[]> {
   if (await pgReady()) {
-    const countCheck = await pgPool!.query('SELECT COUNT(*)::int AS count FROM advertisements');
-    if ((countCheck.rows[0]?.count || 0) === 0) {
+    let res = await pgPool!.query('SELECT * FROM advertisements');
+    if (res.rows.length === 0) {
       console.log('🌱 Tabela advertisements vazia no PostgreSQL. Inserindo SEED_ADVERTISEMENTS...');
       for (const a of SEED_ADVERTISEMENTS) {
         await pgPool!.query(
           `INSERT INTO advertisements (id, title, category, partner_id, business_name, tagline, description, image_url, link_url, whatsapp, phone, location, price_starting, badge, event_date, event_venue, banner_slot, plan_type, is_active, is_highlighted, start_date, end_date, views_count, clicks_count, created_at, updated_at)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
-           ON CONFLICT (id) DO NOTHING`,
+           ON CONFLICT (id) DO UPDATE SET is_active = true, updated_at = NOW()`,
           [a.id, a.title, a.category, a.partner_id || null, a.business_name, a.tagline || null, a.description, a.image_url, a.link_url || null, a.whatsapp, a.phone || null, a.location, a.price_starting || 0, a.badge || null, a.event_date || null, a.event_venue || null, a.banner_slot || 'nenhum', a.plan_type || null, a.is_active, a.is_highlighted, a.start_date, a.end_date, a.views_count || 0, a.clicks_count || 0, a.created_at, a.updated_at]
         );
       }
+      res = await pgPool!.query('SELECT * FROM advertisements');
     }
 
-    const res = await pgPool!.query('SELECT * FROM advertisements');
     let list = res.rows.map(rowToAdvertisement);
 
     if (onlyActive) {
-      const today = new Date().toISOString().split('T')[0];
-      list = list.filter(ad => {
-        if (!ad.is_active) return false;
-        if (ad.start_date && ad.start_date > today) return false;
-        if (ad.end_date && ad.end_date < today) return false;
-        return true;
-      });
+      list = list.filter(ad => ad.is_active !== false);
     }
     if (category && category !== 'todos') {
       const normTarget = normalizeAdCategory(category);
@@ -1826,10 +1894,15 @@ export async function getAdvertisements(category?: string, onlyActive = true): P
 
   const db = loadLocalDB();
   if (!Array.isArray(db.advertisements) || db.advertisements.length === 0) {
-    db.advertisements = SEED_ADVERTISEMENTS;
+    db.advertisements = [...SEED_ADVERTISEMENTS];
     saveLocalDB(db);
   }
   let list = db.advertisements || [];
+  if (list.length === 0) {
+    list = [...SEED_ADVERTISEMENTS];
+    db.advertisements = list;
+    saveLocalDB(db);
+  }
   
   if (onlyActive) {
     list = list.filter(ad => ad.is_active !== false);

@@ -20,6 +20,7 @@ import {
   Check, 
   AlertCircle, 
   RefreshCw, 
+  RotateCcw,
   ExternalLink,
   ShieldCheck,
   Search,
@@ -714,6 +715,24 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   // ==========================
   // AD ACTIONS (REAL BACKEND)
   // ==========================
+  const handleResetDefaultAds = async () => {
+    if (!confirm('Deseja restaurar e reativar todos os anúncios comerciais oficiais da Ilha de Algodoal (Pousadas, Charretes, Restaurantes, Passeios)?')) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/advertisements/reset-defaults', { method: 'POST' });
+      const data = await res.json();
+      if (data.ads) {
+        setAds(data.ads);
+        showSuccess(`Sucesso! ${data.ads.length} anúncios comerciais foram restaurados e ativados.`);
+        if (onRefreshData) onRefreshData();
+      }
+    } catch (err: any) {
+      setActionError('Falha ao restaurar anúncios: ' + err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleToggleAdActive = async (ad: Advertisement) => {
     try {
       const res = await fetch(`/api/advertisements/${ad.id}`, {
@@ -1781,6 +1800,17 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       </button>
 
                       <button
+                        type="button"
+                        onClick={handleResetDefaultAds}
+                        disabled={isLoading}
+                        title="Restaurar e ativar todos os anúncios comerciais oficiais"
+                        className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer border border-slate-300"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="hidden sm:inline">Restaurar Anúncios Padrão</span>
+                      </button>
+
+                      <button
                         onClick={() => {
                           setCurrentAd({
                             title: '',
@@ -1812,8 +1842,31 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         <Megaphone className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                         <h4 className="text-base font-black text-slate-700">Nenhum anúncio encontrado</h4>
                         <p className="text-xs text-slate-400 mt-1">
-                          Nenhum anúncio corresponde aos filtros selecionados. Crie um novo anúncio ou limpe os filtros.
+                          Nenhum anúncio corresponde aos filtros selecionados. Crie um novo anúncio ou restaure os anúncios comerciais oficiais da ilha.
                         </p>
+                        <div className="mt-4 flex flex-wrap justify-center gap-3">
+                          <button
+                            type="button"
+                            onClick={handleResetDefaultAds}
+                            disabled={isLoading}
+                            className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 shadow-xs transition cursor-pointer"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                            <span>Restaurar 6 Anúncios Oficiais da Ilha</span>
+                          </button>
+                          {(selectedAdCategory !== 'todos' || adSearchTerm) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedAdCategory('todos');
+                                setAdSearchTerm('');
+                              }}
+                              className="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer"
+                            >
+                              Limpar Filtros
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ) : (
                       filteredAds.map((ad) => (

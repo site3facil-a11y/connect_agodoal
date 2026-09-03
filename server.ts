@@ -37,6 +37,7 @@ import {
   getIslandStats,
   getAdvertisements,
   getAdvertisementById,
+  resetAdvertisementsToDefault,
   createAdvertisement,
   updateAdvertisement,
   deleteAdvertisement,
@@ -287,6 +288,15 @@ async function startServer() {
       res.json(ads);
     } catch (err: any) {
       res.status(500).json({ error: 'Erro ao buscar anúncios', details: err.message });
+    }
+  });
+
+  app.post('/api/advertisements/reset-defaults', async (req, res) => {
+    try {
+      const ads = await resetAdvertisementsToDefault();
+      res.json({ success: true, count: ads.length, ads });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Erro ao restaurar anúncios padrão', details: err.message });
     }
   });
 
