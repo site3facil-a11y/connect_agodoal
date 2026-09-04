@@ -140,6 +140,17 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
             type="text"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                (e.target as HTMLInputElement).blur();
+                const el = document.getElementById('secao-portal-anuncios') || document.getElementById('secao-guia-parceiros') || document.getElementById('secao-navegacao');
+                if (el) {
+                  const navHeight = 60;
+                  const elPos = el.getBoundingClientRect().top + window.pageYOffset - navHeight;
+                  window.scrollTo({ top: elPos, behavior: 'smooth' });
+                }
+              }
+            }}
             placeholder="Buscar charretes, rabetas, pousadas, peixadas..."
             className={`w-full pl-10 pr-4 py-2.5 rounded-2xl text-xs font-medium border focus:outline-hidden transition shadow-inner ${
               isDark

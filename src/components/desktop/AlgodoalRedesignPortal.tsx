@@ -34,7 +34,8 @@ import {
   Check,
   Building2,
   Store,
-  DollarSign
+  DollarSign,
+  ArrowUp
 } from 'lucide-react';
 import { Advertisement, Partner, TideDayEntry, UserProfile, WeatherData } from '../../types/index.ts';
 import { StoriesRow } from '../mobile/StoriesRow.tsx';
@@ -310,6 +311,21 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
       tag: 'Cultura & Lazer'
     }
   ];
+
+  // Scroll directly to search results smoothly
+  const scrollToResults = () => {
+    if (activeMainView === 'anuncie') {
+      setActiveMainView('inicio');
+    }
+    setTimeout(() => {
+      const el = document.getElementById('secao-portal-anuncios') || document.getElementById('secao-guia-parceiros') || document.getElementById('secao-navegacao');
+      if (el) {
+        const navHeight = 70;
+        const elPos = el.getBoundingClientRect().top + window.pageYOffset - navHeight;
+        window.scrollTo({ top: elPos, behavior: 'smooth' });
+      }
+    }, 60);
+  };
 
   // Filtered ads
   const activeFilteredAds = advertisements.filter((ad) => {
@@ -637,17 +653,33 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
                   type="text"
                   value={searchTerm}
                   onChange={(e) => onSearchChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      scrollToResults();
+                    }
+                  }}
                   placeholder="Buscar charretes, pousadas, peixadas..."
-                  className="w-full bg-white text-slate-900 placeholder-slate-500 pl-11 pr-10 py-3.5 rounded-full text-sm font-semibold shadow-2xl border-2 border-white/20 focus:outline-hidden focus:ring-4 focus:ring-amber-400/30 transition"
+                  className="w-full bg-white text-slate-900 placeholder-slate-500 pl-11 pr-28 py-3.5 rounded-full text-sm font-semibold shadow-2xl border-2 border-white/20 focus:outline-hidden focus:ring-4 focus:ring-amber-400/30 transition"
                 />
-                {searchTerm && (
+                <div className="absolute right-2 flex items-center gap-1">
+                  {searchTerm && (
+                    <button
+                      onClick={() => onSearchChange('')}
+                      className="text-slate-400 hover:text-slate-600 p-1 rounded-full cursor-pointer"
+                      title="Limpar busca"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                   <button
-                    onClick={() => onSearchChange('')}
-                    className="absolute right-4 text-slate-400 hover:text-slate-600 p-1"
+                    onClick={scrollToResults}
+                    className="bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 px-3 py-1.5 rounded-full text-xs font-black shadow-md transition flex items-center gap-1 cursor-pointer"
+                    title="Pressione Enter ou clique para descer aos resultados"
                   >
-                    <X className="w-4 h-4" />
+                    <span>Buscar</span>
                   </button>
-                )}
+                </div>
               </div>
             </div>
           </div>
@@ -1005,17 +1037,27 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
 
         {/* Search notice if active */}
         {searchTerm && (
-          <div className="p-3 rounded-2xl bg-slate-900/80 border border-slate-700 flex items-center justify-between text-xs">
-            <span className="text-slate-300 font-medium">
-              Buscando por: <strong className="text-amber-400">"{searchTerm}"</strong> • Encontrados {activeFilteredAds.length} anúncios e {activeFilteredPartners.length} parceiros.
+          <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-amber-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-lg">
+            <span className="text-slate-200 font-medium">
+              Buscando por: <strong className="text-amber-400 font-black text-sm">"{searchTerm}"</strong> • Encontrados {activeFilteredAds.length} anúncios e {activeFilteredPartners.length} parceiros.
             </span>
-            <button
-              onClick={() => onSearchChange('')}
-              className="text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 cursor-pointer"
-            >
-              <span>Limpar busca</span>
-              <X className="w-3.5 h-3.5" />
-            </button>
+            <div className="flex items-center gap-2 self-end sm:self-center">
+              <button
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                className="text-slate-300 hover:text-white px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 font-bold flex items-center gap-1.5 cursor-pointer transition shadow-xs"
+                title="Voltar ao topo da página"
+              >
+                <ArrowUp className="w-3.5 h-3.5 text-amber-400" />
+                <span>Voltar ao topo</span>
+              </button>
+              <button
+                onClick={() => onSearchChange('')}
+                className="text-amber-400 hover:text-amber-300 font-bold px-3 py-1.5 rounded-xl bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/30 flex items-center gap-1 cursor-pointer transition"
+              >
+                <span>Limpar busca</span>
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         )}
       </section>

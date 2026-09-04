@@ -147,6 +147,17 @@ export const DesktopNavbar: React.FC<DesktopNavbarProps> = ({
             type="text"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                const el = document.getElementById('secao-portal-anuncios') || document.getElementById('secao-guia-parceiros') || document.getElementById('secao-navegacao');
+                if (el) {
+                  const navHeight = 70;
+                  const elPos = el.getBoundingClientRect().top + window.pageYOffset - navHeight;
+                  window.scrollTo({ top: elPos, behavior: 'smooth' });
+                }
+              }
+            }}
             placeholder="Buscar charretes, rabetas, pousadas, peixadas, disk gelo..."
             className={`w-full pl-10 pr-9 py-2 rounded-2xl text-xs font-medium border transition focus:outline-hidden ${
               isDark 

@@ -29,7 +29,8 @@ import {
   Megaphone,
   CheckCircle2,
   Monitor,
-  Smartphone
+  Smartphone,
+  ArrowUp
 } from 'lucide-react';
 
 import { Advertisement, Partner, TideDayEntry, UserProfile, WeatherData } from './types/index.ts';
@@ -340,10 +341,18 @@ export function App() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [isWeatherLoading, setIsWeatherLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     loadRealData();
     loadWeatherData();
+
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 280);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const toggleTheme = () => {
@@ -937,6 +946,20 @@ export function App() {
             isAdminLoggedIn={currentUser?.role === 'admin'}
           />
         </main>
+      )}
+
+      {/* Floating Back to Top Button (Global Desktop & Mobile) */}
+      {showScrollTop && (
+        <button
+          id="btn-voltar-ao-topo-global"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-20 md:bottom-8 right-4 sm:right-6 z-40 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-full bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 font-black text-xs shadow-2xl transition-all duration-300 flex items-center gap-2 border-2 border-slate-950/20 shadow-amber-400/30 ring-2 ring-white/30 cursor-pointer animate-in fade-in"
+          title="Voltar ao topo da página"
+          aria-label="Voltar ao topo"
+        >
+          <ArrowUp className="w-4 h-4 text-slate-950 stroke-[3]" />
+          <span className="font-extrabold text-xs">Voltar ao topo</span>
+        </button>
       )}
 
       {/* ======================================================== */}
