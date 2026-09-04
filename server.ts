@@ -90,6 +90,22 @@ async function startServer() {
     });
   });
 
+  // Database Diagnostic endpoint
+  app.get('/api/admin/db-diagnostic', async (req, res) => {
+    try {
+      const dbStatus = getDatabaseStatus();
+      const backup = await exportDatabaseBackup();
+      res.json({
+        dbStatus,
+        advertisements_count: backup.advertisements?.length || 0,
+        advertisements: backup.advertisements || [],
+        partners_count: backup.partners?.length || 0
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // =====================================
   // IMAGE UPLOAD API
   // =====================================

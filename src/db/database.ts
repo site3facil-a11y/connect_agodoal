@@ -1454,14 +1454,7 @@ function loadLocalDB(): LocalDatabaseState {
           parsed.advertisements = SEED_ADVERTISEMENTS;
         }
       } else {
-        // Garantir que nenhum anúncio existente tenha sua imagem/dados sobrescritos
-        const existingIds = new Set(parsed.advertisements.map((a: any) => a.id));
-        // Apenas adiciona novos seeds se faltar algum id sem tocar nos existentes
-        for (const seedAd of SEED_ADVERTISEMENTS) {
-          if (!existingIds.has(seedAd.id)) {
-            parsed.advertisements.push(seedAd);
-          }
-        }
+        // Se já existem anúncios no arquivo, NUNCA sobrescrever nem forçar injeção de sementes mocadas
       }
 
       if (!Array.isArray(parsed.partners) || parsed.partners.length === 0) {
