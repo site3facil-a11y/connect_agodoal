@@ -27,14 +27,30 @@ if (!fs.existsSync(path.join(process.cwd(), 'data'))) {
 }
 
 let pgPool: pg.Pool | null = null;
+let pgConnected = false;
+let pgStatusDetails = 'Armazenamento Local JSON Ativo';
+
+export function getDatabaseStatus(): { type: 'postgresql' | 'json'; connected: boolean; details: string } {
+  return {
+    type: pgConnected ? 'postgresql' : 'json',
+    connected: pgConnected,
+    details: pgConnected ? 'PostgreSQL Database Connected' : pgStatusDetails,
+  };
+}
+
 const databaseUrl = process.env.DATABASE_URL;
 
 if (databaseUrl && databaseUrl.trim() !== '') {
   try {
-    const isLocal = databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1') || databaseUrl.includes('sslmode=disable');
+    const isLocal = databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1') || databaseUrl.includes('sslmode=disable') || databaseUrl.includes('@postgres:');
     pgPool = new pg.Pool({
       connectionString: databaseUrl,
       ssl: isLocal ? false : { rejectUnauthorized: false },
+      connectionTimeoutMillis: 3500, // Timeout rápido de 3.5s caso o host remoto esteja inacessível
+      idleTimeoutMillis: 10000,
+    });
+    pgPool.on('error', (err) => {
+      console.warn('⚠️ Erro no pool do PostgreSQL:', err.message);
     });
     console.log('🔗 PostgreSQL pool initialized with connection string');
   } catch (err) {
@@ -270,10 +286,20 @@ async function initPostgres(): Promise<void> {
 
     console.log('🗄️  Tabelas PostgreSQL verificadas/criadas com sucesso.');
     await seedPostgresIfEmpty();
-  } catch (err) {
-    console.error('❌ Falha ao inicializar o schema PostgreSQL. Caindo para o armazenamento local em arquivo JSON:', err);
-    // Disable the pool so every DAL function below falls back to the local JSON store
-    // instead of silently failing on every request.
+    pgConnected = true;
+    pgStatusDetails = 'PostgreSQL Conectado com Sucesso';
+  } catch (err: any) {
+    const errorMsg = err?.message || String(err);
+    console.warn(`ℹ️ PostgreSQL externo indisponível (${errorMsg}). Alternando com segurança para o armazenamento local em arquivo JSON.`);
+    pgConnected = false;
+    pgStatusDetails = `Armazenamento Local JSON Ativo (${errorMsg.includes('ETIMEDOUT') ? 'Host externo inalcançável' : errorMsg})`;
+    
+    // Encerra o pool com segurança para não reter sockets pendentes
+    try {
+      await pgPool?.end();
+    } catch {
+      // ignore
+    }
     pgPool = null;
   }
 }

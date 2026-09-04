@@ -53,7 +53,8 @@ import {
   updateStory,
   deleteStory,
   exportDatabaseBackup,
-  restoreDatabaseBackup
+  restoreDatabaseBackup,
+  getDatabaseStatus
 } from './src/db/database';
 
 async function startServer() {
@@ -80,10 +81,11 @@ async function startServer() {
 
   // Health check & Server Status
   app.get('/api/health', (req, res) => {
+    const dbStatus = getDatabaseStatus();
     res.json({
       status: 'online',
       service: 'Algodoal Connect Backend API',
-      database: process.env.DATABASE_URL ? 'PostgreSQL (Connected)' : 'Relational Engine (Active)',
+      database: dbStatus.connected ? 'PostgreSQL (Connected)' : `Relational Engine (${dbStatus.details})`,
       timestamp: new Date().toISOString()
     });
   });
