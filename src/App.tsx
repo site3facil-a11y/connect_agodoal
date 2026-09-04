@@ -535,35 +535,57 @@ export function App() {
           </span>
         </div>
 
-        {/* Layout Version Checkpoint & View Controls */}
+        {/* Main View Mode Selector (Início, Portal, Guia, Anuncie) */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Layout Checkpoint Selector */}
           <div className={`flex items-center gap-1 p-1 rounded-xl border ${
             isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
           }`}>
             <button
-              onClick={() => setLayoutVersion('new_photo_layout')}
+              onClick={() => handleTabChange('inicio')}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
-                layoutVersion === 'new_photo_layout'
+                activeMainView === 'inicio'
                   ? 'bg-amber-400 text-slate-950 shadow-xs font-black'
                   : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
               }`}
-              title="Novo Layout baseado na foto enviada"
+              title="Página Inicial: Todos os anúncios e parceiros"
             >
-              <Sparkles className="w-3.5 h-3.5 text-slate-950" />
-              <span>Novo Layout (Foto)</span>
+              <span>🏠 Início</span>
             </button>
 
             <button
-              onClick={() => setLayoutVersion('previous_layout')}
+              onClick={() => handleTabChange('portal')}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
-                layoutVersion === 'previous_layout'
-                  ? 'bg-teal-500 text-slate-950 shadow-xs font-black'
+                activeMainView === 'portal'
+                  ? 'bg-amber-400 text-slate-950 shadow-xs font-black'
                   : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
               }`}
-              title="Marcação para voltar ao layout anterior"
+              title="Portal de Anúncios: Somente anúncios comerciais"
             >
-              <span>⏮️ Layout Anterior</span>
+              <span>🌟 Portal de Anúncios</span>
+            </button>
+
+            <button
+              onClick={() => handleTabChange('guia')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
+                activeMainView === 'guia'
+                  ? 'bg-teal-400 text-slate-950 shadow-xs font-black'
+                  : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="Guia da Ilha: Somente parceiros credenciados"
+            >
+              <span>🌴 Guia da Ilha (Parceiros)</span>
+            </button>
+
+            <button
+              onClick={() => handleTabChange('anuncie')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
+                activeMainView === 'anuncie'
+                  ? 'bg-amber-400 text-slate-950 shadow-xs font-black'
+                  : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="Anuncie: Quadro de valores e planos comerciais"
+            >
+              <span>💎 Anuncie</span>
             </button>
           </div>
 
@@ -804,7 +826,7 @@ export function App() {
               <div className="flex flex-col sm:flex-row items-center gap-2 text-center sm:text-left">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">🌴</span>
-                  <span className="font-bold">Algodoal Connect • Guia de Anúncios e Serviços da Ilha de Algodoal</span>
+                  <span className="font-bold">Algodoal Connect © 2026 - Ilha de Maiandeua, Pará</span>
                 </div>
                 <span className="hidden sm:inline text-slate-400">•</span>
                 <p className="text-[11px]">
@@ -884,6 +906,9 @@ export function App() {
 
           {/* Mobile Footer with 3facil.com Credit */}
           <div className="px-6 pt-2 pb-6 text-center">
+            <p className="text-xs font-semibold text-slate-400 dark:text-slate-400 mb-1">
+              Algodoal Connect © 2026 - Ilha de Maiandeua, Pará
+            </p>
             <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
               <span>Produzido por</span>
               <a 

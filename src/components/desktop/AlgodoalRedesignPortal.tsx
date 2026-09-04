@@ -401,11 +401,11 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
                 onSearchChange('');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className={`hover:text-amber-400 transition cursor-pointer flex items-center gap-1.5 ${
-                activeMainView === 'inicio' ? 'text-amber-400 font-bold' : ''
+              className={`hover:text-amber-400 transition cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-full ${
+                activeMainView === 'inicio' ? 'text-slate-950 bg-white font-black shadow-xs' : 'text-slate-300'
               }`}
             >
-              <Home className="w-3.5 h-3.5 text-amber-400" />
+              <Home className={`w-3.5 h-3.5 ${activeMainView === 'inicio' ? 'text-slate-950' : 'text-amber-400'}`} />
               <span>Início</span>
             </button>
             <button 
@@ -414,16 +414,13 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
                 setActiveMainView('portal');
                 onSelectCategory('todos');
                 onSearchChange('');
-                setTimeout(() => {
-                  const el = document.getElementById('secao-portal-anuncios') || document.getElementById('secao-navegacao');
-                  el?.scrollIntoView({ behavior: 'smooth' });
-                }, 50);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className={`hover:text-amber-400 transition cursor-pointer flex items-center gap-1.5 ${
-                activeMainView === 'portal' ? 'text-amber-400 font-bold' : ''
+              className={`hover:text-amber-400 transition cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-full ${
+                activeMainView === 'portal' ? 'text-slate-950 bg-amber-400 font-black shadow-xs' : 'text-slate-300'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <Sparkles className={`w-3.5 h-3.5 ${activeMainView === 'portal' ? 'text-slate-950' : 'text-amber-400'}`} />
               <span>Portal de Anúncios</span>
             </button>
             <button 
@@ -432,16 +429,13 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
                 setActiveMainView('guia');
                 onSelectCategory('todos');
                 onSearchChange('');
-                setTimeout(() => {
-                  const el = document.getElementById('secao-guia-parceiros') || document.getElementById('secao-navegacao');
-                  el?.scrollIntoView({ behavior: 'smooth' });
-                }, 50);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className={`hover:text-teal-300 transition cursor-pointer flex items-center gap-1.5 ${
-                activeMainView === 'guia' ? 'text-teal-400 font-bold' : ''
+              className={`hover:text-teal-300 transition cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-full ${
+                activeMainView === 'guia' ? 'text-slate-950 bg-teal-400 font-black shadow-xs' : 'text-slate-300'
               }`}
             >
-              <Compass className="w-3.5 h-3.5 text-teal-400" />
+              <Compass className={`w-3.5 h-3.5 ${activeMainView === 'guia' ? 'text-slate-950' : 'text-teal-400'}`} />
               <span>Guia da Ilha (Parceiros)</span>
             </button>
             <button 
@@ -450,16 +444,13 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
                 setActiveMainView('anuncie');
                 onSelectCategory('todos');
                 onSearchChange('');
-                setTimeout(() => {
-                  const el = document.getElementById('secao-quadro-valores') || document.getElementById('secao-navegacao');
-                  el?.scrollIntoView({ behavior: 'smooth' });
-                }, 50);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className={`hover:text-amber-400 transition cursor-pointer flex items-center gap-1.5 ${
-                activeMainView === 'anuncie' ? 'text-amber-400 font-bold' : ''
+              className={`hover:text-amber-400 transition cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-full ${
+                activeMainView === 'anuncie' ? 'text-slate-950 bg-amber-400 font-black shadow-xs' : 'text-slate-300'
               }`}
             >
-              <Tag className="w-3.5 h-3.5 text-amber-400" />
+              <Tag className={`w-3.5 h-3.5 ${activeMainView === 'anuncie' ? 'text-slate-950' : 'text-amber-400'}`} />
               <span>Anuncie</span>
             </button>
           </nav>
@@ -1036,27 +1027,54 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
       {/* ======================================================== */}
       {activeMainView === 'portal' && (
         <section className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-6 pb-2">
-          <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-amber-500/20 via-slate-900 to-slate-900 border border-amber-500/30 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2.5">
-                <span className="p-2.5 rounded-2xl bg-amber-400 text-slate-950 font-black text-xl shadow-md">
-                  🌟
-                </span>
-                <div>
-                  <h1 className="text-xl sm:text-2xl font-black text-white font-heading">
-                    Portal de Anúncios Comerciais
-                  </h1>
-                  <p className="text-xs sm:text-sm text-slate-300">
-                    Exibindo <strong>somente os anúncios comerciais</strong> da Ilha de Algodoal com contato direto pelo WhatsApp
-                  </p>
+          <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-amber-500/20 via-slate-900 to-slate-900 border border-amber-500/30 shadow-2xl flex flex-col gap-5">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2.5">
+                  <span className="p-2.5 rounded-2xl bg-amber-400 text-slate-950 font-black text-xl shadow-md">
+                    🌟
+                  </span>
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-black text-white font-heading">
+                      Portal de Anúncios Comerciais
+                    </h1>
+                    <p className="text-xs sm:text-sm text-slate-300">
+                      Exibindo <strong>somente os anúncios comerciais</strong> da Ilha de Algodoal com contato direto pelo WhatsApp
+                    </p>
+                  </div>
                 </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 self-start md:self-center">
+                <span className="px-4 py-2 rounded-2xl bg-slate-950/80 border border-amber-500/30 text-xs font-bold text-amber-300 shadow-inner">
+                  <strong className="text-white font-black">{activeFilteredAds.length}</strong> {activeFilteredAds.length === 1 ? 'anúncio comercial ativo' : 'anúncios comerciais ativos'}
+                </span>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 self-start md:self-center">
-              <span className="px-4 py-2 rounded-2xl bg-slate-950/80 border border-amber-500/30 text-xs font-bold text-amber-300 shadow-inner">
-                <strong className="text-white font-black">{activeFilteredAds.length}</strong> {activeFilteredAds.length === 1 ? 'anúncio comercial ativo' : 'anúncios comerciais ativos'}
-              </span>
+            {/* Quick Category Filters inside Portal */}
+            <div className="pt-3 border-t border-slate-800/80 flex items-center gap-2 overflow-x-auto no-scrollbar">
+              <span className="text-xs font-bold text-slate-400 shrink-0">Filtrar por:</span>
+              {[
+                { id: 'todos', label: 'Todos os Anúncios' },
+                { id: 'pousadas', label: '🏨 Pousadas' },
+                { id: 'alimentacao', label: '🍲 Restaurantes & Peixadas' },
+                { id: 'transporte', label: '🐎 Charretes' },
+                { id: 'passeios', label: '⛵ Passeios de Rabeta' },
+                { id: 'compras', label: '🛒 Depósitos & Gelo' }
+              ].map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => onSelectCategory(cat.id)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                    selectedCategory === cat.id
+                      ? 'bg-amber-400 text-slate-950 font-black shadow-md'
+                      : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
             </div>
           </div>
         </section>
@@ -1067,27 +1085,54 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
       {/* ======================================================== */}
       {activeMainView === 'guia' && (
         <section className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-6 pb-2">
-          <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-teal-500/20 via-slate-900 to-slate-900 border border-teal-500/30 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2.5">
-                <span className="p-2.5 rounded-2xl bg-teal-400 text-slate-950 font-black text-xl shadow-md">
-                  🌴
-                </span>
-                <div>
-                  <h1 className="text-xl sm:text-2xl font-black text-white font-heading">
-                    Guia da Ilha de Algodoal
-                  </h1>
-                  <p className="text-xs sm:text-sm text-slate-300">
-                    Exibindo <strong>somente os parceiros credenciados</strong> da ilha (charreteiros, barcos, pousadas e barracas)
-                  </p>
+          <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-teal-500/20 via-slate-900 to-slate-900 border border-teal-500/30 shadow-2xl flex flex-col gap-5">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2.5">
+                  <span className="p-2.5 rounded-2xl bg-teal-400 text-slate-950 font-black text-xl shadow-md">
+                    🌴
+                  </span>
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-black text-white font-heading">
+                      Guia da Ilha de Algodoal
+                    </h1>
+                    <p className="text-xs sm:text-sm text-slate-300">
+                      Exibindo <strong>somente os parceiros credenciados</strong> da ilha (charreteiros, barcos, pousadas e barracas)
+                    </p>
+                  </div>
                 </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 self-start md:self-center">
+                <span className="px-4 py-2 rounded-2xl bg-slate-950/80 border border-teal-500/30 text-xs font-bold text-teal-300 shadow-inner">
+                  <strong className="text-white font-black">{activeFilteredPartners.length}</strong> parceiros cadastrados
+                </span>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 self-start md:self-center">
-              <span className="px-4 py-2 rounded-2xl bg-slate-950/80 border border-teal-500/30 text-xs font-bold text-teal-300 shadow-inner">
-                <strong className="text-white font-black">{activeFilteredPartners.length}</strong> parceiros cadastrados
-              </span>
+            {/* Quick Category Filters inside Guia */}
+            <div className="pt-3 border-t border-slate-800/80 flex items-center gap-2 overflow-x-auto no-scrollbar">
+              <span className="text-xs font-bold text-slate-400 shrink-0">Filtrar por:</span>
+              {[
+                { id: 'todos', label: 'Todos os Parceiros' },
+                { id: 'transporte', label: '🐎 Charreteiros' },
+                { id: 'passeios', label: '⛵ Barqueiros & Rabetas' },
+                { id: 'pousadas', label: '🏨 Pousadas da Ilha' },
+                { id: 'alimentacao', label: '🍲 Restaurantes & Barracas' },
+                { id: 'compras', label: '🛒 Depósitos de Bebidas' }
+              ].map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => onSelectCategory(cat.id)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                    selectedCategory === cat.id
+                      ? 'bg-teal-400 text-slate-950 font-black shadow-md'
+                      : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
             </div>
           </div>
         </section>
@@ -2021,7 +2066,7 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
 
           {/* Copyright */}
           <div className="text-center">
-            <p>Algodoal Connect © 2024 - Ilha de Maiandeua, Pará</p>
+            <p>Algodoal Connect © 2026 - Ilha de Maiandeua, Pará</p>
             <p className="text-[10px] text-slate-500 mt-0.5">
               Produzido por <a href="https://www.3facil.com" target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline">3facil.com</a>
             </p>
