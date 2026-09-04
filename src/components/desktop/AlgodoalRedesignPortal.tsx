@@ -35,7 +35,9 @@ import {
   Building2,
   Store,
   DollarSign,
-  ArrowUp
+  ArrowUp,
+  Sun,
+  History
 } from 'lucide-react';
 import { Advertisement, Partner, TideDayEntry, UserProfile, WeatherData } from '../../types/index.ts';
 import { StoriesRow } from '../mobile/StoriesRow.tsx';
@@ -61,6 +63,7 @@ interface AlgodoalRedesignPortalProps {
   heroBackgroundUrl?: string;
   activeMainView?: 'inicio' | 'portal' | 'guia' | 'anuncie';
   onMainViewChange?: (view: 'inicio' | 'portal' | 'guia' | 'anuncie') => void;
+  onToggleLayout?: () => void;
 }
 
 export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
@@ -83,7 +86,8 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
   onOpenAdDetails,
   heroBackgroundUrl,
   activeMainView: propActiveMainView,
-  onMainViewChange
+  onMainViewChange,
+  onToggleLayout
 }) => {
   const [selectedPartnerForModal, setSelectedPartnerForModal] = useState<Partner | null>(null);
 
@@ -407,8 +411,8 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
             </div>
           </div>
 
-          {/* Center Navigation Links */}
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
+          {/* Center Navigation Links (Beautiful High-Contrast Pill Buttons) */}
+          <nav className="hidden md:flex items-center gap-1.5 p-1 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-inner">
             <button 
               id="nav-btn-inicio"
               onClick={() => {
@@ -417,12 +421,11 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
                 onSearchChange('');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className={`hover:text-amber-400 transition cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-full ${
-                activeMainView === 'inicio' ? 'text-slate-950 bg-white font-black shadow-xs' : 'text-slate-300'
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-black text-xs transition cursor-pointer ${
+                activeMainView === 'inicio' ? 'bg-amber-400 text-slate-950 shadow-xs' : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
               }`}
             >
-              <Home className={`w-3.5 h-3.5 ${activeMainView === 'inicio' ? 'text-slate-950' : 'text-amber-400'}`} />
-              <span>Início</span>
+              <span>🏠 Início</span>
             </button>
             <button 
               id="nav-btn-portal"
@@ -432,12 +435,11 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
                 onSearchChange('');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className={`hover:text-amber-400 transition cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-full ${
-                activeMainView === 'portal' ? 'text-slate-950 bg-amber-400 font-black shadow-xs' : 'text-slate-300'
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-black text-xs transition cursor-pointer ${
+                activeMainView === 'portal' ? 'bg-amber-400 text-slate-950 shadow-xs' : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
               }`}
             >
-              <Sparkles className={`w-3.5 h-3.5 ${activeMainView === 'portal' ? 'text-slate-950' : 'text-amber-400'}`} />
-              <span>Portal de Anúncios</span>
+              <span>🌟 Portal de Anúncios</span>
             </button>
             <button 
               id="nav-btn-guia"
@@ -447,12 +449,11 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
                 onSearchChange('');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className={`hover:text-teal-300 transition cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-full ${
-                activeMainView === 'guia' ? 'text-slate-950 bg-teal-400 font-black shadow-xs' : 'text-slate-300'
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-black text-xs transition cursor-pointer ${
+                activeMainView === 'guia' ? 'bg-teal-400 text-slate-950 shadow-xs' : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
               }`}
             >
-              <Compass className={`w-3.5 h-3.5 ${activeMainView === 'guia' ? 'text-slate-950' : 'text-teal-400'}`} />
-              <span>Guia da Ilha (Parceiros)</span>
+              <span>🌴 Guia da Ilha (Parceiros)</span>
             </button>
             <button 
               id="nav-btn-anuncie"
@@ -462,32 +463,57 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
                 onSearchChange('');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className={`hover:text-amber-400 transition cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-full ${
-                activeMainView === 'anuncie' ? 'text-slate-950 bg-amber-400 font-black shadow-xs' : 'text-slate-300'
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-black text-xs transition cursor-pointer ${
+                activeMainView === 'anuncie' ? 'bg-amber-400 text-slate-950 shadow-xs' : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
               }`}
             >
-              <Tag className={`w-3.5 h-3.5 ${activeMainView === 'anuncie' ? 'text-slate-950' : 'text-amber-400'}`} />
-              <span>Anuncie</span>
+              <span>💎 Anuncie</span>
             </button>
           </nav>
 
-          {/* Right Action: Gold Pill Button */}
-          <div className="flex items-center gap-3">
+          {/* Right Actions: Layout Toggle ("Layout Antigo") + Theme Switcher + Admin */}
+          <div className="flex items-center gap-2">
+            {/* Button to toggle to Layout Antigo */}
+            {onToggleLayout && (
+              <button
+                id="btn-layout-antigo"
+                onClick={onToggleLayout}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer active:scale-95"
+                title="Alternar para o Layout Antigo / Clássico"
+              >
+                <History className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Layout Antigo</span>
+                <span className="sm:hidden">Antigo</span>
+              </button>
+            )}
+
+            {/* Theme Switcher Button */}
+            <button
+              onClick={onToggleTheme}
+              className="p-2 sm:px-3 sm:py-1.5 rounded-full text-xs font-bold bg-slate-800/90 hover:bg-slate-700 text-amber-400 border border-slate-700 flex items-center gap-1.5 transition cursor-pointer active:scale-95"
+              title="Alternar Tema Claro / Escuro"
+            >
+              {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+              <span className="hidden lg:inline">{theme === 'dark' ? 'Tema Claro' : 'Tema Escuro'}</span>
+            </button>
+
+            {/* Admin / Login Button */}
             <button
               onClick={onOpenAdmin}
-              className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs px-4 sm:px-5 py-2.5 rounded-full flex items-center gap-2 shadow-lg shadow-amber-500/20 transition-transform active:scale-95 cursor-pointer"
+              className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs px-3 sm:px-4 py-2 rounded-full flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition-transform active:scale-95 cursor-pointer"
             >
-              <User className="w-4 h-4 text-slate-950" />
-              <span>{currentUser?.role === 'admin' ? 'Painel Admin' : 'Entrar / Admin'}</span>
+              <User className="w-3.5 h-3.5 text-slate-950" />
+              <span className="hidden sm:inline">{currentUser?.role === 'admin' ? 'Painel Admin' : 'Entrar / Admin'}</span>
+              <span className="sm:hidden">{currentUser?.role === 'admin' ? 'Admin' : 'Entrar'}</span>
             </button>
           </div>
         </div>
       </header>
 
       {/* ======================================================== */}
-      {/* STICKY MAIN VIEW BAR (INÍCIO | PORTAL | GUIA | ANUNCIE)  */}
+      {/* STICKY MAIN VIEW BAR (MOBILE ONLY: INÍCIO | PORTAL | GUIA | ANUNCIE) */}
       {/* ======================================================== */}
-      <nav className="sticky top-18 z-40 bg-[#080d18]/95 border-b border-slate-800/90 backdrop-blur-md px-3 sm:px-6 py-2.5 shadow-xl">
+      <nav className="md:hidden sticky top-18 z-40 bg-[#080d18]/95 border-b border-slate-800/90 backdrop-blur-md px-3 sm:px-6 py-2.5 shadow-xl">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 overflow-x-auto no-scrollbar">
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Tab 1: Início (Tudo) */}

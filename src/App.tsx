@@ -310,8 +310,13 @@ export function App() {
   // Theme Mode ('dark' | 'light') - Light Theme Default
   const [theme, setTheme] = useState<'dark' | 'light'>('light');
 
-  // View Mode: 'desktop' | 'mobile' (Defaults to 'desktop' so desktop view is always available)
-  const [viewMode, setViewMode] = useState<'desktop' | 'mobile'>('desktop');
+  // View Mode: 'desktop' | 'mobile' (Defaults to 'mobile' on smartphone screens, 'desktop' on larger screens)
+  const [viewMode, setViewMode] = useState<'desktop' | 'mobile'>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return 'mobile';
+    }
+    return 'desktop';
+  });
 
   // Layout Version: 'new_photo_layout' (Current from WhatsApp screenshot) | 'previous_layout' (Checkpoint / Marcação)
   const [layoutVersion, setLayoutVersion] = useState<'new_photo_layout' | 'previous_layout'>('new_photo_layout');
@@ -527,102 +532,31 @@ export function App() {
     }`}>
       
       {/* ======================================================== */}
-      {/* 0. VIEW SWITCHER & LAYOUT CHECKPOINT TOOLBAR             */}
+      {/* 0. VIEW SWITCHER (ONLY ACTIVE IN PREVIOUS_LAYOUT)         */}
       {/* ======================================================== */}
-      <div className={`w-full border-b px-4 py-2 flex flex-wrap items-center justify-between gap-2 z-30 text-xs transition-colors ${
-        isDark ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700 shadow-xs'
-      }`}>
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-teal-500 animate-pulse" />
-          <span className="font-bold">
-            Algodoal Connect • <strong className="text-teal-600">Portal & Guia</strong>
-          </span>
-          <span className={`hidden sm:inline-block px-2 py-0.5 rounded-md text-[10px] border ${
-            isDark ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-600 border-slate-200'
-          }`}>
-            Contatos 100% Diretos
-          </span>
-        </div>
-
-        {/* Main View Mode Selector (Início, Portal, Guia, Anuncie) */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className={`flex items-center gap-1 p-1 rounded-xl border ${
-            isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
-          }`}>
-            <button
-              onClick={() => handleTabChange('inicio')}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
-                activeMainView === 'inicio'
-                  ? 'bg-amber-400 text-slate-950 shadow-xs font-black'
-                  : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
-              }`}
-              title="Página Inicial: Todos os anúncios e parceiros"
-            >
-              <span>🏠 Início</span>
-            </button>
-
-            <button
-              onClick={() => handleTabChange('portal')}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
-                activeMainView === 'portal'
-                  ? 'bg-amber-400 text-slate-950 shadow-xs font-black'
-                  : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
-              }`}
-              title="Portal de Anúncios: Somente anúncios comerciais"
-            >
-              <span>🌟 Portal de Anúncios</span>
-            </button>
-
-            <button
-              onClick={() => handleTabChange('guia')}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
-                activeMainView === 'guia'
-                  ? 'bg-teal-400 text-slate-950 shadow-xs font-black'
-                  : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
-              }`}
-              title="Guia da Ilha: Somente parceiros credenciados"
-            >
-              <span>🌴 Guia da Ilha (Parceiros)</span>
-            </button>
-
-            <button
-              onClick={() => handleTabChange('anuncie')}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
-                activeMainView === 'anuncie'
-                  ? 'bg-amber-400 text-slate-950 shadow-xs font-black'
-                  : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
-              }`}
-              title="Anuncie: Quadro de valores e planos comerciais"
-            >
-              <span>💎 Anuncie</span>
-            </button>
+      {layoutVersion === 'previous_layout' && (
+        <div className={`w-full border-b px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 z-30 text-xs transition-colors ${
+          isDark ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700 shadow-xs'
+        }`}>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-teal-500 animate-pulse" />
+            <span className="font-bold">
+              Algodoal Connect • <strong className="text-teal-600">Layout Clássico (Antigo)</strong>
+            </span>
           </div>
 
-          {/* Theme Switcher Button */}
-          <button
-            onClick={toggleTheme}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-xl font-bold text-xs transition cursor-pointer border ${
-              isDark 
-                ? 'bg-slate-800 hover:bg-slate-700 text-amber-400 border-slate-700' 
-                : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-300'
-            }`}
-            title="Alternar Tema Claro / Escuro"
-          >
-            {isDark ? (
-              <>
-                <Sun className="w-3.5 h-3.5 text-amber-400" />
-                <span className="hidden sm:inline">Tema Claro</span>
-              </>
-            ) : (
-              <>
-                <Moon className="w-3.5 h-3.5 text-slate-700" />
-                <span className="hidden sm:inline">Tema Escuro</span>
-              </>
-            )}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Button to return to the New Photo Layout */}
+            <button
+              onClick={() => setLayoutVersion('new_photo_layout')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md shadow-amber-400/20 transition cursor-pointer active:scale-95"
+              title="Voltar para o Novo Portal com Foto de Capa"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Voltar ao Novo Portal (Foto)</span>
+            </button>
 
-          {/* View Modes (Only active if in previous_layout or testing) */}
-          {layoutVersion === 'previous_layout' && (
+            {/* Desktop / Mobile view toggle */}
             <div className={`flex items-center gap-1 p-1 rounded-xl border ${
               isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
             }`}>
@@ -650,9 +584,31 @@ export function App() {
                 <span>Mobile</span>
               </button>
             </div>
-          )}
+
+            {/* Theme switcher */}
+            <button
+              onClick={toggleTheme}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer border ${
+                isDark 
+                  ? 'bg-slate-800 hover:bg-slate-700 text-amber-400 border-slate-700' 
+                  : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-300'
+              }`}
+            >
+              {isDark ? (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden sm:inline">Tema Claro</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-slate-700" />
+                  <span className="hidden sm:inline">Tema Escuro</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ======================================================== */}
       {/* 1. NEW PHOTO LAYOUT (ACTIVE BY DEFAULT)                  */}
@@ -686,6 +642,7 @@ export function App() {
             heroBackgroundUrl={heroBackgroundUrl}
             activeMainView={activeMainView}
             onMainViewChange={setActiveMainView}
+            onToggleLayout={() => setLayoutVersion('previous_layout')}
           />
           {/* Mobile Bottom Navigation Bar (Visible on mobile viewports) */}
           <div className="md:hidden">
