@@ -6,3 +6,9 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Dados gerados em runtime pelo container (fallback local do banco).
+# Nunca devem ser versionados: escrever neles em produção gera alterações
+# locais no servidor que quebram o "git pull" do deploy automático.
+data/*.json
+data/*.backup.json

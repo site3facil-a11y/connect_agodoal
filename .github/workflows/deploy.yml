@@ -16,9 +16,18 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            set -e
             cd /home/ec2-user/app
-            git pull origin main
+
+            echo "🔄 Descartando qualquer alteração local (ex: data/*.json gerados em runtime) e sincronizando com o main remoto..."
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd -e "data/"
+
             mkdir -p data
+
+            echo "📦 Reconstruindo containers com o código mais recente..."
             docker compose down
             docker compose up -d --build
-            echo "✅ Deploy concluído!"
+
+            echo "✅ Deploy concluído! Commit ativo: $(git rev-parse --short HEAD)"
