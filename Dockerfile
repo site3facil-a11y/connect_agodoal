@@ -8,8 +8,8 @@ WORKDIR /app
 # Copia manifestos de dependência
 COPY package*.json ./
 
-# Instala todas as dependências necessárias para o build
-RUN npm ci
+# Instala dependências de forma compatível
+RUN npm install
 
 # Copia os arquivos do projeto
 COPY . .
@@ -29,11 +29,11 @@ ENV PORT=3000
 
 # Instala apenas dependências de produção para economizar memória e espaço
 COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm install --omit=dev && npm cache clean --force
 
 # Copia os arquivos compilados e dados necessários
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/data ./data
+RUN mkdir -p /app/data
 COPY --from=builder /app/assets ./assets
 
 # Expõe a porta 3000

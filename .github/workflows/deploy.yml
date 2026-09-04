@@ -19,15 +19,25 @@ jobs:
             set -e
             cd /home/ec2-user/app
 
-            echo "🔄 Descartando qualquer alteração local (ex: data/*.json gerados em runtime) e sincronizando com o main remoto..."
+            echo "🔄 Sincronizando com a branch main..."
             git fetch origin main
             git reset --hard origin/main
-            git clean -fd -e "data/"
 
             mkdir -p data
 
             echo "📦 Reconstruindo containers com o código mais recente..."
-            docker compose down
-            docker compose up -d --build
+            if command -v docker-compose &> /dev/null; then
+              DOCKER_CMD="docker-compose"
+            else
+              DOCKER_CMD="docker compose"
+            fi
+
+            # Tenta rodar com docker ou com sudo se necessario
+            if $DOCKER_CMD down 2>/dev/null; then
+              $DOCKER_CMD up -d --build
+            else
+              sudo $DOCKER_CMD down
+              sudo $DOCKER_CMD up -d --build
+            fi
 
             echo "✅ Deploy concluído! Commit ativo: $(git rev-parse --short HEAD)"
