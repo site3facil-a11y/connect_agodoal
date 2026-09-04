@@ -60,6 +60,15 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // Prevent browser caching of development assets and index.html
+  app.use((req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+    next();
+  });
+
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));
   app.use('/imagens', express.static(path.join(process.cwd(), 'public', 'imagens')));
