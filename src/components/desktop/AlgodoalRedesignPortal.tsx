@@ -376,12 +376,12 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
   });
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden min-h-screen bg-[#060a12] text-white flex flex-col font-sans selection:bg-amber-500 selection:text-black">
+    <div className="w-full min-h-screen bg-[#060a12] text-white flex flex-col font-sans selection:bg-amber-500 selection:text-black">
       
       {/* ======================================================== */}
       {/* 1. TOP NAVBAR (DARK ATMOSPHERIC)                         */}
       {/* ======================================================== */}
-      <header className="w-full max-w-full bg-[#060a12]/95 border-b border-slate-800/80 sticky top-0 z-50 backdrop-blur-md overflow-x-hidden sm:overflow-visible">
+      <header className="w-full bg-[#060a12]/95 border-b border-slate-800/80 sticky top-0 z-50 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-2.5 sm:px-6 h-14 sm:h-18 flex items-center justify-between gap-1.5 sm:gap-4">
           
           {/* Brand Logo & Location */}
