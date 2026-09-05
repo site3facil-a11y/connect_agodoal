@@ -57,6 +57,22 @@ import {
   getDatabaseStatus
 } from './src/db/database';
 
+function requireDatabase(req, res, next) {
+  const dbStatus = getDatabaseStatus();
+  if (!dbStatus.connected) {
+    console.warn(
+      `\u26d4 [${new Date().toISOString()}] Escrita bloqueada (banco indisponivel) - ` +
+      `${req.method} ${req.originalUrl} - IP: ${req.ip}`
+    );
+    return res.status(503).json({
+      error: 'DATABASE_UNAVAILABLE',
+      message: 'Nao foi possivel salvar: sem conexao com o banco de dados principal no momento. Tente novamente em instantes.',
+      details: dbStatus.details
+    });
+  }
+  next();
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -86,6 +102,9 @@ async function startServer() {
       status: 'online',
       service: 'Algodoal Connect Backend API',
       database: dbStatus.connected ? 'PostgreSQL (Connected)' : `Relational Engine (${dbStatus.details})`,
+      dbConnected: dbStatus.connected,
+      dbType: dbStatus.type,
+      dbDetails: dbStatus.details,
       timestamp: new Date().toISOString()
     });
   });
@@ -337,7 +356,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/advertisements', async (req, res) => {
+  app.post('/api/advertisements', requireDatabase, async (req, res) => {
     try {
       const data = req.body;
       const newAd = {
@@ -373,7 +392,7 @@ async function startServer() {
     }
   });
 
-  app.patch('/api/advertisements/:id', async (req, res) => {
+  app.patch('/api/advertisements/:id', requireDatabase, async (req, res) => {
     try {
       const updated = await updateAdvertisement(req.params.id, req.body);
       if (!updated) return res.status(404).json({ error: 'Anúncio não encontrado' });
@@ -383,7 +402,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/advertisements/:id', async (req, res) => {
+  app.delete('/api/advertisements/:id', requireDatabase, async (req, res) => {
     try {
       const ok = await deleteAdvertisement(req.params.id);
       if (!ok) return res.status(404).json({ error: 'Anúncio não encontrado' });
@@ -455,7 +474,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/stories', async (req, res) => {
+  app.post('/api/stories', requireDatabase, async (req, res) => {
     try {
       const data = req.body;
       const created = await createStory(data);
@@ -465,7 +484,7 @@ async function startServer() {
     }
   });
 
-  app.patch('/api/stories/:id', async (req, res) => {
+  app.patch('/api/stories/:id', requireDatabase, async (req, res) => {
     try {
       const updated = await updateStory(req.params.id, req.body);
       if (!updated) return res.status(404).json({ error: 'Destaque não encontrado' });
@@ -475,7 +494,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/stories/:id', async (req, res) => {
+  app.delete('/api/stories/:id', requireDatabase, async (req, res) => {
     try {
       const ok = await deleteStory(req.params.id);
       if (!ok) return res.status(404).json({ error: 'Destaque não encontrado' });
@@ -738,7 +757,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/partners', async (req, res) => {
+  app.post('/api/partners', requireDatabase, async (req, res) => {
     try {
       const data = req.body;
       const newPartner = {
@@ -768,7 +787,7 @@ async function startServer() {
     }
   });
 
-  app.patch('/api/partners/:id', async (req, res) => {
+  app.patch('/api/partners/:id', requireDatabase, async (req, res) => {
     try {
       const updated = await updatePartner(req.params.id, req.body);
       if (!updated) return res.status(404).json({ error: 'Parceiro não encontrado' });
@@ -778,7 +797,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/partners/:id', async (req, res) => {
+  app.delete('/api/partners/:id', requireDatabase, async (req, res) => {
     try {
       const ok = await deletePartner(req.params.id);
       if (!ok) return res.status(404).json({ error: 'Parceiro não encontrado' });
@@ -800,7 +819,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/services', async (req, res) => {
+  app.post('/api/services', requireDatabase, async (req, res) => {
     try {
       const data = req.body;
       const newService = {
@@ -822,7 +841,7 @@ async function startServer() {
     }
   });
 
-  app.patch('/api/services/:id', async (req, res) => {
+  app.patch('/api/services/:id', requireDatabase, async (req, res) => {
     try {
       const updated = await updateService(req.params.id, req.body);
       if (!updated) return res.status(404).json({ error: 'Serviço não encontrado' });
@@ -832,7 +851,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/services/:id', async (req, res) => {
+  app.delete('/api/services/:id', requireDatabase, async (req, res) => {
     try {
       const ok = await deleteService(req.params.id);
       if (!ok) return res.status(404).json({ error: 'Serviço não encontrado' });
@@ -854,7 +873,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/orders', async (req, res) => {
+  app.post('/api/orders', requireDatabase, async (req, res) => {
     try {
       const data = req.body;
       const newOrder = {
@@ -882,7 +901,7 @@ async function startServer() {
     }
   });
 
-  app.patch('/api/orders/:id/status', async (req, res) => {
+  app.patch('/api/orders/:id/status', requireDatabase, async (req, res) => {
     try {
       const { status, driver_or_agent_name } = req.body;
       const updated = await updateOrderStatus(req.params.id, status, driver_or_agent_name);
@@ -931,7 +950,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/reviews', async (req, res) => {
+  app.post('/api/reviews', requireDatabase, async (req, res) => {
     try {
       const data = req.body;
       const newReview = {
