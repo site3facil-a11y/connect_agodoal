@@ -621,7 +621,7 @@ async function startServer() {
     }
   });
 
-  app.patch('/api/stories/:id', requireDatabase, async (req, res) => {
+  const handleUpdateStory = async (req: express.Request, res: express.Response) => {
     try {
       const updated = await updateStory(req.params.id, req.body);
       if (!updated) return res.status(404).json({ error: 'Destaque não encontrado' });
@@ -629,7 +629,10 @@ async function startServer() {
     } catch (err: any) {
       res.status(500).json({ error: 'Erro ao atualizar destaque/story', details: err.message });
     }
-  });
+  };
+
+  app.patch('/api/stories/:id', requireDatabase, handleUpdateStory);
+  app.put('/api/stories/:id', requireDatabase, handleUpdateStory);
 
   app.delete('/api/stories/:id', requireDatabase, async (req, res) => {
     try {

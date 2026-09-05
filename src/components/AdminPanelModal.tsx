@@ -1409,15 +1409,19 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   // Story Handlers
   const handleToggleStoryActive = async (story: IslandStory) => {
     try {
-      const nextActive = !story.active;
-      const updated = await api.updateStory(story.id, { active: nextActive });
+      const currentActive = story.active !== undefined 
+        ? story.active 
+        : (story.is_active !== undefined ? story.is_active : true);
+      const nextActive = !currentActive;
+      const updated = await api.updateStory(story.id, { active: nextActive, is_active: nextActive });
       if (updated) {
-        setStories(prev => prev.map(s => s.id === story.id ? { ...s, active: nextActive } : s));
+        setStories(prev => prev.map(s => s.id === story.id ? { ...s, ...updated, active: nextActive, is_active: nextActive } : s));
         showSuccess(`Destaque "${story.title}" ${nextActive ? 'ativado' : 'pausado'}!`);
+        window.dispatchEvent(new CustomEvent('algodoal_stories_updated'));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Erro ao atualizar status do destaque.');
+      alert(`Erro ao atualizar status do destaque: ${err?.message || 'Falha de comunicação'}`);
     }
   };
 
@@ -1428,6 +1432,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       if (success) {
         setStories(prev => prev.filter(s => s.id !== id));
         showSuccess(`Destaque "${title}" excluído com sucesso!`);
+        window.dispatchEvent(new CustomEvent('algodoal_stories_updated'));
       }
     } catch (err) {
       console.error(err);
@@ -1436,25 +1441,26 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   };
 
   const handleMoveStory = async (story: IslandStory, direction: 'up' | 'down') => {
-    const sorted = [...stories].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+    const sorted = [...stories].sort((a, b) => ((a.orderIndex ?? a.order_index) || 0) - ((b.orderIndex ?? b.order_index) || 0));
     const currentIndex = sorted.findIndex(s => s.id === story.id);
     if (currentIndex === -1) return;
     const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
     if (targetIndex < 0 || targetIndex >= sorted.length) return;
 
     const targetStory = sorted[targetIndex];
-    const currentOrder = story.orderIndex ?? currentIndex + 1;
-    const targetOrder = targetStory.orderIndex ?? targetIndex + 1;
+    const currentOrder = story.orderIndex ?? story.order_index ?? (currentIndex + 1);
+    const targetOrder = targetStory.orderIndex ?? targetStory.order_index ?? (targetIndex + 1);
 
     try {
-      await api.updateStory(story.id, { orderIndex: targetOrder });
-      await api.updateStory(targetStory.id, { orderIndex: currentOrder });
+      await api.updateStory(story.id, { orderIndex: targetOrder, order_index: targetOrder });
+      await api.updateStory(targetStory.id, { orderIndex: currentOrder, order_index: currentOrder });
       setStories(prev => prev.map(s => {
-        if (s.id === story.id) return { ...s, orderIndex: targetOrder };
-        if (s.id === targetStory.id) return { ...s, orderIndex: currentOrder };
+        if (s.id === story.id) return { ...s, orderIndex: targetOrder, order_index: targetOrder };
+        if (s.id === targetStory.id) return { ...s, orderIndex: currentOrder, order_index: currentOrder };
         return s;
       }));
       showSuccess(`Ordem de exibição dos destaques atualizada!`);
+      window.dispatchEvent(new CustomEvent('algodoal_stories_updated'));
     } catch (err) {
       console.error(err);
       alert('Erro ao reordenar destaques.');
@@ -3992,16 +3998,24 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                               </div>
 
                               {/* Active Status Badge */}
-                              <button
-                                onClick={() => handleToggleStoryActive(story)}
-                                className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full border transition cursor-pointer shrink-0 ${
-                                  story.active
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                    : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
-                                }`}
-                              >
-                                {story.active ? '● Ativo' : '○ Pausado'}
-                              </button>
+                              {(() => {
+                                const isStoryActive = story.active !== undefined 
+                                  ? story.active 
+                                  : (story.is_active !== undefined ? story.is_active : true);
+                                return (
+                                  <button
+                                    onClick={() => handleToggleStoryActive(story)}
+                                    className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full border transition cursor-pointer shrink-0 ${
+                                      isStoryActive
+                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                        : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
+                                    }`}
+                                    title={isStoryActive ? 'Clique para pausar este destaque' : 'Clique para ativar este destaque'}
+                                  >
+                                    {isStoryActive ? '● Ativo' : '○ Pausado'}
+                                  </button>
+                                );
+                              })()}
                             </div>
 
                             {/* Story Description & Meta */}

@@ -370,9 +370,13 @@ async function initPostgres(): Promise<void> {
       ALTER TABLE stories ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'todos';
       ALTER TABLE stories ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(50);
       ALTER TABLE stories ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;
       ALTER TABLE stories ADD COLUMN IF NOT EXISTS order_index INTEGER DEFAULT 0;
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS "orderIndex" INTEGER DEFAULT 0;
       ALTER TABLE stories ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
       ALTER TABLE stories ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+      UPDATE stories SET active = is_active WHERE active IS NULL AND is_active IS NOT NULL;
+      UPDATE stories SET is_active = active WHERE is_active IS NULL AND active IS NOT NULL;
     `);
 
     console.log('🗄️  Tabelas PostgreSQL verificadas/criadas com sucesso.');
@@ -634,11 +638,29 @@ function rowToUser(r: any): UserProfile {
   };
 }
 function rowToStory(r: any): IslandStory {
+  const activeVal = r.is_active !== undefined ? Boolean(r.is_active) : (r.active !== undefined ? Boolean(r.active) : true);
+  const orderVal = r.order_index !== undefined ? Number(r.order_index) : (r.orderIndex !== undefined ? Number(r.orderIndex) : 0);
+  const iconEmoji = r.emoji || r.icon || '✨';
+  const cover = r.cover_image || r.coverImage || '';
+  const full = r.full_image || r.fullImage || cover;
+
   return {
-    id: r.id, title: r.title, subtitle: r.subtitle || '', emoji: r.emoji || undefined,
-    coverImage: r.cover_image, fullImage: r.full_image, description: r.description || '',
-    location: r.location || '', tag: r.tag || '', category: r.category || 'todos',
-    whatsapp: r.whatsapp || undefined, is_active: r.is_active, order_index: r.order_index,
+    id: r.id,
+    title: r.title,
+    subtitle: r.subtitle || '',
+    emoji: iconEmoji,
+    icon: iconEmoji,
+    coverImage: cover,
+    fullImage: full,
+    description: r.description || '',
+    location: r.location || '',
+    tag: r.tag || '',
+    category: r.category || 'todos',
+    whatsapp: r.whatsapp || undefined,
+    is_active: activeVal,
+    active: activeVal,
+    order_index: orderVal,
+    orderIndex: orderVal,
     created_at: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
     updated_at: r.updated_at instanceof Date ? r.updated_at.toISOString() : r.updated_at
   };
@@ -2589,16 +2611,16 @@ export async function getIslandStats() {
 
 export async function getStories(onlyActive = false): Promise<IslandStory[]> {
   if (await pgReady()) {
-    const where = onlyActive ? 'WHERE is_active = TRUE' : '';
+    const where = onlyActive ? 'WHERE (is_active = TRUE OR active = TRUE)' : '';
     const res = await pgPool!.query(`SELECT * FROM stories ${where} ORDER BY order_index ASC`);
     return res.rows.map(rowToStory);
   }
   const db = loadLocalDB();
   let list = db.stories || SEED_STORIES;
   if (onlyActive) {
-    list = list.filter(s => s.is_active !== false);
+    list = list.filter(s => (s.is_active !== false && s.active !== false));
   }
-  return list.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+  return list.sort((a, b) => ((a.order_index ?? a.orderIndex ?? 0) - (b.order_index ?? b.orderIndex ?? 0)));
 }
 
 export async function getStoryById(id: string): Promise<IslandStory | null> {
@@ -2612,29 +2634,42 @@ export async function getStoryById(id: string): Promise<IslandStory | null> {
 }
 
 export async function createStory(storyData: Partial<IslandStory>): Promise<IslandStory> {
+  const activeVal = storyData.is_active !== undefined 
+    ? storyData.is_active 
+    : (storyData.active !== undefined ? storyData.active : true);
+
   if (await pgReady()) {
     const countRes = await pgPool!.query('SELECT COUNT(*)::int AS count FROM stories');
-    const newStory: IslandStory = {
+    const orderVal = typeof storyData.order_index === 'number' 
+      ? storyData.order_index 
+      : (typeof storyData.orderIndex === 'number' ? storyData.orderIndex : (countRes.rows[0].count + 1));
+    const iconEmoji = storyData.emoji || (storyData as any).icon || '✨';
+    const cover = storyData.coverImage || (storyData as any).cover_image || '/imagens/vila2.jpg';
+    const full = storyData.fullImage || (storyData as any).full_image || cover;
+
+    const newStory = {
       id: storyData.id || `story_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
       title: storyData.title || 'Novo Destaque',
       subtitle: storyData.subtitle || 'Destaque de Algodoal',
-      emoji: storyData.emoji || '✨',
-      coverImage: storyData.coverImage || '/imagens/vila2.jpg',
-      fullImage: storyData.fullImage || storyData.coverImage || '/imagens/vila2.jpg',
+      emoji: iconEmoji,
+      cover_image: cover,
+      full_image: full,
       description: storyData.description || 'Conheça as belezas e histórias da Ilha de Algodoal.',
       location: storyData.location || 'Ilha de Algodoal',
       tag: storyData.tag || 'Destaque',
       category: storyData.category || 'todos',
       whatsapp: storyData.whatsapp || '',
-      is_active: storyData.is_active !== false,
-      order_index: typeof storyData.order_index === 'number' ? storyData.order_index : (countRes.rows[0].count + 1),
+      is_active: activeVal,
+      active: activeVal,
+      order_index: orderVal,
+      orderIndex: orderVal,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
     const res = await pgPool!.query(
-      `INSERT INTO stories (id, title, subtitle, emoji, cover_image, full_image, description, location, tag, category, whatsapp, is_active, order_index, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
-      [newStory.id, newStory.title, newStory.subtitle, newStory.emoji, newStory.coverImage, newStory.fullImage, newStory.description, newStory.location, newStory.tag, newStory.category, newStory.whatsapp, newStory.is_active, newStory.order_index, newStory.created_at, newStory.updated_at]
+      `INSERT INTO stories (id, title, subtitle, emoji, cover_image, full_image, description, location, tag, category, whatsapp, is_active, active, order_index, "orderIndex", created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *`,
+      [newStory.id, newStory.title, newStory.subtitle, newStory.emoji, newStory.cover_image, newStory.full_image, newStory.description, newStory.location, newStory.tag, newStory.category, newStory.whatsapp, newStory.is_active, newStory.active, newStory.order_index, newStory.orderIndex, newStory.created_at, newStory.updated_at]
     );
     return rowToStory(res.rows[0]);
   }
@@ -2642,20 +2677,30 @@ export async function createStory(storyData: Partial<IslandStory>): Promise<Isla
   const db = loadLocalDB();
   if (!db.stories) db.stories = [...SEED_STORIES];
 
+  const orderVal = typeof storyData.order_index === 'number' 
+    ? storyData.order_index 
+    : (typeof storyData.orderIndex === 'number' ? storyData.orderIndex : (db.stories.length + 1));
+  const iconEmoji = storyData.emoji || (storyData as any).icon || '✨';
+  const cover = storyData.coverImage || (storyData as any).cover_image || '/imagens/vila2.jpg';
+  const full = storyData.fullImage || (storyData as any).full_image || cover;
+
   const newStory: IslandStory = {
     id: storyData.id || `story_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
     title: storyData.title || 'Novo Destaque',
     subtitle: storyData.subtitle || 'Destaque de Algodoal',
-    emoji: storyData.emoji || '✨',
-    coverImage: storyData.coverImage || '/imagens/vila2.jpg',
-    fullImage: storyData.fullImage || storyData.coverImage || '/imagens/vila2.jpg',
+    emoji: iconEmoji,
+    icon: iconEmoji,
+    coverImage: cover,
+    fullImage: full,
     description: storyData.description || 'Conheça as belezas e histórias da Ilha de Algodoal.',
     location: storyData.location || 'Ilha de Algodoal',
     tag: storyData.tag || 'Destaque',
     category: storyData.category || 'todos',
     whatsapp: storyData.whatsapp || '',
-    is_active: storyData.is_active !== false,
-    order_index: typeof storyData.order_index === 'number' ? storyData.order_index : (db.stories.length + 1),
+    is_active: activeVal,
+    active: activeVal,
+    order_index: orderVal,
+    orderIndex: orderVal,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
@@ -2667,9 +2712,39 @@ export async function createStory(storyData: Partial<IslandStory>): Promise<Isla
 
 export async function updateStory(id: string, updates: Partial<IslandStory>): Promise<IslandStory | null> {
   if (await pgReady()) {
-    const payload: Record<string, any> = { ...updates, updated_at: new Date().toISOString() };
-    if (payload.coverImage !== undefined) { payload.cover_image = payload.coverImage; delete payload.coverImage; }
-    if (payload.fullImage !== undefined) { payload.full_image = payload.fullImage; delete payload.fullImage; }
+    const payload: Record<string, any> = { updated_at: new Date().toISOString() };
+    if (updates.title !== undefined) payload.title = updates.title;
+    if (updates.subtitle !== undefined) payload.subtitle = updates.subtitle;
+    if (updates.emoji !== undefined) payload.emoji = updates.emoji;
+    if ((updates as any).icon !== undefined && updates.emoji === undefined) payload.emoji = (updates as any).icon;
+    if (updates.coverImage !== undefined) payload.cover_image = updates.coverImage;
+    if (updates.fullImage !== undefined) payload.full_image = updates.fullImage;
+    if ((updates as any).cover_image !== undefined) payload.cover_image = (updates as any).cover_image;
+    if ((updates as any).full_image !== undefined) payload.full_image = (updates as any).full_image;
+    if (updates.description !== undefined) payload.description = updates.description;
+    if (updates.location !== undefined) payload.location = updates.location;
+    if (updates.tag !== undefined) payload.tag = updates.tag;
+    if (updates.category !== undefined) payload.category = updates.category;
+    if (updates.whatsapp !== undefined) payload.whatsapp = updates.whatsapp;
+    
+    // Status (atualiza tanto is_active quanto active)
+    if (updates.is_active !== undefined) {
+      payload.is_active = updates.is_active;
+      payload.active = updates.is_active;
+    }
+    if (updates.active !== undefined) {
+      payload.is_active = updates.active;
+      payload.active = updates.active;
+    }
+
+    // Ordenação (atualiza tanto order_index quanto orderIndex)
+    if (updates.order_index !== undefined) {
+      payload.order_index = updates.order_index;
+    }
+    if (updates.orderIndex !== undefined) {
+      payload.order_index = updates.orderIndex;
+    }
+
     const row = await pgPartialUpdate('stories', id, payload);
     return row ? rowToStory(row) : null;
   }
@@ -2680,9 +2755,21 @@ export async function updateStory(id: string, updates: Partial<IslandStory>): Pr
   const index = db.stories.findIndex(s => s.id === id);
   if (index === -1) return null;
 
+  const current = db.stories[index];
+  const activeVal = updates.is_active !== undefined 
+    ? updates.is_active 
+    : (updates.active !== undefined ? updates.active : (current.active ?? current.is_active ?? true));
+  const orderVal = updates.order_index !== undefined
+    ? updates.order_index
+    : (updates.orderIndex !== undefined ? updates.orderIndex : (current.orderIndex ?? current.order_index ?? 0));
+
   db.stories[index] = {
-    ...db.stories[index],
+    ...current,
     ...updates,
+    is_active: activeVal,
+    active: activeVal,
+    order_index: orderVal,
+    orderIndex: orderVal,
     updated_at: new Date().toISOString()
   };
 
