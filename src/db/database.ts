@@ -30,11 +30,26 @@ let pgPool: pg.Pool | null = null;
 let pgConnected = false;
 let pgStatusDetails = 'Armazenamento Local JSON Ativo';
 
-export function getDatabaseStatus(): { type: 'postgresql' | 'json'; connected: boolean; details: string } {
+export function maskDatabaseUrl(url?: string): string {
+  if (!url || url.trim() === '') return 'Não configurado (DATABASE_URL vazia)';
+  try {
+    return url.replace(/:\/\/(.*?):(.*?)@/, '://$1:••••••••@');
+  } catch {
+    return 'URL Configurada';
+  }
+}
+
+export function getDatabaseStatus(): {
+  type: 'postgresql' | 'json';
+  connected: boolean;
+  details: string;
+  configuredUrl: string;
+} {
   return {
     type: pgConnected ? 'postgresql' : 'json',
     connected: pgConnected,
-    details: pgConnected ? 'PostgreSQL Database Connected' : pgStatusDetails,
+    details: pgConnected ? 'PostgreSQL Conectado com Sucesso' : pgStatusDetails,
+    configuredUrl: maskDatabaseUrl(process.env.DATABASE_URL),
   };
 }
 
@@ -2025,6 +2040,7 @@ function rowToAdminSettings(r: any): AdminSettings {
     hero_rotation_enabled: r.hero_rotation_enabled,
     hero_active_images: r.hero_active_images || [],
     hero_custom_images: r.hero_custom_images || [],
+    hero_deleted_presets: r.hero_deleted_presets || [],
     updated_at: r.updated_at instanceof Date ? r.updated_at.toISOString() : r.updated_at
   };
 }
@@ -2039,7 +2055,8 @@ export async function getAdminSettings(): Promise<AdminSettings> {
         ...settings,
         hero_active_images: Array.isArray(settings.hero_active_images)
           ? settings.hero_active_images
-          : DEFAULT_HERO_PRESET_URLS
+          : DEFAULT_HERO_PRESET_URLS,
+        hero_deleted_presets: settings.hero_deleted_presets || []
       };
     }
     return DEFAULT_ADMIN_SETTINGS;
@@ -2083,6 +2100,7 @@ export async function updateAdminSettings(newSettings: Partial<AdminSettings>): 
     const payload = { ...newSettings, updated_at: new Date().toISOString() } as Record<string, any>;
     if (payload.hero_active_images !== undefined) payload.hero_active_images = JSON.stringify(payload.hero_active_images);
     if (payload.hero_custom_images !== undefined) payload.hero_custom_images = JSON.stringify(payload.hero_custom_images);
+    if (payload.hero_deleted_presets !== undefined) payload.hero_deleted_presets = JSON.stringify(payload.hero_deleted_presets);
 
     const entries = Object.entries(payload).filter(([, v]) => v !== undefined);
     const setClauses = entries.map(([k], i) => `"${k}" = $${i + 1}`);
@@ -2614,4 +2632,341 @@ export async function deleteStory(id: string): Promise<boolean> {
     return true;
   }
   return false;
+}
+
+// ==========================================
+// POSTGRESQL DIAGNOSTICS & DATA SYNC
+// ==========================================
+
+export async function testPostgresConnection(customUrl?: string): Promise<{
+  success: boolean;
+  message: string;
+  details?: any;
+}> {
+  const url = (customUrl && customUrl.trim()) || process.env.DATABASE_URL;
+  if (!url || url.trim() === '') {
+    return {
+      success: false,
+      message: 'Nenhuma URL de conexão PostgreSQL configurada (variável DATABASE_URL vazia).'
+    };
+  }
+
+  const isLocal = url.includes('localhost') || url.includes('127.0.0.1') || url.includes('sslmode=disable') || url.includes('@postgres:');
+  const client = new pg.Client({
+    connectionString: url,
+    ssl: isLocal ? false : { rejectUnauthorized: false },
+    connectionTimeoutMillis: 4000
+  });
+
+  try {
+    await client.connect();
+    const verRes = await client.query('SELECT version()');
+    const tblRes = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      ORDER BY table_name
+    `);
+    const tables = tblRes.rows.map((r: any) => r.table_name);
+
+    // Se o pool principal estava inativo ou falhou no startup, reconecta agora
+    if (!pgConnected && (!customUrl || customUrl === process.env.DATABASE_URL)) {
+      try {
+        if (!pgPool) {
+          pgPool = new pg.Pool({
+            connectionString: url,
+            ssl: isLocal ? false : { rejectUnauthorized: false },
+            connectionTimeoutMillis: 5000,
+            idleTimeoutMillis: 10000,
+          });
+        }
+        await initPostgres();
+      } catch (e: any) {
+        console.warn('⚠️ Tentativa de ativação do pool principal pós-teste:', e.message);
+      }
+    }
+
+    await client.end();
+    return {
+      success: true,
+      message: 'Conexão com PostgreSQL estabelecida com sucesso!',
+      details: {
+        version: verRes.rows[0]?.version,
+        tablesCount: tables.length,
+        tables,
+        configuredHost: maskDatabaseUrl(url)
+      }
+    };
+  } catch (err: any) {
+    try { await client.end(); } catch { /* ignore */ }
+    const msg = err?.message || String(err);
+    let advice = 'Verifique credenciais de usuário, senha, host e porta.';
+    if (msg.includes('timeout') || msg.includes('ETIMEDOUT')) {
+      advice = 'Tempo limite esgotado (Timeout). Verifique se a porta 5432 está aberta no firewall do servidor (ex: ufw allow 5432/tcp) e se o arquivo postgresql.conf está com listen_addresses = \'*\'.';
+    } else if (msg.includes('password authentication failed')) {
+      advice = 'Usuário ou senha incorretos na string de conexão.';
+    } else if (msg.includes('does not exist')) {
+      advice = 'O banco de dados informado na URL não foi criado no PostgreSQL ainda.';
+    } else if (msg.includes('ECONNREFUSED')) {
+      advice = 'Conexão recusada. O serviço PostgreSQL não está rodando nesta porta/IP ou o container postgres está parado.';
+    }
+
+    return {
+      success: false,
+      message: `Falha na conexão: ${msg}`,
+      details: { advice, rawError: msg, configuredHost: maskDatabaseUrl(url) }
+    };
+  }
+}
+
+export async function syncLocalDataToPostgres(): Promise<{
+  success: boolean;
+  message: string;
+  syncedCounts?: Record<string, number>;
+}> {
+  // Se o pool não está ativo, tenta conectar antes de sincronizar
+  if (!pgPool) {
+    const test = await testPostgresConnection();
+    if (!test.success) {
+      return {
+        success: false,
+        message: `Não foi possível sincronizar: PostgreSQL indisponível. ${test.message}`
+      };
+    }
+  }
+
+  if (!await pgReady() || !pgPool) {
+    return {
+      success: false,
+      message: 'PostgreSQL não está disponível para receber dados. Verifique a conexão primeiro.'
+    };
+  }
+
+  const db = loadLocalDB();
+  const counts: Record<string, number> = {};
+
+  try {
+    // 1. Partners
+    if (Array.isArray(db.partners)) {
+      counts.partners = 0;
+      for (const p of db.partners) {
+        await pgPool.query(
+          `INSERT INTO partners (id, name, category, subcategory, phone, whatsapp, description, photo_url, location, rating, total_reviews, is_active, verified, plan_type, price_starting, vehicle_badge, opening_hours, amenities, created_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+           ON CONFLICT (id) DO UPDATE SET
+             name = EXCLUDED.name,
+             category = EXCLUDED.category,
+             subcategory = EXCLUDED.subcategory,
+             phone = EXCLUDED.phone,
+             whatsapp = EXCLUDED.whatsapp,
+             description = EXCLUDED.description,
+             photo_url = EXCLUDED.photo_url,
+             location = EXCLUDED.location,
+             rating = EXCLUDED.rating,
+             total_reviews = EXCLUDED.total_reviews,
+             is_active = EXCLUDED.is_active,
+             verified = EXCLUDED.verified,
+             plan_type = EXCLUDED.plan_type,
+             price_starting = EXCLUDED.price_starting,
+             vehicle_badge = EXCLUDED.vehicle_badge,
+             opening_hours = EXCLUDED.opening_hours,
+             amenities = EXCLUDED.amenities`,
+          [p.id, p.name, p.category, p.subcategory || null, p.phone, p.whatsapp, p.description || '', p.photo_url, p.location, p.rating || 5.0, p.total_reviews || 0, p.is_active !== false, p.verified !== false, p.plan_type || null, p.price_starting || 0, p.vehicle_badge || null, p.opening_hours || null, JSON.stringify(p.amenities || []), p.created_at || new Date().toISOString()]
+        );
+        counts.partners++;
+      }
+    }
+
+    // 2. Services / Products
+    if (Array.isArray(db.services)) {
+      counts.services = 0;
+      for (const s of db.services) {
+        await pgPool.query(
+          `INSERT INTO services_products (id, partner_id, name, description, price, unit, category, image_url, available, estimated_time)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+           ON CONFLICT (id) DO UPDATE SET
+             name = EXCLUDED.name,
+             description = EXCLUDED.description,
+             price = EXCLUDED.price,
+             unit = EXCLUDED.unit,
+             available = EXCLUDED.available,
+             image_url = EXCLUDED.image_url`,
+          [s.id, s.partner_id, s.name, s.description || '', s.price || 0, s.unit || 'por unidade', s.category, s.image_url, s.available !== false, s.estimated_time || null]
+        );
+        counts.services++;
+      }
+    }
+
+    // 3. Advertisements
+    if (Array.isArray(db.advertisements)) {
+      counts.advertisements = 0;
+      for (const a of db.advertisements) {
+        await pgPool.query(
+          `INSERT INTO advertisements (id, title, category, partner_id, business_name, tagline, description, image_url, link_url, whatsapp, phone, location, price_starting, badge, event_date, event_venue, banner_slot, plan_type, is_active, is_highlighted, start_date, end_date, views_count, clicks_count, created_at, updated_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
+           ON CONFLICT (id) DO UPDATE SET
+             title = EXCLUDED.title,
+             category = EXCLUDED.category,
+             partner_id = EXCLUDED.partner_id,
+             business_name = EXCLUDED.business_name,
+             tagline = EXCLUDED.tagline,
+             description = EXCLUDED.description,
+             image_url = EXCLUDED.image_url,
+             link_url = EXCLUDED.link_url,
+             whatsapp = EXCLUDED.whatsapp,
+             phone = EXCLUDED.phone,
+             location = EXCLUDED.location,
+             price_starting = EXCLUDED.price_starting,
+             badge = EXCLUDED.badge,
+             event_date = EXCLUDED.event_date,
+             event_venue = EXCLUDED.event_venue,
+             banner_slot = EXCLUDED.banner_slot,
+             plan_type = EXCLUDED.plan_type,
+             is_active = EXCLUDED.is_active,
+             is_highlighted = EXCLUDED.is_highlighted,
+             start_date = EXCLUDED.start_date,
+             end_date = EXCLUDED.end_date,
+             updated_at = NOW()`,
+          [a.id, a.title, a.category, a.partner_id || null, a.business_name, a.tagline || null, a.description, a.image_url, a.link_url || null, a.whatsapp, a.phone || null, a.location, a.price_starting || 0, a.badge || null, a.event_date || null, a.event_venue || null, a.banner_slot || 'nenhum', a.plan_type || null, a.is_active, a.is_highlighted, a.start_date, a.end_date, a.views_count || 0, a.clicks_count || 0, a.created_at || new Date().toISOString(), a.updated_at || new Date().toISOString()]
+        );
+        counts.advertisements++;
+      }
+    }
+
+    // 4. Island Spots
+    if (Array.isArray(db.island_spots)) {
+      counts.island_spots = 0;
+      for (const sp of db.island_spots) {
+        await pgPool.query(
+          `INSERT INTO island_spots (id, name, category, description, image_url, distance_from_port, walking_time, cart_time, tips, coordinates)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+           ON CONFLICT (id) DO UPDATE SET
+             name = EXCLUDED.name,
+             category = EXCLUDED.category,
+             description = EXCLUDED.description,
+             image_url = EXCLUDED.image_url,
+             distance_from_port = EXCLUDED.distance_from_port,
+             walking_time = EXCLUDED.walking_time,
+             cart_time = EXCLUDED.cart_time,
+             tips = EXCLUDED.tips`,
+          [sp.id, sp.name, sp.category, sp.description || '', sp.image_url, sp.distance_from_port, sp.walking_time, sp.cart_time, sp.tips || '', JSON.stringify(sp.coordinates || {})]
+        );
+        counts.island_spots++;
+      }
+    }
+
+    // 5. Boat Crossings
+    if (Array.isArray(db.boat_crossings)) {
+      counts.boat_crossings = 0;
+      for (const b of db.boat_crossings) {
+        await pgPool.query(
+          `INSERT INTO boat_crossings (id, origin, destination, departure_times, price, duration, association, phone, notes)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+           ON CONFLICT (id) DO UPDATE SET
+             origin = EXCLUDED.origin,
+             destination = EXCLUDED.destination,
+             departure_times = EXCLUDED.departure_times,
+             price = EXCLUDED.price,
+             duration = EXCLUDED.duration,
+             phone = EXCLUDED.phone,
+             notes = EXCLUDED.notes`,
+          [b.id, b.origin, b.destination, JSON.stringify(b.departure_times || []), b.price, b.duration, b.association, b.phone, b.notes || '']
+        );
+        counts.boat_crossings++;
+      }
+    }
+
+    // 6. Useful Contacts
+    if (Array.isArray(db.useful_contacts)) {
+      counts.useful_contacts = 0;
+      for (const c of db.useful_contacts) {
+        await pgPool.query(
+          `INSERT INTO useful_contacts (id, title, category, phone, whatsapp, location, description, available_hours)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+           ON CONFLICT (id) DO UPDATE SET
+             title = EXCLUDED.title,
+             category = EXCLUDED.category,
+             phone = EXCLUDED.phone,
+             whatsapp = EXCLUDED.whatsapp,
+             location = EXCLUDED.location,
+             description = EXCLUDED.description,
+             available_hours = EXCLUDED.available_hours`,
+          [c.id, c.title, c.category, c.phone, c.whatsapp || null, c.location, c.description || '', c.available_hours || '']
+        );
+        counts.useful_contacts++;
+      }
+    }
+
+    // 7. Stories
+    if (Array.isArray(db.stories)) {
+      counts.stories = 0;
+      for (const st of db.stories) {
+        await pgPool.query(
+          `INSERT INTO stories (id, title, subtitle, emoji, cover_image, full_image, description, location, tag, category, whatsapp, is_active, order_index, created_at, updated_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+           ON CONFLICT (id) DO UPDATE SET
+             title = EXCLUDED.title,
+             subtitle = EXCLUDED.subtitle,
+             cover_image = EXCLUDED.cover_image,
+             full_image = EXCLUDED.full_image,
+             description = EXCLUDED.description,
+             is_active = EXCLUDED.is_active,
+             order_index = EXCLUDED.order_index,
+             updated_at = NOW()`,
+          [st.id, st.title, st.subtitle || null, st.emoji || null, st.coverImage, st.fullImage, st.description, st.location, st.tag, st.category || 'todos', st.whatsapp || null, st.is_active !== false, st.order_index || 0, st.created_at || new Date().toISOString(), st.updated_at || new Date().toISOString()]
+        );
+        counts.stories++;
+      }
+    }
+
+    // 8. Tide Days
+    if (Array.isArray(db.tide_days)) {
+      counts.tide_days = 0;
+      for (const t of db.tide_days) {
+        await pgPool.query(
+          `INSERT INTO tide_days (id, date, moon_phase, coefficient, high_tides, low_tides, source, recommendations)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+           ON CONFLICT (id) DO UPDATE SET
+             moon_phase = EXCLUDED.moon_phase,
+             coefficient = EXCLUDED.coefficient,
+             high_tides = EXCLUDED.high_tides,
+             low_tides = EXCLUDED.low_tides,
+             recommendations = EXCLUDED.recommendations`,
+          [t.id, t.date, t.moon_phase, t.coefficient, JSON.stringify(t.high_tides || []), JSON.stringify(t.low_tides || []), t.source, t.recommendations]
+        );
+        counts.tide_days++;
+      }
+    }
+
+    // 9. Admin Settings
+    const admin = await getAdminSettings();
+    if (admin) {
+      await pgPool.query(
+        `INSERT INTO admin_settings (id, admin_username, admin_email, admin_pin, hero_background_url, hero_rotation_enabled, hero_active_images, hero_custom_images, updated_at)
+         VALUES (1, $1, $2, $3, $4, $5, $6, $7, NOW())
+         ON CONFLICT (id) DO UPDATE SET
+           admin_username = EXCLUDED.admin_username,
+           admin_email = EXCLUDED.admin_email,
+           admin_pin = EXCLUDED.admin_pin,
+           hero_background_url = EXCLUDED.hero_background_url,
+           hero_rotation_enabled = EXCLUDED.hero_rotation_enabled,
+           hero_active_images = EXCLUDED.hero_active_images,
+           hero_custom_images = EXCLUDED.hero_custom_images,
+           updated_at = NOW()`,
+        [admin.admin_username, admin.admin_email, admin.admin_pin, admin.hero_background_url, admin.hero_rotation_enabled, JSON.stringify(admin.hero_active_images || []), JSON.stringify(admin.hero_custom_images || [])]
+      );
+      counts.admin_settings = 1;
+    }
+
+    return {
+      success: true,
+      message: 'Todos os dados locais foram sincronizados com o PostgreSQL com sucesso!',
+      syncedCounts: counts
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: `Erro durante a sincronização com o PostgreSQL: ${err.message}`
+    };
+  }
 }

@@ -29,15 +29,35 @@ export const api = {
     return res.json();
   },
 
-  // Image Upload
+  // Image Upload & Rollback
   async uploadImage(base64Data: string, filename?: string): Promise<{ success: boolean; url: string; filename?: string }> {
     const res = await fetch(`${API_BASE}/upload`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image: base64Data, filename })
     });
-    if (!res.ok) throw new Error('Falha no upload da imagem');
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || errData.details || 'Falha no upload da imagem');
+    }
     return res.json();
+  },
+
+  async rollbackUploadedImage(url: string): Promise<{ success: boolean; message: string; deletedFile?: string }> {
+    try {
+      if (!url || !url.startsWith('/imagens/upload_')) {
+        return { success: true, message: 'Nenhuma exclusão necessária' };
+      }
+      const res = await fetch(`${API_BASE}/upload/rollback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      return await res.json();
+    } catch (err: any) {
+      console.warn('Erro ao realizar rollback de imagem órfã:', err);
+      return { success: false, message: err.message || 'Erro de rede' };
+    }
   },
 
   // Auth & Social Login
@@ -119,7 +139,11 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error('Erro ao cadastrar anúncio');
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      const msg = errData.error || errData.details || `Erro HTTP ${res.status} ao cadastrar anúncio`;
+      throw new Error(msg);
+    }
     return res.json();
   },
 
@@ -129,7 +153,11 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error('Erro ao atualizar anúncio');
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      const msg = errData.error || errData.details || `Erro HTTP ${res.status} ao atualizar anúncio`;
+      throw new Error(msg);
+    }
     return res.json();
   },
 
@@ -413,6 +441,30 @@ export const api = {
       body: JSON.stringify(backupData)
     });
     if (!res.ok) throw new Error('Falha ao restaurar backup');
+    return res.json();
+  },
+
+  // Database Connection Diagnostics & PostgreSQL Sync
+  async getDatabaseDiagnostic(): Promise<any> {
+    const res = await fetch(`${API_BASE}/admin/db-diagnostic`);
+    if (!res.ok) throw new Error('Falha ao obter diagnóstico do banco de dados');
+    return res.json();
+  },
+
+  async testDatabaseConnection(customUrl?: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/admin/db-test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customUrl })
+    });
+    return res.json();
+  },
+
+  async syncDatabaseToPostgres(): Promise<any> {
+    const res = await fetch(`${API_BASE}/admin/db-sync-to-postgres`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
     return res.json();
   }
 };

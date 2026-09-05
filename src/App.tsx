@@ -48,6 +48,7 @@ import { AdDetailsModal } from './components/AdDetailsModal.tsx';
 import { WeatherDetailsModal } from './components/WeatherDetailsModal.tsx';
 import { DesktopNavbar } from './components/desktop/DesktopNavbar.tsx';
 import { AlgodoalRedesignPortal } from './components/desktop/AlgodoalRedesignPortal.tsx';
+import { DbStatusBanner } from './components/DbStatusBanner.tsx';
 
 // Fallback Initial Partners Data for Instant Prototype Rendering
 const INITIAL_PROTOTYPE_PARTNERS: Partner[] = [
@@ -530,6 +531,7 @@ export function App() {
     <div className={`min-h-screen flex flex-col items-center justify-start selection:bg-teal-500 selection:text-white transition-colors duration-200 ${
       isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-800'
     }`}>
+      <DbStatusBanner />
       
       {/* ======================================================== */}
       {/* 0. VIEW SWITCHER (ONLY ACTIVE IN PREVIOUS_LAYOUT)         */}

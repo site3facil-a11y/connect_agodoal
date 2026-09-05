@@ -54,8 +54,11 @@ import {
   deleteStory,
   exportDatabaseBackup,
   restoreDatabaseBackup,
-  getDatabaseStatus
+  getDatabaseStatus,
+  testPostgresConnection,
+  syncLocalDataToPostgres
 } from './src/db/database';
+import { AdCategory } from './src/types';
 
 function requireDatabase(req, res, next) {
   const dbStatus = getDatabaseStatus();
@@ -125,6 +128,29 @@ async function startServer() {
     }
   });
 
+  // Test PostgreSQL Connection
+  app.post('/api/admin/db-test', async (req, res) => {
+    try {
+      const { customUrl } = req.body || {};
+      const result = await testPostgresConnection(customUrl);
+      const currentStatus = getDatabaseStatus();
+      res.json({ ...result, currentStatus });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  // Synchronize Local JSON Database into PostgreSQL
+  app.post('/api/admin/db-sync-to-postgres', async (req, res) => {
+    try {
+      const result = await syncLocalDataToPostgres();
+      const currentStatus = getDatabaseStatus();
+      res.json({ ...result, currentStatus });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
   // =====================================
   // IMAGE UPLOAD API
   // =====================================
@@ -177,6 +203,34 @@ async function startServer() {
     } catch (err: any) {
       console.error('Erro no upload de imagem:', err);
       res.status(500).json({ error: 'Erro ao processar imagem no servidor', details: err.message });
+    }
+  });
+
+  // Rollback uploaded image to prevent orphan files if form submission fails or is cancelled
+  app.post('/api/upload/rollback', (req, res) => {
+    try {
+      const url = req.body?.url || req.body?.imageUrl;
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ success: false, error: 'URL da imagem para rollback não fornecida.' });
+      }
+
+      // Security validation: only permit deleting uploaded files inside /imagens/upload_
+      if (url.startsWith('/imagens/upload_')) {
+        const filename = path.basename(url);
+        if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+          return res.status(400).json({ success: false, error: 'Nome de arquivo inválido para rollback.' });
+        }
+        const filePath = path.join(process.cwd(), 'public', 'imagens', filename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          console.log(`[Upload Rollback] Imagem órfã removida com sucesso: ${filename}`);
+          return res.json({ success: true, message: `Imagem órfã ${filename} removida com sucesso.`, deletedFile: filename });
+        }
+      }
+      res.json({ success: true, message: 'Nenhuma ação necessária (arquivo não é temporário de upload ou já foi removido).' });
+    } catch (err: any) {
+      console.error('[Upload Rollback Error]:', err);
+      res.status(500).json({ success: false, error: 'Erro ao remover imagem órfã', details: err.message });
     }
   });
 
@@ -359,26 +413,72 @@ async function startServer() {
   app.post('/api/advertisements', requireDatabase, async (req, res) => {
     try {
       const data = req.body;
+      if (!data || typeof data !== 'object') {
+        return res.status(400).json({ error: 'Dados do formulário de anúncio não fornecidos ou formato inválido.' });
+      }
+
+      // 1. Strict validation of schema required fields (NOT NULL in PostgreSQL)
+      const title = data.title ? String(data.title).trim() : '';
+      if (!title) {
+        return res.status(400).json({ error: 'O campo "Título do Anúncio" é obrigatório e não pode ser vazio.' });
+      }
+      if (title.length < 3) {
+        return res.status(400).json({ error: 'O título do anúncio deve ter no mínimo 3 caracteres.' });
+      }
+
+      const businessName = data.business_name ? String(data.business_name).trim() : '';
+      if (!businessName) {
+        return res.status(400).json({ error: 'O campo "Nome do Estabelecimento" é obrigatório.' });
+      }
+
+      const category = data.category ? String(data.category).trim() : '';
+      if (!category) {
+        return res.status(400).json({ error: 'A seleção da "Categoria do Site" é obrigatória.' });
+      }
+
+      const description = data.description ? String(data.description).trim() : '';
+      if (!description) {
+        return res.status(400).json({ error: 'A "Descrição Completa" do anúncio é obrigatória.' });
+      }
+
+      const imageUrl = data.image_url ? String(data.image_url).trim() : '';
+      if (!imageUrl) {
+        return res.status(400).json({ error: 'A "Foto / Imagem do Anúncio" é obrigatória.' });
+      }
+
+      const rawWhatsapp = data.whatsapp ? String(data.whatsapp).replace(/\D/g, '') : '';
+      if (!rawWhatsapp) {
+        return res.status(400).json({ error: 'O "WhatsApp para contato" é obrigatório para que os turistas possam falar com você.' });
+      }
+      if (rawWhatsapp.length < 10) {
+        return res.status(400).json({ error: 'O número de WhatsApp informado é inválido. Inclua o DDD com pelo menos 10 dígitos (ex: 91983342211).' });
+      }
+
+      const location = data.location ? String(data.location).trim() : 'Ilha de Algodoal';
+      if (!location) {
+        return res.status(400).json({ error: 'A "Localização na Ilha" é obrigatória.' });
+      }
+
       const newAd = {
         id: `ad_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-        title: data.title,
-        business_name: data.business_name || data.title,
-        category: data.category || 'restaurante',
-        tagline: data.tagline || '',
-        description: data.description || '',
-        image_url: data.image_url || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&auto=format&fit=crop&q=80',
-        whatsapp: data.whatsapp ? data.whatsapp.replace(/\D/g, '') : '',
-        phone: data.phone || '',
-        location: data.location || 'Ilha de Algodoal',
+        title,
+        business_name: businessName,
+        category: category as AdCategory,
+        tagline: data.tagline ? String(data.tagline).trim() : '',
+        description,
+        image_url: imageUrl,
+        whatsapp: rawWhatsapp,
+        phone: data.phone ? String(data.phone).trim() : '',
+        location,
         price_starting: Number(data.price_starting) || 0,
-        badge: data.badge || '',
+        badge: data.badge ? String(data.badge).trim() : '',
         banner_slot: data.banner_slot || 'nenhum',
-        is_active: data.is_active !== undefined ? data.is_active : true,
+        is_active: data.is_active !== undefined ? Boolean(data.is_active) : true,
         is_highlighted: Boolean(data.is_highlighted),
-        start_date: data.start_date || new Date().toISOString().split('T')[0],
-        end_date: data.end_date || '2026-12-31',
-        event_date: data.event_date || undefined,
-        event_venue: data.event_venue || undefined,
+        start_date: data.start_date ? String(data.start_date).trim() : new Date().toISOString().split('T')[0],
+        end_date: data.end_date ? String(data.end_date).trim() : '2026-12-31',
+        event_date: data.event_date ? String(data.event_date).trim() : undefined,
+        event_venue: data.event_venue ? String(data.event_venue).trim() : undefined,
         views_count: 0,
         clicks_count: 0,
         created_at: new Date().toISOString(),
@@ -388,17 +488,46 @@ async function startServer() {
       const created = await createAdvertisement(newAd);
       res.status(201).json(created);
     } catch (err: any) {
-      res.status(500).json({ error: 'Erro ao cadastrar anúncio', details: err.message });
+      console.error('Erro ao cadastrar anúncio no backend:', err);
+      res.status(500).json({
+        error: 'Erro ao cadastrar anúncio no banco de dados',
+        details: err?.message || String(err)
+      });
     }
   });
 
   app.patch('/api/advertisements/:id', requireDatabase, async (req, res) => {
     try {
-      const updated = await updateAdvertisement(req.params.id, req.body);
+      const data = req.body;
+      if (!data || typeof data !== 'object') {
+        return res.status(400).json({ error: 'Dados para atualização não fornecidos.' });
+      }
+
+      if (data.title !== undefined && !String(data.title).trim()) {
+        return res.status(400).json({ error: 'O título do anúncio não pode ser vazio.' });
+      }
+      if (data.business_name !== undefined && !String(data.business_name).trim()) {
+        return res.status(400).json({ error: 'O nome do estabelecimento não pode ser vazio.' });
+      }
+      if (data.category !== undefined && !String(data.category).trim()) {
+        return res.status(400).json({ error: 'A categoria do anúncio não pode ser vazia.' });
+      }
+      if (data.description !== undefined && !String(data.description).trim()) {
+        return res.status(400).json({ error: 'A descrição do anúncio não pode ser vazia.' });
+      }
+      if (data.image_url !== undefined && !String(data.image_url).trim()) {
+        return res.status(400).json({ error: 'A foto/imagem do anúncio não pode ser vazia.' });
+      }
+
+      const updated = await updateAdvertisement(req.params.id, data);
       if (!updated) return res.status(404).json({ error: 'Anúncio não encontrado' });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ error: 'Erro ao atualizar anúncio', details: err.message });
+      console.error('Erro ao atualizar anúncio no backend:', err);
+      res.status(500).json({
+        error: 'Erro ao atualizar anúncio no banco de dados',
+        details: err?.message || String(err)
+      });
     }
   });
 

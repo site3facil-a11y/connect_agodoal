@@ -237,6 +237,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [isEditingAd, setIsEditingAd] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isSavingAd, setIsSavingAd] = useState(false);
+  const [adFormError, setAdFormError] = useState<string | null>(null);
+  const [adValidationErrors, setAdValidationErrors] = useState<Record<string, string>>({});
+  const [tempUploadedImageUrl, setTempUploadedImageUrl] = useState<string | null>(null);
   const [currentAd, setCurrentAd] = useState<Partial<Advertisement>>({
     title: '',
     business_name: '',
@@ -264,6 +268,18 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [isChangingPass, setIsChangingPass] = useState(false);
   const [isExportingBackup, setIsExportingBackup] = useState(false);
   const [isRestoringBackup, setIsRestoringBackup] = useState(false);
+
+  // PostgreSQL Connection & Diagnostics states
+  const [dbDiagnostic, setDbDiagnostic] = useState<{
+    dbStatus?: { type: 'postgresql' | 'json'; connected: boolean; details: string; configuredUrl?: string };
+    advertisements_count?: number;
+    partners_count?: number;
+  } | null>(null);
+  const [isTestingDb, setIsTestingDb] = useState(false);
+  const [dbTestResult, setDbTestResult] = useState<{ success: boolean; message: string; details?: any } | null>(null);
+  const [isSyncingDb, setIsSyncingDb] = useState(false);
+  const [dbSyncResult, setDbSyncResult] = useState<{ success: boolean; message: string; syncedCounts?: Record<string, number> } | null>(null);
+  const [showPgGuide, setShowPgGuide] = useState<'vps' | 'docker' | null>(null);
 
   // Tide Form & Bulk Import states
   const [isAddingTideDay, setIsAddingTideDay] = useState(false);
@@ -376,6 +392,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       const resUsers = await fetch('/api/admin/users');
       const dataUsers = await resUsers.json();
       setUsers(dataUsers || []);
+
+      // Load Database Diagnostic
+      try {
+        const diag = await api.getDatabaseDiagnostic();
+        setDbDiagnostic(diag);
+      } catch {
+        // ignore
+      }
     } catch (err: any) {
       console.error('Erro ao carregar dados do admin:', err);
       setActionError('Falha ao conectar com o banco de dados do servidor.');
@@ -713,6 +737,62 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   };
 
   // ==========================
+  // POSTGRESQL & DB ACTIONS
+  // ==========================
+  const loadDbDiagnostic = async () => {
+    try {
+      const data = await api.getDatabaseDiagnostic();
+      setDbDiagnostic(data);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleTestDbConnection = async () => {
+    setIsTestingDb(true);
+    setDbTestResult(null);
+    try {
+      const res = await api.testDatabaseConnection();
+      setDbTestResult(res);
+      if (res.success) {
+        showSuccess('Conexão com PostgreSQL bem-sucedida!');
+      }
+      loadDbDiagnostic();
+    } catch (err: any) {
+      setDbTestResult({
+        success: false,
+        message: err.message || 'Erro inesperado ao testar conexão'
+      });
+    } finally {
+      setIsTestingDb(false);
+    }
+  };
+
+  const handleSyncToPostgres = async () => {
+    if (!confirm('Deseja sincronizar todos os parceiros, anúncios, fotos, histórias e configurações do banco local para o PostgreSQL?')) return;
+    setIsSyncingDb(true);
+    setDbSyncResult(null);
+    try {
+      const res = await api.syncDatabaseToPostgres();
+      setDbSyncResult(res);
+      if (res.success) {
+        showSuccess('Todos os dados locais foram replicados com sucesso no PostgreSQL!');
+        if (onRefreshData) onRefreshData();
+      } else {
+        setActionError(res.message || 'Falha na sincronização.');
+      }
+      loadDbDiagnostic();
+    } catch (err: any) {
+      setDbSyncResult({
+        success: false,
+        message: err.message || 'Erro ao sincronizar dados com PostgreSQL'
+      });
+    } finally {
+      setIsSyncingDb(false);
+    }
+  };
+
+  // ==========================
   // AD ACTIONS (REAL BACKEND)
   // ==========================
   const handleResetDefaultAds = async () => {
@@ -795,20 +875,35 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     }
 
     setIsUploadingImage(true);
+    setAdFormError(null);
     try {
       const reader = new FileReader();
       reader.onload = async () => {
         const base64Data = reader.result as string;
         try {
+          // If another temporary image was uploaded in this session without being saved, rollback previous to avoid orphan files
+          if (tempUploadedImageUrl && tempUploadedImageUrl.startsWith('/imagens/upload_')) {
+            api.rollbackUploadedImage(tempUploadedImageUrl).catch(() => {});
+          }
+
           const res = await api.uploadImage(base64Data, file.name);
           if (res.success && res.url) {
             setCurrentAd(prev => ({ ...prev, image_url: res.url }));
-            showSuccess(`Imagem "${file.name}" enviada com sucesso!`);
+            if (res.url.startsWith('/imagens/upload_')) {
+              setTempUploadedImageUrl(res.url);
+            }
+            // Clear validation error on image_url
+            setAdValidationErrors(prev => {
+              const next = { ...prev };
+              delete next.image_url;
+              return next;
+            });
+            showSuccess(`Imagem "${file.name}" enviada ao servidor com sucesso!`);
           } else {
             setCurrentAd(prev => ({ ...prev, image_url: base64Data }));
             showSuccess(`Imagem "${file.name}" pronta!`);
           }
-        } catch (err) {
+        } catch (err: any) {
           console.warn('Fallback base64 para imagem:', err);
           setCurrentAd(prev => ({ ...prev, image_url: base64Data }));
           showSuccess(`Imagem "${file.name}" carregada!`);
@@ -817,48 +912,143 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
         }
       };
       reader.readAsDataURL(file);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       setIsUploadingImage(false);
-      alert('Erro ao ler arquivo de imagem.');
+      setAdFormError('Erro ao ler arquivo de imagem: ' + (err?.message || ''));
     }
+  };
+
+  // Rollback uploaded temporary photo if user discards or changes mind
+  const handleManualImageRollback = async () => {
+    if (tempUploadedImageUrl && tempUploadedImageUrl.startsWith('/imagens/upload_')) {
+      try {
+        await api.rollbackUploadedImage(tempUploadedImageUrl);
+        showSuccess('Foto órfã descartada e removida do servidor.');
+      } catch (err: any) {
+        console.warn('Erro ao descartar foto do servidor:', err);
+      }
+    }
+    setTempUploadedImageUrl(null);
+    setCurrentAd(prev => ({ ...prev, image_url: '/imagens/carroca.jpg' }));
+    setAdValidationErrors(prev => {
+      const next = { ...prev };
+      delete next.image_url;
+      return next;
+    });
+  };
+
+  // Safe ad modal close with automatic rollback of uncommitted uploaded images
+  const handleCloseAdModal = async () => {
+    if (tempUploadedImageUrl && tempUploadedImageUrl.startsWith('/imagens/upload_')) {
+      try {
+        await api.rollbackUploadedImage(tempUploadedImageUrl);
+        showSuccess('Upload cancelado: foto temporária removida do servidor para evitar arquivo órfão.');
+      } catch (err) {
+        console.warn('Erro ao limpar imagem órfã no cancelamento:', err);
+      }
+    }
+    setTempUploadedImageUrl(null);
+    setAdValidationErrors({});
+    setAdFormError(null);
+    setIsEditingAd(false);
+    setCurrentAd({});
+  };
+
+  // Client-side schema validation enforcing NOT NULL database columns
+  const validateAdForm = (): { valid: boolean; errors: Record<string, string> } => {
+    const errors: Record<string, string> = {};
+
+    const title = (currentAd.title || '').trim();
+    if (!title) {
+      errors.title = 'Título do anúncio é obrigatório e não pode ser vazio.';
+    } else if (title.length < 3) {
+      errors.title = 'O título deve ter no mínimo 3 caracteres.';
+    }
+
+    const businessName = (currentAd.business_name || '').trim();
+    if (!businessName) {
+      errors.business_name = 'Nome do estabelecimento é obrigatório (ex: Restaurante O Marujo).';
+    }
+
+    const category = (currentAd.category || '').trim();
+    if (!category) {
+      errors.category = 'Selecione uma categoria válida para o anúncio.';
+    }
+
+    const description = (currentAd.description || '').trim();
+    if (!description) {
+      errors.description = 'Descrição completa é obrigatória com detalhes do serviço ou produto.';
+    }
+
+    const imageUrl = (currentAd.image_url || '').trim();
+    if (!imageUrl) {
+      errors.image_url = 'A foto/imagem do anúncio é obrigatória. Envie um arquivo ou selecione uma imagem.';
+    }
+
+    const whatsapp = (currentAd.whatsapp || '').replace(/\D/g, '');
+    if (!whatsapp) {
+      errors.whatsapp = 'WhatsApp para contato direto é obrigatório.';
+    } else if (whatsapp.length < 10) {
+      errors.whatsapp = 'Informe um WhatsApp válido com DDD (mínimo 10 dígitos).';
+    }
+
+    const location = (currentAd.location || '').trim();
+    if (!location) {
+      errors.location = 'Localização na Ilha é obrigatória (ex: Praia da Princesa, Porto).';
+    }
+
+    return { valid: Object.keys(errors).length === 0, errors };
   };
 
   const handleSaveAd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentAd.title || !currentAd.category) {
-      alert('Preencha pelo menos o título e a categoria do anúncio.');
+    setAdFormError(null);
+
+    // 1. Client-side schema validation (NOT NULL enforcement)
+    const { valid, errors } = validateAdForm();
+    if (!valid) {
+      setAdValidationErrors(errors);
+      setAdFormError('Atenção: existem campos obrigatórios não preenchidos ou inválidos. Veja os avisos em vermelho abaixo.');
+      const formEl = document.getElementById('ad-edit-form');
+      if (formEl) formEl.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+
+    setAdValidationErrors({});
+    setIsSavingAd(true);
 
     try {
       if (currentAd.id) {
         // Edit existing ad in DB
-        const res = await fetch(`/api/advertisements/${currentAd.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(currentAd)
-        });
-        const updated = await res.json();
+        const updated = await api.updateAdvertisement(currentAd.id, currentAd);
         setAds(prev => prev.map(a => a.id === updated.id ? updated : a));
-        showSuccess('Anúncio salvo e sincronizado no banco de dados!');
+        // Ad saved successfully: disarm rollback tracker
+        setTempUploadedImageUrl(null);
+        showSuccess('Anúncio atualizado e salvo no banco de dados com sucesso!');
       } else {
         // Create new ad in DB
-        const res = await fetch('/api/advertisements', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(currentAd)
-        });
-        const created = await res.json();
+        const created = await api.createAdvertisement(currentAd);
         setAds(prev => [created, ...prev]);
+        // Ad saved successfully: disarm rollback tracker
+        setTempUploadedImageUrl(null);
         showSuccess('Novo anúncio cadastrado e veiculado com sucesso!');
       }
+
       setIsEditingAd(false);
       setCurrentAd({});
+      setAdFormError(null);
+      setAdValidationErrors({});
       if (onRefreshData) onRefreshData();
-    } catch (err) {
-      console.error(err);
-      alert('Erro ao salvar anúncio no servidor.');
+    } catch (err: any) {
+      console.error('Erro ao salvar anúncio:', err);
+      const errorMsg = err?.message || 'Erro inesperado ao salvar anúncio no servidor.';
+      // Keep form open, preserve typed data, and display prominent error banner
+      setAdFormError(errorMsg);
+      const formEl = document.getElementById('ad-edit-form');
+      if (formEl) formEl.scrollTo({ top: 0, behavior: 'smooth' });
+    } finally {
+      setIsSavingAd(false);
     }
   };
 
@@ -1812,6 +2002,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
                       <button
                         onClick={() => {
+                          setTempUploadedImageUrl(null);
+                          setAdFormError(null);
+                          setAdValidationErrors({});
                           setCurrentAd({
                             title: '',
                             business_name: '',
@@ -1970,6 +2163,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
                               <button
                                 onClick={() => {
+                                  setTempUploadedImageUrl(null);
+                                  setAdFormError(null);
+                                  setAdValidationErrors({});
                                   setCurrentAd(ad);
                                   setIsEditingAd(true);
                                 }}
@@ -2673,6 +2869,241 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               {activeMainTab === 'seguranca' && (
                 <div className="max-w-4xl mx-auto space-y-6">
                   
+                  {/* CARD 0: POSTGRESQL & STATUS DO BANCO DE DADOS */}
+                  <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black ${
+                          dbDiagnostic?.dbStatus?.connected ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          <Database className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-black text-slate-900 font-serif flex items-center gap-2">
+                            PostgreSQL & Arquitetura de Dados
+                            {dbDiagnostic?.dbStatus?.connected ? (
+                              <span className="text-[10px] uppercase font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                PostgreSQL Conectado
+                              </span>
+                            ) : (
+                              <span className="text-[10px] uppercase font-black px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                                Modo Contingência Local JSON
+                              </span>
+                            )}
+                          </h3>
+                          <p className="text-xs text-slate-500">
+                            Persistência dual resiliente com tolerância a falhas de rede e sincronização bidirecional.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Botão Testar Conexão */}
+                        <button
+                          type="button"
+                          onClick={handleTestDbConnection}
+                          disabled={isTestingDb}
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-xs transition cursor-pointer disabled:opacity-50"
+                        >
+                          {isTestingDb ? (
+                            <RefreshCw className="w-4 h-4 animate-spin text-amber-300" />
+                          ) : (
+                            <RefreshCw className="w-4 h-4 text-emerald-400" />
+                          )}
+                          <span>{isTestingDb ? 'Testando Conexão...' : 'Testar Conexão PostgreSQL'}</span>
+                        </button>
+
+                        {/* Botão Sincronizar com PostgreSQL */}
+                        <button
+                          type="button"
+                          onClick={handleSyncToPostgres}
+                          disabled={isSyncingDb}
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition cursor-pointer disabled:opacity-50"
+                          title="Grava todos os parceiros, anúncios, fotos e contatos locais diretamente nas tabelas PostgreSQL"
+                        >
+                          {isSyncingDb ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Upload className="w-4 h-4" />
+                          )}
+                          <span>{isSyncingDb ? 'Sincronizando...' : 'Sincronizar Dados p/ PostgreSQL'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* STATUS DETAILS ROW */}
+                    <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-1.5">
+                        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                          Host / String de Conexão Configurada
+                        </div>
+                        <div className="text-xs font-mono font-medium text-slate-700 break-all bg-white px-3 py-2 rounded-xl border border-slate-200/80">
+                          {dbDiagnostic?.dbStatus?.configuredUrl || 'Carregando...'}
+                        </div>
+                        <div className="text-[11px] text-slate-500 flex items-center gap-1.5 pt-1">
+                          <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span>A senha é mantida oculta por segurança.</span>
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-1.5">
+                        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                          Estado Atual do Mecanismo de Dados
+                        </div>
+                        <div className="text-xs font-semibold text-slate-800 bg-white px-3 py-2 rounded-xl border border-slate-200/80 flex items-center justify-between">
+                          <span>{dbDiagnostic?.dbStatus?.details || 'Armazenamento Local JSON Ativo'}</span>
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
+                            {dbDiagnostic?.dbStatus?.type === 'postgresql' ? 'PGSQL' : 'JSON'}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-500 flex items-center gap-1.5 pt-1">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span>Se o PostgreSQL estiver inacessível, o app nunca cai: o modo local assume instantaneamente.</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* RESULTADO DO TESTE DE CONEXÃO */}
+                    {dbTestResult && (
+                      <div className={`mt-4 p-4 rounded-2xl border text-xs ${
+                        dbTestResult.success
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                          : 'bg-amber-50 border-amber-200 text-amber-950'
+                      }`}>
+                        <div className="flex items-start gap-2.5">
+                          {dbTestResult.success ? (
+                            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                          ) : (
+                            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                          )}
+                          <div className="space-y-1">
+                            <div className="font-bold text-sm">
+                              {dbTestResult.message}
+                            </div>
+                            {dbTestResult.details?.advice && (
+                              <p className="text-slate-700 leading-relaxed font-medium">
+                                💡 <strong>Orientação:</strong> {dbTestResult.details.advice}
+                              </p>
+                            )}
+                            {dbTestResult.details?.tablesCount !== undefined && (
+                              <p className="text-emerald-800 text-[11px]">
+                                Tabelas disponíveis encontradas no schema: <strong>{dbTestResult.details.tablesCount}</strong> ({dbTestResult.details.tables?.join(', ')})
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* RESULTADO DA SINCRONIZAÇÃO */}
+                    {dbSyncResult && (
+                      <div className={`mt-4 p-4 rounded-2xl border text-xs ${
+                        dbSyncResult.success
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                          : 'bg-rose-50 border-rose-200 text-rose-950'
+                      }`}>
+                        <div className="flex items-start gap-2.5">
+                          {dbSyncResult.success ? (
+                            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                          ) : (
+                            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                          )}
+                          <div className="space-y-1">
+                            <div className="font-bold text-sm">{dbSyncResult.message}</div>
+                            {dbSyncResult.syncedCounts && (
+                              <div className="flex flex-wrap gap-2 pt-1">
+                                {Object.entries(dbSyncResult.syncedCounts).map(([key, val]) => (
+                                  <span key={key} className="px-2 py-0.5 rounded-lg bg-emerald-100/80 border border-emerald-200 text-emerald-900 text-[10px] font-bold">
+                                    {key}: {val}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* GUIAS EXPLICATIVOS EXPANSÍVEIS */}
+                    <div className="mt-5 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setShowPgGuide(showPgGuide === 'vps' ? null : 'vps')}
+                        className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1.5 transition cursor-pointer"
+                      >
+                        <Info className="w-4 h-4" />
+                        <span>{showPgGuide === 'vps' ? 'Ocultar Guia do Servidor VPS' : 'Como liberar o PostgreSQL remoto (Porta 5432 / Firewall)'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowPgGuide(showPgGuide === 'docker' ? null : 'docker')}
+                        className="text-xs font-bold text-slate-600 hover:text-slate-800 flex items-center gap-1.5 transition cursor-pointer"
+                      >
+                        <Database className="w-4 h-4" />
+                        <span>{showPgGuide === 'docker' ? 'Ocultar Guia Docker' : 'Como rodar no Docker com Postgres local incluído'}</span>
+                      </button>
+                    </div>
+
+                    {showPgGuide === 'vps' && (
+                      <div className="mt-4 p-5 rounded-2xl bg-indigo-50/60 border border-indigo-100 text-xs space-y-3">
+                        <div className="font-bold text-indigo-950 text-sm flex items-center gap-2">
+                          Passo a Passo para liberar o PostgreSQL no seu servidor (56.125.35.169):
+                        </div>
+                        <ol className="list-decimal list-inside space-y-2 text-slate-700">
+                          <li>
+                            <strong>Liberar a porta 5432 no Firewall:</strong>
+                            <code className="block mt-1 p-2 rounded-lg bg-slate-900 text-emerald-300 font-mono text-[11px]">
+                              sudo ufw allow 5432/tcp
+                            </code>
+                          </li>
+                          <li>
+                            <strong>Configurar o PostgreSQL para escutar conexões externas:</strong>
+                            <div className="text-[11px] text-slate-600 mt-0.5">No arquivo <code>/etc/postgresql/16/main/postgresql.conf</code>:</div>
+                            <code className="block mt-1 p-2 rounded-lg bg-slate-900 text-emerald-300 font-mono text-[11px]">
+                              listen_addresses = '*'
+                            </code>
+                          </li>
+                          <li>
+                            <strong>Permitir autenticação de rede:</strong>
+                            <div className="text-[11px] text-slate-600 mt-0.5">No final do arquivo <code>/etc/postgresql/16/main/pg_hba.conf</code>:</div>
+                            <code className="block mt-1 p-2 rounded-lg bg-slate-900 text-emerald-300 font-mono text-[11px]">
+                              host    all    all    0.0.0.0/0    md5
+                            </code>
+                          </li>
+                          <li>
+                            <strong>Reiniciar o serviço do PostgreSQL:</strong>
+                            <code className="block mt-1 p-2 rounded-lg bg-slate-900 text-emerald-300 font-mono text-[11px]">
+                              sudo systemctl restart postgresql
+                            </code>
+                          </li>
+                        </ol>
+                        <p className="text-[11px] text-slate-500 pt-1">
+                          Assim que executar esses comandos no seu servidor, clique no botão <strong>"Testar Conexão PostgreSQL"</strong> acima para conectar imediatamente!
+                        </p>
+                      </div>
+                    )}
+
+                    {showPgGuide === 'docker' && (
+                      <div className="mt-4 p-5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-3">
+                        <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                          Rodando via Docker Compose (Sem precisar de servidor externo):
+                        </div>
+                        <p className="text-slate-700 text-xs leading-relaxed">
+                          O arquivo <code>docker-compose.yml</code> deste projeto já está configurado com um serviço oficial do <strong>PostgreSQL 16 Alpine</strong>, com volume persistente (<code>postgres_data</code>), checagem de saúde automática (<code>healthcheck pg_isready</code>) e rede interna dedicada.
+                        </p>
+                        <code className="block p-2.5 rounded-lg bg-slate-900 text-emerald-300 font-mono text-[11px]">
+                          docker compose up -d --build
+                        </code>
+                        <p className="text-[11px] text-slate-600">
+                          O banco de dados sobe automaticamente e o Algodoal Connect se conecta nele internamente em <code>postgres:5432</code> de forma 100% segura e rápida.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
                   {/* CARD 1: BACKUP & PREVENÇÃO DE PERDA DE DADOS */}
                   <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
@@ -4107,54 +4538,138 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   </h3>
                 </div>
                 <button
-                  onClick={() => setIsEditingAd(false)}
+                  onClick={handleCloseAdModal}
                   className="p-1 rounded-full text-slate-400 hover:text-white"
+                  title="Fechar e cancelar (remove fotos temporárias)"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               {/* Form & Live Preview Grid */}
-              <form onSubmit={handleSaveAd} className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 bg-slate-50">
+              <form id="ad-edit-form" onSubmit={handleSaveAd} className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 bg-slate-50">
                 
+                {/* PROMINENT ERROR BANNER */}
+                {adFormError && (
+                  <div className="lg:col-span-12 p-4 rounded-2xl bg-rose-50 border-2 border-rose-400 text-rose-950 shadow-sm animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 rounded-xl bg-rose-200 text-rose-800 shrink-0 mt-0.5">
+                        <AlertCircle className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-black text-rose-900">
+                          Aviso ao Salvar Anúncio
+                        </h4>
+                        <p className="text-xs font-semibold text-rose-800 mt-1 whitespace-pre-wrap">
+                          {adFormError}
+                        </p>
+                        {tempUploadedImageUrl && (
+                          <div className="mt-3 pt-2.5 border-t border-rose-200 flex flex-wrap items-center justify-between gap-2">
+                            <span className="text-[11px] text-rose-700">
+                              🛡️ <strong>Sua foto está segura:</strong> O upload foi mantido para você não perder tempo. Caso deseje desistir ou trocar de foto, você pode removê-la do servidor agora:
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleManualImageRollback}
+                              className="text-[11px] font-black text-rose-900 hover:text-white bg-rose-200 hover:bg-rose-700 px-3 py-1.5 rounded-lg transition cursor-pointer"
+                            >
+                              Remover Foto do Servidor (Rollback)
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Form Fields (Col 7) */}
                 <div className="lg:col-span-7 space-y-4">
                   <div>
                     <label className="block text-xs font-black uppercase text-slate-800 mb-1">
-                      Título do Anúncio *
+                      Título do Anúncio <span className="text-rose-600">*</span>
                     </label>
                     <input
                       type="text"
-                      required
                       placeholder="Ex: Peixada com Jambu no Restaurante O Marujo"
                       value={currentAd.title || ''}
-                      onChange={(e) => setCurrentAd(prev => ({ ...prev, title: e.target.value }))}
-                      className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                      onChange={(e) => {
+                        setCurrentAd(prev => ({ ...prev, title: e.target.value }));
+                        if (adValidationErrors.title) {
+                          setAdValidationErrors(prev => {
+                            const next = { ...prev };
+                            delete next.title;
+                            return next;
+                          });
+                        }
+                      }}
+                      className={`w-full p-2.5 rounded-xl border text-xs font-semibold text-slate-900 bg-white transition ${
+                        adValidationErrors.title
+                          ? 'border-rose-500 bg-rose-50/30 focus:ring-2 focus:ring-rose-400'
+                          : 'border-slate-300 focus:ring-2 focus:ring-amber-400'
+                      }`}
                     />
+                    {adValidationErrors.title && (
+                      <p className="mt-1 text-[11px] font-bold text-rose-600 flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        {adValidationErrors.title}
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-black uppercase text-slate-800 mb-1">
-                        Nome do Estabelecimento
+                        Nome do Estabelecimento <span className="text-rose-600">*</span>
                       </label>
                       <input
                         type="text"
                         placeholder="Ex: Restaurante O Marujo"
                         value={currentAd.business_name || ''}
-                        onChange={(e) => setCurrentAd(prev => ({ ...prev, business_name: e.target.value }))}
-                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                        onChange={(e) => {
+                          setCurrentAd(prev => ({ ...prev, business_name: e.target.value }));
+                          if (adValidationErrors.business_name) {
+                            setAdValidationErrors(prev => {
+                              const next = { ...prev };
+                              delete next.business_name;
+                              return next;
+                            });
+                          }
+                        }}
+                        className={`w-full p-2.5 rounded-xl border text-xs font-semibold text-slate-900 bg-white transition ${
+                          adValidationErrors.business_name
+                            ? 'border-rose-500 bg-rose-50/30 focus:ring-2 focus:ring-rose-400'
+                            : 'border-slate-300 focus:ring-2 focus:ring-amber-400'
+                        }`}
                       />
+                      {adValidationErrors.business_name && (
+                        <p className="mt-1 text-[11px] font-bold text-rose-600 flex items-center gap-1">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          {adValidationErrors.business_name}
+                        </p>
+                      )}
                     </div>
 
                     <div>
                       <label className="block text-xs font-black uppercase text-slate-800 mb-1">
-                        Categoria do Site *
+                        Categoria do Site <span className="text-rose-600">*</span>
                       </label>
                       <select
                         value={currentAd.category || 'alimentacao'}
-                        onChange={(e) => setCurrentAd(prev => ({ ...prev, category: e.target.value as any }))}
-                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 bg-white"
+                        onChange={(e) => {
+                          setCurrentAd(prev => ({ ...prev, category: e.target.value as any }));
+                          if (adValidationErrors.category) {
+                            setAdValidationErrors(prev => {
+                              const next = { ...prev };
+                              delete next.category;
+                              return next;
+                            });
+                          }
+                        }}
+                        className={`w-full p-2.5 rounded-xl border text-xs font-bold text-slate-900 bg-white transition ${
+                          adValidationErrors.category
+                            ? 'border-rose-500 bg-rose-50/30 focus:ring-2 focus:ring-rose-400'
+                            : 'border-slate-300 focus:ring-2 focus:ring-amber-400'
+                        }`}
                       >
                         <option value="transporte">🚖 Transporte & Charretes</option>
                         <option value="pousadas">🏨 Pousadas & Chalés</option>
@@ -4164,34 +4679,78 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         <option value="eventos">🎉 Eventos & Cultura</option>
                         <option value="informacoes">ℹ️ Guia da Ilha</option>
                       </select>
+                      {adValidationErrors.category && (
+                        <p className="mt-1 text-[11px] font-bold text-rose-600 flex items-center gap-1">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          {adValidationErrors.category}
+                        </p>
+                      )}
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-xs font-black uppercase text-slate-800 mb-1">
-                      Descrição Completa
+                      Descrição Completa <span className="text-rose-600">*</span>
                     </label>
                     <textarea
                       rows={3}
                       placeholder="Detalhes sobre a oferta, localização, diferenciais e horários..."
                       value={currentAd.description || ''}
-                      onChange={(e) => setCurrentAd(prev => ({ ...prev, description: e.target.value }))}
-                      className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                      onChange={(e) => {
+                        setCurrentAd(prev => ({ ...prev, description: e.target.value }));
+                        if (adValidationErrors.description) {
+                          setAdValidationErrors(prev => {
+                            const next = { ...prev };
+                            delete next.description;
+                            return next;
+                          });
+                        }
+                      }}
+                      className={`w-full p-2.5 rounded-xl border text-xs font-semibold text-slate-900 bg-white transition ${
+                        adValidationErrors.description
+                          ? 'border-rose-500 bg-rose-50/30 focus:ring-2 focus:ring-rose-400'
+                          : 'border-slate-300 focus:ring-2 focus:ring-amber-400'
+                      }`}
                     />
+                    {adValidationErrors.description && (
+                      <p className="mt-1 text-[11px] font-bold text-rose-600 flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        {adValidationErrors.description}
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-black uppercase text-slate-800 mb-1">
-                        WhatsApp (apenas números com DDD)
+                        WhatsApp (apenas números com DDD) <span className="text-rose-600">*</span>
                       </label>
                       <input
                         type="text"
                         placeholder="5591983342211"
                         value={currentAd.whatsapp || ''}
-                        onChange={(e) => setCurrentAd(prev => ({ ...prev, whatsapp: e.target.value.replace(/\D/g, '') }))}
-                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                        onChange={(e) => {
+                          setCurrentAd(prev => ({ ...prev, whatsapp: e.target.value.replace(/\D/g, '') }));
+                          if (adValidationErrors.whatsapp) {
+                            setAdValidationErrors(prev => {
+                              const next = { ...prev };
+                              delete next.whatsapp;
+                              return next;
+                            });
+                          }
+                        }}
+                        className={`w-full p-2.5 rounded-xl border text-xs font-semibold text-slate-900 bg-white transition ${
+                          adValidationErrors.whatsapp
+                            ? 'border-rose-500 bg-rose-50/30 focus:ring-2 focus:ring-rose-400'
+                            : 'border-slate-300 focus:ring-2 focus:ring-amber-400'
+                        }`}
                       />
+                      {adValidationErrors.whatsapp && (
+                        <p className="mt-1 text-[11px] font-bold text-rose-600 flex items-center gap-1">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          {adValidationErrors.whatsapp}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -4211,22 +4770,58 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
                   <div>
                     <label className="block text-xs font-black uppercase text-slate-800 mb-1">
-                      Localização na Ilha
+                      Localização na Ilha <span className="text-rose-600">*</span>
                     </label>
                     <input
                       type="text"
                       placeholder="Ex: Praia da Princesa, Barraca 04"
                       value={currentAd.location || ''}
-                      onChange={(e) => setCurrentAd(prev => ({ ...prev, location: e.target.value }))}
-                      className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                      onChange={(e) => {
+                        setCurrentAd(prev => ({ ...prev, location: e.target.value }));
+                        if (adValidationErrors.location) {
+                          setAdValidationErrors(prev => {
+                            const next = { ...prev };
+                            delete next.location;
+                            return next;
+                          });
+                        }
+                      }}
+                      className={`w-full p-2.5 rounded-xl border text-xs font-semibold text-slate-900 bg-white transition ${
+                        adValidationErrors.location
+                          ? 'border-rose-500 bg-rose-50/30 focus:ring-2 focus:ring-rose-400'
+                          : 'border-slate-300 focus:ring-2 focus:ring-amber-400'
+                      }`}
                     />
+                    {adValidationErrors.location && (
+                      <p className="mt-1 text-[11px] font-bold text-rose-600 flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        {adValidationErrors.location}
+                      </p>
+                    )}
                   </div>
 
                   {/* Image Upload Section */}
                   <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
                     <label className="block text-xs font-black uppercase text-slate-800">
-                      Foto / Imagem do Anúncio *
+                      Foto / Imagem do Anúncio <span className="text-rose-600">*</span>
                     </label>
+
+                    {/* Server status alert if temp uploaded */}
+                    {tempUploadedImageUrl && (
+                      <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          Foto carregada com sucesso no servidor
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleManualImageRollback}
+                          className="text-[11px] font-bold text-rose-700 hover:text-rose-900 bg-rose-100 hover:bg-rose-200 px-2.5 py-1 rounded-lg transition cursor-pointer"
+                        >
+                          Descartar foto
+                        </button>
+                      </div>
+                    )}
 
                     <div className="space-y-2">
                       <div
@@ -4244,7 +4839,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           if (input) input.click();
                         }}
                         className={`border-2 border-dashed rounded-2xl p-5 text-center cursor-pointer transition ${
-                          isDragOver
+                          adValidationErrors.image_url
+                            ? 'border-rose-400 bg-rose-50/20'
+                            : isDragOver
                             ? 'border-amber-500 bg-amber-50/80 scale-[1.01]'
                             : 'border-slate-300 hover:border-amber-400 bg-slate-50/70 hover:bg-amber-50/30'
                         }`}
@@ -4280,6 +4877,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           </div>
                         )}
                       </div>
+
+                      {adValidationErrors.image_url && (
+                        <p className="mt-1 text-[11px] font-bold text-rose-600 flex items-center gap-1">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          {adValidationErrors.image_url}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -4344,7 +4948,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
                     <button
                       type="button"
-                      onClick={() => setIsEditingAd(false)}
+                      onClick={handleCloseAdModal}
                       className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
                     >
                       Cancelar
@@ -4352,10 +4956,20 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
                     <button
                       type="submit"
-                      className="px-6 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs transition shadow-md cursor-pointer flex items-center gap-1.5"
+                      disabled={isSavingAd}
+                      className="px-6 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 disabled:bg-slate-300 disabled:cursor-not-allowed text-slate-950 font-black text-xs transition shadow-md cursor-pointer flex items-center gap-1.5"
                     >
-                      <Check className="w-4 h-4" />
-                      <span>Salvar</span>
+                      {isSavingAd ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Salvando no banco...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4" />
+                          <span>Salvar Anúncio</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
