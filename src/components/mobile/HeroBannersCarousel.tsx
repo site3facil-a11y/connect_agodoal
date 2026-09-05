@@ -126,14 +126,6 @@ export const HeroBannersCarousel: React.FC<HeroBannersCarouselProps> = ({
 
   const current = displayList[currentIndex] || displayList[0];
 
-  const viewedAdsRef = React.useRef<Set<string>>(new Set());
-  useEffect(() => {
-    if (current?.id && !viewedAdsRef.current.has(current.id) && !current.id.startsWith('banner-default-')) {
-      viewedAdsRef.current.add(current.id);
-      api.recordAdMetric(current.id, 'view');
-    }
-  }, [current?.id]);
-
   const handleNext = () => {
     setCurrentIndex((prev) => (prev + 1) % displayList.length);
   };
@@ -143,6 +135,9 @@ export const HeroBannersCarousel: React.FC<HeroBannersCarouselProps> = ({
   };
 
   const handleBannerClick = () => {
+    if (current?.id && !current.id.startsWith('banner-default-')) {
+      api.recordAdMetric(current.id, 'view');
+    }
     if (onOpenDetails && current) {
       onOpenDetails(current as Advertisement);
     } else if (onAdClick && current) {
