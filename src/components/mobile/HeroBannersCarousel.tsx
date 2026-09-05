@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Advertisement } from '../../types/index.ts';
+import { api } from '../../services/api.ts';
 import { MapPin, ChevronLeft, ChevronRight, Sparkles, Info, ArrowRight } from 'lucide-react';
 
 interface HeroBannersCarouselProps {
@@ -124,6 +125,14 @@ export const HeroBannersCarousel: React.FC<HeroBannersCarouselProps> = ({
   }, [displayList.length]);
 
   const current = displayList[currentIndex] || displayList[0];
+
+  const viewedAdsRef = React.useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (current?.id && !viewedAdsRef.current.has(current.id) && !current.id.startsWith('banner-default-')) {
+      viewedAdsRef.current.add(current.id);
+      api.recordAdMetric(current.id, 'view');
+    }
+  }, [current?.id]);
 
   const handleNext = () => {
     setCurrentIndex((prev) => (prev + 1) % displayList.length);

@@ -733,8 +733,8 @@ const SEED_ADVERTISEMENTS: Advertisement[] = [
     is_highlighted: true,
     start_date: '2026-01-01',
     end_date: '2026-12-31',
-    views_count: 1420,
-    clicks_count: 318,
+    views_count: 0,
+    clicks_count: 0,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-02-15T00:00:00Z'
   },
@@ -756,8 +756,8 @@ const SEED_ADVERTISEMENTS: Advertisement[] = [
     is_highlighted: true,
     start_date: '2026-01-01',
     end_date: '2026-12-31',
-    views_count: 1890,
-    clicks_count: 450,
+    views_count: 0,
+    clicks_count: 0,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-02-18T00:00:00Z'
   },
@@ -779,8 +779,8 @@ const SEED_ADVERTISEMENTS: Advertisement[] = [
     is_highlighted: true,
     start_date: '2026-01-01',
     end_date: '2026-12-31',
-    views_count: 1650,
-    clicks_count: 382,
+    views_count: 0,
+    clicks_count: 0,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-02-20T00:00:00Z'
   },
@@ -802,8 +802,8 @@ const SEED_ADVERTISEMENTS: Advertisement[] = [
     is_highlighted: true,
     start_date: '2026-01-01',
     end_date: '2026-12-31',
-    views_count: 2100,
-    clicks_count: 512,
+    views_count: 0,
+    clicks_count: 0,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-02-22T00:00:00Z'
   },
@@ -825,8 +825,8 @@ const SEED_ADVERTISEMENTS: Advertisement[] = [
     is_highlighted: true,
     start_date: '2026-01-01',
     end_date: '2026-12-31',
-    views_count: 980,
-    clicks_count: 240,
+    views_count: 0,
+    clicks_count: 0,
     created_at: '2026-01-05T00:00:00Z',
     updated_at: '2026-02-10T00:00:00Z'
   },
@@ -849,8 +849,8 @@ const SEED_ADVERTISEMENTS: Advertisement[] = [
     is_highlighted: true,
     start_date: '2026-08-01',
     end_date: '2026-09-06',
-    views_count: 850,
-    clicks_count: 190,
+    views_count: 0,
+    clicks_count: 0,
     created_at: '2026-08-10T00:00:00Z',
     updated_at: '2026-08-20T00:00:00Z'
   }
