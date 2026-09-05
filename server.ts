@@ -209,7 +209,15 @@ async function startServer() {
   // Rollback uploaded image to prevent orphan files if form submission fails or is cancelled
   app.post('/api/upload/rollback', (req, res) => {
     try {
-      const url = req.body?.url || req.body?.imageUrl;
+      let url = req.body?.url || req.body?.imageUrl;
+      if (!url && typeof req.body === 'string') {
+        try {
+          const parsed = JSON.parse(req.body);
+          url = parsed?.url || parsed?.imageUrl;
+        } catch {
+          url = req.body;
+        }
+      }
       if (!url || typeof url !== 'string') {
         return res.status(400).json({ success: false, error: 'URL da imagem para rollback não fornecida.' });
       }

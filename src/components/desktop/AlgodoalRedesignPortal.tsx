@@ -376,37 +376,37 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
   });
 
   return (
-    <div className="w-full min-h-screen bg-[#060a12] text-white flex flex-col font-sans selection:bg-amber-500 selection:text-black">
+    <div className="w-full max-w-full overflow-x-hidden min-h-screen bg-[#060a12] text-white flex flex-col font-sans selection:bg-amber-500 selection:text-black">
       
       {/* ======================================================== */}
       {/* 1. TOP NAVBAR (DARK ATMOSPHERIC)                         */}
       {/* ======================================================== */}
-      <header className="w-full bg-[#060a12]/95 border-b border-slate-800/80 sticky top-0 z-50 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between gap-4">
+      <header className="w-full max-w-full bg-[#060a12]/95 border-b border-slate-800/80 sticky top-0 z-50 backdrop-blur-md overflow-x-hidden sm:overflow-visible">
+        <div className="max-w-7xl mx-auto px-2.5 sm:px-6 h-14 sm:h-18 flex items-center justify-between gap-1.5 sm:gap-4">
           
           {/* Brand Logo & Location */}
           <div 
-            className="flex items-center gap-3 cursor-pointer select-none"
+            className="flex items-center gap-1.5 sm:gap-3 cursor-pointer select-none min-w-0 shrink"
             onClick={() => {
               onSelectCategory('todos');
               onSearchChange('');
             }}
           >
-            <div className="w-10 h-10 rounded-full bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-xl shadow-inner">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-base sm:text-xl shadow-inner shrink-0">
               🌴
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-black font-heading tracking-tight text-white">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <span className="text-sm xs:text-base sm:text-xl font-black font-heading tracking-tight text-white truncate">
                   Algodoal<span className="text-amber-500">Connect</span>
                 </span>
-                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md bg-teal-500/20 text-teal-400 border border-teal-500/30">
+                <span className="text-[8px] sm:text-[9px] font-black uppercase px-1 sm:px-1.5 py-0.5 rounded-md bg-teal-500/20 text-teal-400 border border-teal-500/30 shrink-0">
                   GUIA
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 flex items-center gap-1 font-medium">
-                <MapPin className="w-3 h-3 text-amber-500" />
-                Ilha de Maiandeua, Pará
+              <p className="text-[10px] sm:text-[11px] text-slate-400 hidden xs:flex items-center gap-1 font-medium truncate">
+                <MapPin className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-500 shrink-0" />
+                <span className="truncate">Ilha de Maiandeua, Pará</span>
               </p>
             </div>
           </div>
@@ -472,39 +472,37 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
           </nav>
 
           {/* Right Actions: Layout Toggle ("Layout Antigo") + Theme Switcher + Admin */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {/* Button to toggle to Layout Antigo */}
             {onToggleLayout && (
               <button
                 id="btn-layout-antigo"
                 onClick={onToggleLayout}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer active:scale-95"
+                className="flex items-center gap-1 sm:gap-1.5 p-1.5 sm:px-3 sm:py-1.5 rounded-full text-xs font-bold bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer active:scale-95 shrink-0"
                 title="Alternar para o Layout Antigo / Clássico"
               >
-                <History className="w-3.5 h-3.5 text-amber-400" />
+                <History className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 <span className="hidden sm:inline">Layout Antigo</span>
-                <span className="sm:hidden">Antigo</span>
               </button>
             )}
 
             {/* Theme Switcher Button */}
             <button
               onClick={onToggleTheme}
-              className="p-2 sm:px-3 sm:py-1.5 rounded-full text-xs font-bold bg-slate-800/90 hover:bg-slate-700 text-amber-400 border border-slate-700 flex items-center gap-1.5 transition cursor-pointer active:scale-95"
+              className="p-1.5 sm:px-3 sm:py-1.5 rounded-full text-xs font-bold bg-slate-800/90 hover:bg-slate-700 text-amber-400 border border-slate-700 flex items-center gap-1.5 transition cursor-pointer active:scale-95 shrink-0"
               title="Alternar Tema Claro / Escuro"
             >
-              {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+              {theme === 'dark' ? <Sun className="w-3.5 h-3.5 shrink-0" /> : <Moon className="w-3.5 h-3.5 shrink-0" />}
               <span className="hidden lg:inline">{theme === 'dark' ? 'Tema Claro' : 'Tema Escuro'}</span>
             </button>
 
             {/* Admin / Login Button */}
             <button
               onClick={onOpenAdmin}
-              className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs px-3 sm:px-4 py-2 rounded-full flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition-transform active:scale-95 cursor-pointer"
+              className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full flex items-center gap-1 sm:gap-1.5 shadow-lg shadow-amber-500/20 transition-transform active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
             >
-              <User className="w-3.5 h-3.5 text-slate-950" />
-              <span className="hidden sm:inline">{currentUser?.role === 'admin' ? 'Painel Admin' : 'Entrar / Admin'}</span>
-              <span className="sm:hidden">{currentUser?.role === 'admin' ? 'Admin' : 'Entrar'}</span>
+              <User className="w-3.5 h-3.5 text-slate-950 shrink-0" />
+              <span className="hidden xs:inline">{currentUser?.role === 'admin' ? 'Painel Admin' : 'Entrar'}</span>
             </button>
           </div>
         </div>
@@ -513,8 +511,8 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
       {/* ======================================================== */}
       {/* STICKY MAIN VIEW BAR (MOBILE ONLY: INÍCIO | PORTAL | GUIA | ANUNCIE) */}
       {/* ======================================================== */}
-      <nav className="md:hidden sticky top-18 z-40 bg-[#080d18]/95 border-b border-slate-800/90 backdrop-blur-md px-3 sm:px-6 py-2.5 shadow-xl">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 overflow-x-auto no-scrollbar">
+      <nav className="md:hidden sticky top-14 sm:top-18 z-40 bg-[#080d18]/95 border-b border-slate-800/90 backdrop-blur-md px-2.5 sm:px-6 py-2 shadow-xl w-full max-w-full overflow-x-hidden">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 overflow-x-auto no-scrollbar w-full">
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Tab 1: Início (Tudo) */}
             <button
@@ -673,8 +671,8 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
 
             {/* Instant Search Bar */}
             <div className="relative pt-2 w-full max-w-md">
-              <div className="relative flex items-center">
-                <Search className="w-5 h-5 text-slate-500 absolute left-4 pointer-events-none" />
+              <div className="relative flex items-center w-full">
+                <Search className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500 absolute left-3.5 pointer-events-none shrink-0" />
                 <input
                   type="text"
                   value={searchTerm}
@@ -686,9 +684,9 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
                     }
                   }}
                   placeholder="Buscar charretes, pousadas, peixadas..."
-                  className="w-full bg-white text-slate-900 placeholder-slate-500 pl-11 pr-28 py-3.5 rounded-full text-sm font-semibold shadow-2xl border-2 border-white/20 focus:outline-hidden focus:ring-4 focus:ring-amber-400/30 transition"
+                  className="w-full bg-white text-slate-900 placeholder-slate-500 pl-9 sm:pl-11 pr-24 sm:pr-28 py-3 sm:py-3.5 rounded-full text-xs sm:text-sm font-semibold shadow-2xl border-2 border-white/20 focus:outline-hidden focus:ring-4 focus:ring-amber-400/30 transition"
                 />
-                <div className="absolute right-2 flex items-center gap-1">
+                <div className="absolute right-1.5 sm:right-2 flex items-center gap-1">
                   {searchTerm && (
                     <button
                       onClick={() => onSearchChange('')}
@@ -700,7 +698,7 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
                   )}
                   <button
                     onClick={scrollToResults}
-                    className="bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 px-3 py-1.5 rounded-full text-xs font-black shadow-md transition flex items-center gap-1 cursor-pointer"
+                    className="bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-black shadow-md transition flex items-center gap-1 cursor-pointer shrink-0"
                     title="Pressione Enter ou clique para descer aos resultados"
                   >
                     <span>Buscar</span>
@@ -713,7 +711,7 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
           {/* Right Floating Status Box (Tide + Weather) */}
           <div 
             onClick={onOpenTides}
-            className="cursor-pointer group p-3.5 sm:p-4 rounded-2xl bg-[#0b1220]/80 border border-slate-700/80 backdrop-blur-md shadow-2xl space-y-1.5 hover:border-amber-400/50 transition shrink-0"
+            className="cursor-pointer group p-3.5 sm:p-4 rounded-2xl bg-[#0b1220]/80 border border-slate-700/80 backdrop-blur-md shadow-2xl space-y-1.5 hover:border-amber-400/50 transition w-full sm:w-auto max-w-full"
           >
             <div className="flex items-center gap-2 text-xs font-bold text-teal-300">
               <Waves className="w-4 h-4 text-teal-400 animate-pulse" />
@@ -788,17 +786,17 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
           {/* Header Row */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
             <div>
-              <div className="flex items-center gap-2.5">
-                <Waves className="w-5 h-5 text-teal-600" />
+              <div className="flex flex-wrap items-center gap-2">
+                <Waves className="w-5 h-5 text-teal-600 shrink-0" />
                 <h3 className="text-base sm:text-lg font-black tracking-tight font-heading text-slate-900 uppercase">
                   Tábua de Marés de Hoje
                 </h3>
-                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-300">
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-300 shrink-0">
                   MARAPANIM
                 </span>
                 <button
                   onClick={onOpenTides}
-                  className="text-xs font-bold text-teal-600 hover:text-teal-700 transition cursor-pointer ml-1"
+                  className="text-xs font-bold text-teal-600 hover:text-teal-700 transition cursor-pointer shrink-0"
                 >
                   Ver Mês Inteiro →
                 </button>

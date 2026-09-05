@@ -339,6 +339,25 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     }
   }, [isOpen, isAdmin]);
 
+  // Limpeza automática se o usuário fechar a aba ou navegador enquanto há uma foto temporária não salva no anúncio
+  useEffect(() => {
+    if (!tempUploadedImageUrl || !tempUploadedImageUrl.startsWith('/imagens/upload_')) return;
+
+    const handleBeforeUnload = () => {
+      try {
+        const blob = new Blob([JSON.stringify({ url: tempUploadedImageUrl })], { type: 'application/json' });
+        navigator.sendBeacon('/api/upload/rollback', blob);
+      } catch (err) {
+        console.warn('Falha no rollback automático via beacon:', err);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [tempUploadedImageUrl]);
+
   const loadAllAdminData = async () => {
     setIsLoading(true);
     setActionError('');
@@ -865,6 +884,32 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
   const handleImageFileUpload = async (file: File) => {
     if (!file) return;
+
+    // Trava de segurança: impede upload de foto se título ou nome do estabelecimento estiverem vazios
+    const titleTrim = (currentAd.title || '').trim();
+    const businessNameTrim = (currentAd.business_name || '').trim();
+    if (!titleTrim || !businessNameTrim) {
+      const missing: string[] = [];
+      if (!titleTrim) missing.push('Título do Anúncio');
+      if (!businessNameTrim) missing.push('Nome do Estabelecimento');
+
+      const warningMsg = `⚠️ Upload Bloqueado: Preencha o ${missing.join(' e o ')} antes de carregar a foto do anúncio.\nEsta validação impede que fotos fiquem órfãs no servidor caso o cadastro seja interrompido.`;
+      setAdFormError(warningMsg);
+      setAdValidationErrors(prev => ({
+        ...prev,
+        ...(!titleTrim ? { title: 'Preencha o título antes de carregar a foto.' } : {}),
+        ...(!businessNameTrim ? { business_name: 'Preencha o nome do estabelecimento antes de carregar a foto.' } : {})
+      }));
+
+      // Limpa o input de arquivo caso tenha sido acionado
+      const fileInput = document.getElementById('ad-image-file-input') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+
+      const formEl = document.getElementById('ad-edit-form');
+      if (formEl) formEl.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     if (!file.type.startsWith('image/')) {
       alert('Por favor, selecione um arquivo de imagem válido (JPG, PNG, WebP, GIF).');
       return;
@@ -4823,68 +4868,102 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       </div>
                     )}
 
-                    <div className="space-y-2">
+                    {/* Trava visual quando campos obrigatórios ainda não foram preenchidos */}
+                    {(!currentAd.title?.trim() || !currentAd.business_name?.trim()) ? (
                       <div
-                        onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-                        onDragLeave={() => setIsDragOver(false)}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          setIsDragOver(false);
-                          if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                            handleImageFileUpload(e.dataTransfer.files[0]);
-                          }
-                        }}
                         onClick={() => {
-                          const input = document.getElementById('ad-image-file-input') as HTMLInputElement;
-                          if (input) input.click();
+                          const missing: string[] = [];
+                          if (!currentAd.title?.trim()) missing.push('Título do Anúncio');
+                          if (!currentAd.business_name?.trim()) missing.push('Nome do Estabelecimento');
+
+                          setAdFormError(`⚠️ Upload Bloqueado: Preencha o ${missing.join(' e o ')} antes de carregar a foto do anúncio.\nEsta validação protege o servidor contra fotos órfãs caso o cadastro seja interrompido.`);
+                          setAdValidationErrors(prev => ({
+                            ...prev,
+                            ...(!currentAd.title?.trim() ? { title: 'Preencha o título antes de carregar a foto.' } : {}),
+                            ...(!currentAd.business_name?.trim() ? { business_name: 'Preencha o nome do estabelecimento antes de carregar a foto.' } : {})
+                          }));
+                          const formEl = document.getElementById('ad-edit-form');
+                          if (formEl) formEl.scrollTo({ top: 0, behavior: 'smooth' });
                         }}
-                        className={`border-2 border-dashed rounded-2xl p-5 text-center cursor-pointer transition ${
-                          adValidationErrors.image_url
-                            ? 'border-rose-400 bg-rose-50/20'
-                            : isDragOver
-                            ? 'border-amber-500 bg-amber-50/80 scale-[1.01]'
-                            : 'border-slate-300 hover:border-amber-400 bg-slate-50/70 hover:bg-amber-50/30'
-                        }`}
+                        className="border-2 border-dashed border-amber-300 bg-amber-50/70 hover:bg-amber-100/80 rounded-2xl p-5 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2"
                       >
-                        <input
-                          type="file"
-                          id="ad-image-file-input"
-                          accept="image/*"
-                          onChange={(e) => {
-                            if (e.target.files && e.target.files[0]) {
-                              handleImageFileUpload(e.target.files[0]);
+                        <div className="w-12 h-12 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center shadow-xs">
+                          <Lock className="w-6 h-6" />
+                        </div>
+                        <div className="text-sm font-black text-amber-950">
+                          Upload de Foto Bloqueado
+                        </div>
+                        <p className="text-xs font-semibold text-amber-800 max-w-sm">
+                          Preencha primeiro o <strong>Título</strong> e o <strong>Nome do Estabelecimento</strong> acima para liberar o envio da foto.
+                        </p>
+                        <span className="text-[11px] font-bold text-amber-700 underline mt-1">
+                          Clique aqui para preencher os campos obrigatórios
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div
+                          onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                          onDragLeave={() => setIsDragOver(false)}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            setIsDragOver(false);
+                            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                              handleImageFileUpload(e.dataTransfer.files[0]);
                             }
                           }}
-                          className="hidden"
-                        />
+                          onClick={() => {
+                            const input = document.getElementById('ad-image-file-input') as HTMLInputElement;
+                            if (input) input.click();
+                          }}
+                          className={`border-2 border-dashed rounded-2xl p-5 text-center cursor-pointer transition ${
+                            adValidationErrors.image_url
+                              ? 'border-rose-400 bg-rose-50/20'
+                              : isDragOver
+                              ? 'border-amber-500 bg-amber-50/80 scale-[1.01]'
+                              : 'border-slate-300 hover:border-amber-400 bg-slate-50/70 hover:bg-amber-50/30'
+                          }`}
+                        >
+                          <input
+                            type="file"
+                            id="ad-image-file-input"
+                            accept="image/*"
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                handleImageFileUpload(e.target.files[0]);
+                              }
+                            }}
+                            className="hidden"
+                          />
 
-                        {isUploadingImage ? (
-                          <div className="py-4 flex flex-col items-center justify-center gap-2">
-                            <RefreshCw className="w-7 h-7 text-amber-500 animate-spin" />
-                            <span className="text-xs font-black text-slate-800">Enviando e processando imagem...</span>
-                          </div>
-                        ) : (
-                          <div className="py-2 flex flex-col items-center justify-center gap-2">
-                            <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shadow-xs">
-                              <UploadCloud className="w-6 h-6" />
+                          {isUploadingImage ? (
+                            <div className="py-4 flex flex-col items-center justify-center gap-2">
+                              <RefreshCw className="w-7 h-7 text-amber-500 animate-spin" />
+                              <span className="text-xs font-black text-slate-800">Enviando e processando imagem...</span>
                             </div>
-                            <div className="text-sm font-black text-slate-800">
-                              Clique para escolher uma imagem ou arraste o arquivo aqui
+                          ) : (
+                            <div className="py-2 flex flex-col items-center justify-center gap-2">
+                              <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shadow-xs">
+                                <UploadCloud className="w-6 h-6" />
+                              </div>
+                              <div className="text-sm font-black text-slate-800">
+                                Clique para escolher uma imagem ou arraste o arquivo aqui
+                              </div>
+                              <p className="text-xs text-slate-500">
+                                Suporta JPG, PNG, WebP do seu celular ou computador (Máx: 10MB)
+                              </p>
                             </div>
-                            <p className="text-xs text-slate-500">
-                              Suporta JPG, PNG, WebP do seu celular ou computador (Máx: 10MB)
-                            </p>
-                          </div>
+                          )}
+                        </div>
+
+                        {adValidationErrors.image_url && (
+                          <p className="mt-1 text-[11px] font-bold text-rose-600 flex items-center gap-1">
+                            <AlertCircle className="w-3.5 h-3.5" />
+                            {adValidationErrors.image_url}
+                          </p>
                         )}
                       </div>
-
-                      {adValidationErrors.image_url && (
-                        <p className="mt-1 text-[11px] font-bold text-rose-600 flex items-center gap-1">
-                          <AlertCircle className="w-3.5 h-3.5" />
-                          {adValidationErrors.image_url}
-                        </p>
-                      )}
-                    </div>
+                    )}
                   </div>
 
                   {/* Status checkbox */}

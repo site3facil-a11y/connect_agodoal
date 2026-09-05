@@ -274,7 +274,39 @@ async function initPostgres(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_advertisements_category ON advertisements(category);
       CREATE INDEX IF NOT EXISTS idx_reviews_partner ON reviews(partner_id);
 
-      -- Migrações incrementais seguras para a tabela advertisements caso já existisse
+      -- Migrações incrementais seguras para todas as tabelas caso o banco já existisse em produção
+
+      -- 1. admin_settings
+      ALTER TABLE admin_settings ADD COLUMN IF NOT EXISTS hero_background_url TEXT;
+      ALTER TABLE admin_settings ADD COLUMN IF NOT EXISTS hero_rotation_enabled BOOLEAN DEFAULT TRUE;
+      ALTER TABLE admin_settings ADD COLUMN IF NOT EXISTS hero_active_images JSONB DEFAULT '[]';
+      ALTER TABLE admin_settings ADD COLUMN IF NOT EXISTS hero_custom_images JSONB DEFAULT '[]';
+      ALTER TABLE admin_settings ADD COLUMN IF NOT EXISTS hero_deleted_presets JSONB DEFAULT '[]';
+      ALTER TABLE admin_settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+      -- 2. partners
+      ALTER TABLE partners ADD COLUMN IF NOT EXISTS subcategory VARCHAR(150);
+      ALTER TABLE partners ADD COLUMN IF NOT EXISTS plan_type VARCHAR(20);
+      ALTER TABLE partners ADD COLUMN IF NOT EXISTS price_starting NUMERIC(10,2) DEFAULT 0.0;
+      ALTER TABLE partners ADD COLUMN IF NOT EXISTS vehicle_badge VARCHAR(150);
+      ALTER TABLE partners ADD COLUMN IF NOT EXISTS opening_hours VARCHAR(150);
+      ALTER TABLE partners ADD COLUMN IF NOT EXISTS amenities JSONB DEFAULT '[]';
+      ALTER TABLE partners ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+
+      -- 3. services_products
+      ALTER TABLE services_products ADD COLUMN IF NOT EXISTS available BOOLEAN DEFAULT TRUE;
+      ALTER TABLE services_products ADD COLUMN IF NOT EXISTS estimated_time VARCHAR(80);
+      ALTER TABLE services_products ADD COLUMN IF NOT EXISTS image_url TEXT;
+
+      -- 4. orders
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS destination_location VARCHAR(255);
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS partner_name VARCHAR(255);
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) DEFAULT 'pix';
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT;
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS driver_or_agent_name VARCHAR(255);
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+      -- 5. advertisements
       ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS partner_id VARCHAR(64);
       ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS business_name VARCHAR(255) DEFAULT '';
       ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS tagline VARCHAR(255);
@@ -298,6 +330,49 @@ async function initPostgres(): Promise<void> {
       ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS clicks_count INTEGER DEFAULT 0;
       ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
       ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+      -- 6. tide_days
+      ALTER TABLE tide_days ADD COLUMN IF NOT EXISTS coefficient INTEGER;
+      ALTER TABLE tide_days ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'manual';
+      ALTER TABLE tide_days ADD COLUMN IF NOT EXISTS recommendations TEXT;
+
+      -- 7. users
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS provider VARCHAR(20) DEFAULT 'email';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'tourist';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS partner_id VARCHAR(64);
+
+      -- 8. useful_contacts
+      ALTER TABLE useful_contacts ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(50);
+      ALTER TABLE useful_contacts ADD COLUMN IF NOT EXISTS available_hours VARCHAR(100);
+
+      -- 9. boat_crossings
+      ALTER TABLE boat_crossings ADD COLUMN IF NOT EXISTS association VARCHAR(255);
+      ALTER TABLE boat_crossings ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
+      ALTER TABLE boat_crossings ADD COLUMN IF NOT EXISTS notes TEXT;
+
+      -- 10. island_spots
+      ALTER TABLE island_spots ADD COLUMN IF NOT EXISTS distance_from_port VARCHAR(100);
+      ALTER TABLE island_spots ADD COLUMN IF NOT EXISTS walking_time VARCHAR(100);
+      ALTER TABLE island_spots ADD COLUMN IF NOT EXISTS cart_time VARCHAR(100);
+      ALTER TABLE island_spots ADD COLUMN IF NOT EXISTS tips TEXT;
+      ALTER TABLE island_spots ADD COLUMN IF NOT EXISTS coordinates JSONB;
+
+      -- 11. stories
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS subtitle VARCHAR(255);
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS emoji VARCHAR(10);
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS cover_image TEXT;
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS full_image TEXT;
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS description TEXT;
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS location VARCHAR(255);
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS tag VARCHAR(100);
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'todos';
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(50);
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS order_index INTEGER DEFAULT 0;
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
     `);
 
     console.log('🗄️  Tabelas PostgreSQL verificadas/criadas com sucesso.');
@@ -457,8 +532,8 @@ async function seedPostgresIfEmpty(): Promise<void> {
   }
 
   await pgPool!.query(
-    `INSERT INTO admin_settings (id, admin_username, admin_email, admin_pin, hero_background_url, hero_rotation_enabled, hero_active_images, hero_custom_images, updated_at)
-     VALUES (1,'admin','admin@algodoalconnect.com.br','algodoal2026','/imagens/algodoal.jpg', TRUE, $1, '[]', NOW())
+    `INSERT INTO admin_settings (id, admin_username, admin_email, admin_pin, hero_background_url, hero_rotation_enabled, hero_active_images, hero_custom_images, hero_deleted_presets, updated_at)
+     VALUES (1,'admin','admin@algodoalconnect.com.br','algodoal2026','/imagens/algodoal.jpg', TRUE, $1, '[]', '[]', NOW())
      ON CONFLICT (id) DO NOTHING`,
     [JSON.stringify(['/imagens/algodoal.jpg', '/imagens/vila.jpg', '/imagens/vila2.jpg', '/imagens/canal.jpg', '/imagens/porto.jpg', '/imagens/porto2.jpg'])]
   );
@@ -2942,8 +3017,8 @@ export async function syncLocalDataToPostgres(): Promise<{
     const admin = await getAdminSettings();
     if (admin) {
       await pgPool.query(
-        `INSERT INTO admin_settings (id, admin_username, admin_email, admin_pin, hero_background_url, hero_rotation_enabled, hero_active_images, hero_custom_images, updated_at)
-         VALUES (1, $1, $2, $3, $4, $5, $6, $7, NOW())
+        `INSERT INTO admin_settings (id, admin_username, admin_email, admin_pin, hero_background_url, hero_rotation_enabled, hero_active_images, hero_custom_images, hero_deleted_presets, updated_at)
+         VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, NOW())
          ON CONFLICT (id) DO UPDATE SET
            admin_username = EXCLUDED.admin_username,
            admin_email = EXCLUDED.admin_email,
@@ -2952,8 +3027,9 @@ export async function syncLocalDataToPostgres(): Promise<{
            hero_rotation_enabled = EXCLUDED.hero_rotation_enabled,
            hero_active_images = EXCLUDED.hero_active_images,
            hero_custom_images = EXCLUDED.hero_custom_images,
+           hero_deleted_presets = EXCLUDED.hero_deleted_presets,
            updated_at = NOW()`,
-        [admin.admin_username, admin.admin_email, admin.admin_pin, admin.hero_background_url, admin.hero_rotation_enabled, JSON.stringify(admin.hero_active_images || []), JSON.stringify(admin.hero_custom_images || [])]
+        [admin.admin_username, admin.admin_email, admin.admin_pin, admin.hero_background_url, admin.hero_rotation_enabled, JSON.stringify(admin.hero_active_images || []), JSON.stringify(admin.hero_custom_images || []), JSON.stringify(admin.hero_deleted_presets || [])]
       );
       counts.admin_settings = 1;
     }

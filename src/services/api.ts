@@ -141,7 +141,7 @@ export const api = {
     });
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
-      const msg = errData.error || errData.details || `Erro HTTP ${res.status} ao cadastrar anúncio`;
+      const msg = errData.message || errData.error || errData.details || `Erro HTTP ${res.status} ao cadastrar anúncio`;
       throw new Error(msg);
     }
     return res.json();
@@ -155,7 +155,7 @@ export const api = {
     });
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
-      const msg = errData.error || errData.details || `Erro HTTP ${res.status} ao atualizar anúncio`;
+      const msg = errData.message || errData.error || errData.details || `Erro HTTP ${res.status} ao atualizar anúncio`;
       throw new Error(msg);
     }
     return res.json();

@@ -528,7 +528,7 @@ export function App() {
   const dynamicTideSummary = getDynamicTideSummary();
 
   return (
-    <div className={`min-h-screen flex flex-col items-center justify-start selection:bg-teal-500 selection:text-white transition-colors duration-200 ${
+    <div className={`min-h-screen w-full max-w-full overflow-x-hidden flex flex-col items-center justify-start selection:bg-teal-500 selection:text-white transition-colors duration-200 ${
       isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-800'
     }`}>
       <DbStatusBanner />
