@@ -178,6 +178,7 @@ CREATE TABLE IF NOT EXISTS admin_settings (
     hero_rotation_enabled BOOLEAN DEFAULT TRUE,
     hero_active_images JSONB DEFAULT '[]',
     hero_custom_images JSONB DEFAULT '[]',
+    hero_deleted_presets JSONB DEFAULT '[]',
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT admin_settings_singleton CHECK (id = 1)
 );

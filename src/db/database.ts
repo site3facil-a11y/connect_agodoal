@@ -229,6 +229,7 @@ async function initPostgres(): Promise<void> {
         hero_rotation_enabled BOOLEAN DEFAULT TRUE,
         hero_active_images JSONB DEFAULT '[]',
         hero_custom_images JSONB DEFAULT '[]',
+        hero_deleted_presets JSONB DEFAULT '[]',
         updated_at TIMESTAMPTZ DEFAULT NOW(),
         CONSTRAINT admin_settings_singleton CHECK (id = 1)
       );
