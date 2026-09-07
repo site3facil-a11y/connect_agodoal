@@ -57,6 +57,7 @@ import {
   restoreDatabaseBackup,
   getDatabaseStatus,
   testPostgresConnection,
+  attemptPostgresReconnect,
   syncLocalDataToPostgres
 } from './src/db/database';
 import { AdCategory } from './src/types';
@@ -126,6 +127,18 @@ async function startServer() {
     try {
       const { customUrl } = req.body || {};
       const result = await testPostgresConnection(customUrl);
+      const currentStatus = getDatabaseStatus();
+      res.json({ ...result, currentStatus });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  // Force PostgreSQL Reconnect
+  app.post('/api/admin/reconnect-db', async (req, res) => {
+    try {
+      const { customUrl } = req.body || {};
+      const result = await attemptPostgresReconnect(customUrl);
       const currentStatus = getDatabaseStatus();
       res.json({ ...result, currentStatus });
     } catch (err: any) {

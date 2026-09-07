@@ -61,7 +61,7 @@ if (databaseUrl && databaseUrl.trim() !== '') {
     pgPool = new pg.Pool({
       connectionString: databaseUrl,
       ssl: isLocal ? false : { rejectUnauthorized: false },
-      connectionTimeoutMillis: 3500, // Timeout rápido de 3.5s caso o host remoto esteja inacessível
+      connectionTimeoutMillis: 8000,
       idleTimeoutMillis: 10000,
     });
     pgPool.on('error', (err) => {
@@ -73,6 +73,99 @@ if (databaseUrl && databaseUrl.trim() !== '') {
     pgPool = null;
   }
 }
+
+// Control state for auto-reconnection
+let isReconnecting = false;
+
+export async function attemptPostgresReconnect(customUrl?: string): Promise<{
+  success: boolean;
+  message: string;
+  details?: any;
+}> {
+  const url = (customUrl && customUrl.trim()) || process.env.DATABASE_URL;
+  if (!url || url.trim() === '') {
+    return {
+      success: false,
+      message: 'Nenhuma DATABASE_URL configurada.',
+      details: 'Defina a variável DATABASE_URL nas configurações ou no arquivo .env'
+    };
+  }
+
+  if (isReconnecting) {
+    return {
+      success: false,
+      message: 'Reconexão já em andamento, aguarde...',
+      details: pgStatusDetails
+    };
+  }
+
+  isReconnecting = true;
+  try {
+    const isLocal = url.includes('localhost') || url.includes('127.0.0.1') || url.includes('sslmode=disable') || url.includes('@postgres:');
+    
+    // Encerra pool anterior com segurança
+    if (pgPool) {
+      try {
+        await pgPool.end();
+      } catch {
+        // ignore
+      }
+      pgPool = null;
+    }
+
+    pgPool = new pg.Pool({
+      connectionString: url,
+      ssl: isLocal ? false : { rejectUnauthorized: false },
+      connectionTimeoutMillis: 8000,
+      idleTimeoutMillis: 10000,
+    });
+
+    pgPool.on('error', (err) => {
+      console.warn('⚠️ Erro no pool do PostgreSQL:', err.message);
+      pgConnected = false;
+      pgStatusDetails = `Erro no pool PostgreSQL: ${err.message}`;
+    });
+
+    pgInitPromise = initPostgres();
+    await pgInitPromise;
+
+    if (pgConnected) {
+      return {
+        success: true,
+        message: 'PostgreSQL conectado e sincronizado com sucesso!',
+        details: pgStatusDetails
+      };
+    } else {
+      return {
+        success: false,
+        message: 'Falha ao conectar com PostgreSQL.',
+        details: pgStatusDetails
+      };
+    }
+  } catch (err: any) {
+    pgConnected = false;
+    pgStatusDetails = `Falha na conexão: ${err.message}`;
+    return {
+      success: false,
+      message: `Falha na conexão: ${err.message}`,
+      details: err.message
+    };
+  } finally {
+    isReconnecting = false;
+  }
+}
+
+// Loop periódico de reconexão automática em segundo plano a cada 30 segundos
+// Caso a conexão caia temporariamente, o app tenta restabelecer sem reiniciar o servidor
+setInterval(async () => {
+  if (!pgConnected && process.env.DATABASE_URL && process.env.DATABASE_URL.trim() !== '' && !isReconnecting) {
+    try {
+      await attemptPostgresReconnect();
+    } catch {
+      // Falha silenciosa no background
+    }
+  }
+}, 30000);
 
 // ==========================================
 // POSTGRESQL SCHEMA BOOTSTRAP + SEED
@@ -377,12 +470,21 @@ async function initPostgres(): Promise<void> {
       ALTER TABLE stories ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
       UPDATE stories SET active = is_active WHERE active IS NULL AND is_active IS NOT NULL;
       UPDATE stories SET is_active = active WHERE is_active IS NULL AND active IS NOT NULL;
+
+      -- 12. safe foreign keys on reviews & orders (garantir que CASCADE ou SET NULL não quebrem)
+      ALTER TABLE reviews DROP CONSTRAINT IF EXISTS reviews_partner_id_fkey;
+      ALTER TABLE reviews ADD CONSTRAINT reviews_partner_id_fkey FOREIGN KEY (partner_id) REFERENCES partners(id) ON DELETE CASCADE NOT VALID;
     `);
 
     console.log('🗄️  Tabelas PostgreSQL verificadas/criadas com sucesso.');
-    await seedPostgresIfEmpty();
     pgConnected = true;
     pgStatusDetails = 'PostgreSQL Conectado com Sucesso';
+    
+    try {
+      await seedPostgresIfEmpty();
+    } catch (seedErr: any) {
+      console.warn('⚠️ Aviso durante seed de dados no PostgreSQL (dados preservados):', seedErr.message);
+    }
   } catch (err: any) {
     const errorMsg = err?.message || String(err);
     console.warn(`ℹ️ PostgreSQL externo indisponível (${errorMsg}). Alternando com segurança para o armazenamento local em arquivo JSON.`);
@@ -414,16 +516,27 @@ async function seedPostgresIfEmpty(): Promise<void> {
     }
   }
 
-  const { rows: sRows } = await pgPool!.query('SELECT COUNT(*)::int AS count FROM services_products');
-  if (sRows[0].count === 0) {
-    for (const s of SEED_SERVICES) {
-      await pgPool!.query(
-        `INSERT INTO services_products (id, partner_id, name, description, price, unit, category, image_url, available, estimated_time)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-         ON CONFLICT (id) DO NOTHING`,
-        [s.id, s.partner_id, s.name, s.description, s.price, s.unit, s.category, s.image_url, s.available, s.estimated_time || null]
-      );
+  try {
+    const { rows: sRows } = await pgPool!.query('SELECT COUNT(*)::int AS count FROM services_products');
+    if (sRows[0].count === 0) {
+      for (const s of SEED_SERVICES) {
+        try {
+          const { rows: partExists } = await pgPool!.query('SELECT 1 FROM partners WHERE id = $1', [s.partner_id]);
+          if (partExists.length > 0) {
+            await pgPool!.query(
+              `INSERT INTO services_products (id, partner_id, name, description, price, unit, category, image_url, available, estimated_time)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+               ON CONFLICT (id) DO NOTHING`,
+              [s.id, s.partner_id, s.name, s.description, s.price, s.unit, s.category, s.image_url, s.available, s.estimated_time || null]
+            );
+          }
+        } catch (errServ) {
+          console.warn('⚠️ Ignorando serviço com parceiro não encontrado:', errServ);
+        }
+      }
     }
+  } catch (errServCount) {
+    console.warn('⚠️ Tabela services_products com aviso:', errServCount);
   }
 
   const { rows: oRows } = await pgPool!.query('SELECT COUNT(*)::int AS count FROM orders');
@@ -474,16 +587,28 @@ async function seedPostgresIfEmpty(): Promise<void> {
     }
   }
 
-  const { rows: rRows } = await pgPool!.query('SELECT COUNT(*)::int AS count FROM reviews');
-  if (rRows[0].count === 0) {
-    for (const r of SEED_REVIEWS) {
-      await pgPool!.query(
-        `INSERT INTO reviews (id, partner_id, customer_name, rating, comment, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6)
-         ON CONFLICT (id) DO NOTHING`,
-        [r.id, r.partner_id, r.customer_name, r.rating, r.comment, r.created_at]
-      );
+  try {
+    const { rows: rRows } = await pgPool!.query('SELECT COUNT(*)::int AS count FROM reviews');
+    if (rRows[0].count === 0) {
+      for (const r of SEED_REVIEWS) {
+        try {
+          // Verifica se o parceiro existe antes de inserir review com chave estrangeira
+          const { rows: partExists } = await pgPool!.query('SELECT 1 FROM partners WHERE id = $1', [r.partner_id]);
+          if (partExists.length > 0) {
+            await pgPool!.query(
+              `INSERT INTO reviews (id, partner_id, customer_name, rating, comment, created_at)
+               VALUES ($1,$2,$3,$4,$5,$6)
+               ON CONFLICT (id) DO NOTHING`,
+              [r.id, r.partner_id, r.customer_name, r.rating, r.comment, r.created_at]
+            );
+          }
+        } catch (errReview) {
+          console.warn('⚠️ Ignorando review sem parceiro correspondente:', errReview);
+        }
+      }
     }
+  } catch (errReviewsQuery) {
+    console.warn('⚠️ Tabela reviews com aviso:', errReviewsQuery);
   }
 
   const { rows: aRows } = await pgPool!.query('SELECT COUNT(*)::int AS count FROM advertisements');
