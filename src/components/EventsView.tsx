@@ -22,7 +22,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
   advertisements,
   onSelectAd
 }) => {
-  const eventAds = advertisements.filter(a => a.category === 'evento' || a.event_date);
+  const eventAds = advertisements.filter(a => a.is_active !== false && (a.category === 'evento' || a.event_date));
 
   const fallbackEvents = [
     {

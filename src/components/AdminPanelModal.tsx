@@ -833,20 +833,52 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   };
 
   const handleToggleAdActive = async (ad: Advertisement) => {
+    const nextState = !ad.is_active;
     try {
       const res = await fetch(`/api/advertisements/${ad.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_active: !ad.is_active })
+        body: JSON.stringify({ is_active: nextState })
       });
       if (res.ok) {
         const updated = await res.json();
         setAds(prev => prev.map(a => a.id === ad.id ? updated : a));
-        showSuccess(`Anúncio "${ad.title}" ${updated.is_active ? 'ATIVADO' : 'PAUSADO'} com sucesso!`);
+        showSuccess(`Anúncio "${ad.title}" ${updated.is_active ? 'ATIVADO no portal' : 'PAUSADO (ocultado do portal)'} com sucesso!`);
         if (onRefreshData) onRefreshData();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setActionError('Falha ao alterar status do anúncio: ' + (errData.message || res.statusText));
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setActionError('Erro de conexão ao alterar status: ' + err.message);
+    }
+  };
+
+  const handleToggleAllAds = async (setActive: boolean) => {
+    const actionDesc = setActive ? 'ATIVAR TODOS' : 'PAUSAR TODOS (OCULTAR)';
+    if (!window.confirm(`Tem certeza que deseja ${actionDesc} os anúncios comerciais do portal?`)) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/advertisements/toggle-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: setActive })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.ads) {
+          setAds(data.ads);
+          showSuccess(`Operação concluída! Todos os ${data.count} anúncios foram ${setActive ? 'ATIVADOS' : 'PAUSADOS e ocultados da página principal'}.`);
+          if (onRefreshData) onRefreshData();
+        }
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setActionError('Erro ao alternar todos os anúncios: ' + (errData.message || res.statusText));
+      }
+    } catch (err: any) {
+      setActionError('Falha de conexão: ' + err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -2030,7 +2062,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       </select>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
                         onClick={loadAllAdminData}
                         disabled={isLoading}
@@ -2042,13 +2074,35 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
                       <button
                         type="button"
+                        onClick={() => handleToggleAllAds(false)}
+                        disabled={isLoading}
+                        title="Pausar e ocultar todos os anúncios da página principal"
+                        className="py-2.5 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-black text-xs flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                      >
+                        <span>⏸️</span>
+                        <span>Pausar Todos</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleToggleAllAds(true)}
+                        disabled={isLoading}
+                        title="Ativar e exibir todos os anúncios no portal"
+                        className="py-2.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 font-black text-xs flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                      >
+                        <span>▶️</span>
+                        <span>Ativar Todos</span>
+                      </button>
+
+                      <button
+                        type="button"
                         onClick={handleResetDefaultAds}
                         disabled={isLoading}
                         title="Restaurar e ativar todos os anúncios comerciais oficiais"
                         className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer border border-slate-300"
                       >
                         <RotateCcw className="w-3.5 h-3.5 text-emerald-600" />
-                        <span className="hidden sm:inline">Restaurar Anúncios Padrão</span>
+                        <span className="hidden sm:inline">Restaurar Padrão</span>
                       </button>
 
                       <button
@@ -2074,7 +2128,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         className="py-2.5 px-4 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs flex items-center gap-2 shadow-sm transition cursor-pointer"
                       >
                         <Plus className="w-4 h-4" />
-                        <span>Novo Anúncio / Banner</span>
+                        <span>Novo Anúncio</span>
                       </button>
                     </div>
                   </div>
@@ -2124,11 +2178,16 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           <div className="p-4">
                             <div className="flex items-start justify-between gap-2 mb-2">
                               <div className="flex flex-wrap items-center gap-1.5">
-                                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                                  ad.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
-                                }`}>
-                                  {ad.is_active ? '🟢 Ativo' : '⏸️ Pausado'}
-                                </span>
+                                {ad.is_active ? (
+                                  <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    Ativo no Site
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                                    ⏸️ Pausado (Oculto)
+                                  </span>
+                                )}
 
                                 <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
                                   {ad.category}
@@ -2143,14 +2202,24 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
                               <button
                                 onClick={() => handleToggleAdActive(ad)}
-                                title={ad.is_active ? 'Pausar anúncio' : 'Ativar anúncio'}
-                                className={`text-[11px] font-bold px-2 py-1 rounded-lg transition cursor-pointer ${
-                                  ad.is_active ? 'bg-amber-100 text-amber-900 hover:bg-amber-200' : 'bg-emerald-100 text-emerald-900 hover:bg-emerald-200'
+                                title={ad.is_active ? 'Pausar anúncio (ocultar da página principal)' : 'Ativar anúncio (exibir na página principal)'}
+                                className={`text-[11px] font-bold px-2.5 py-1 rounded-lg transition cursor-pointer flex items-center gap-1 shadow-2xs ${
+                                  ad.is_active
+                                    ? 'bg-amber-100 text-amber-900 hover:bg-amber-200 border border-amber-300'
+                                    : 'bg-emerald-600 text-white hover:bg-emerald-500 font-black'
                                 }`}
                               >
-                                {ad.is_active ? 'Pausar' : 'Ativar'}
+                                <span>{ad.is_active ? '⏸️' : '▶️'}</span>
+                                <span>{ad.is_active ? 'Pausar' : 'Ativar'}</span>
                               </button>
                             </div>
+
+                            {!ad.is_active && (
+                              <div className="mt-2 mb-1 py-1 px-2.5 rounded-lg bg-rose-50 border border-rose-200 text-[11px] font-semibold text-rose-800 flex items-center gap-1.5">
+                                <span>⏸️</span>
+                                <span>Anúncio pausado: <strong>oculto na página principal</strong>.</span>
+                              </div>
+                            )}
 
                             <div className="flex gap-3 mt-2">
                               <img

@@ -413,15 +413,12 @@ export function App() {
         console.warn('Configurações salvas não puderam ser carregadas:', errSettings);
       }
 
-      // 1. Fetch Real Ads from Backend
+      // 1. Fetch Real Ads from Backend (Apenas anúncios ativos retornados)
       const resAds = await fetch('/api/advertisements');
       if (resAds.ok) {
         const dataAds = await resAds.json();
-        if (Array.isArray(dataAds) && dataAds.length > 0) {
+        if (Array.isArray(dataAds)) {
           setAdvertisements(dataAds);
-        } else if (Array.isArray(dataAds) && dataAds.length === 0) {
-          console.warn('Backend retornou 0 anúncios. Preservando catálogo de anúncios ativos para evitar desaparecimento.');
-          setAdvertisements(INITIAL_PROTOTYPE_ADVERTISEMENTS);
         }
       }
 

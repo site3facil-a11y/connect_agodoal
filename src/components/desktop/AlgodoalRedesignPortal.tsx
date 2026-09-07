@@ -332,8 +332,11 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
     }, 60);
   };
 
-  // Filtered ads
+  // Filtered ads - Only show ACTIVE advertisements on the public portal!
   const activeFilteredAds = advertisements.filter((ad) => {
+    // Hide paused/inactive ads from public visitors
+    if (ad.is_active === false) return false;
+
     if (selectedCategory !== 'todos') {
       if (normalizeCat(ad.category) !== normalizeCat(selectedCategory)) return false;
     }
@@ -1381,11 +1384,11 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
           ) : (
             <div className="p-12 rounded-3xl bg-slate-900/60 border border-slate-800 text-center space-y-3">
               <Compass className="w-10 h-10 mx-auto text-amber-400" />
-              <h4 className="text-base font-black text-white">Nenhum anúncio comercial encontrado</h4>
+              <h4 className="text-base font-black text-white">Nenhum anúncio comercial ativo no momento</h4>
               <p className="text-xs text-slate-400 max-w-md mx-auto">
                 {selectedCategory !== 'todos'
                   ? `Não há anúncios ativos na categoria "${selectedCategory}". Experimente selecionar outra ou ver todos.`
-                  : 'Nenhum anúncio comercial corresponde à sua busca.'}
+                  : 'Os anúncios comerciais estão pausados ou em moderação pelo administrador.'}
               </p>
               <div className="flex items-center justify-center gap-3 pt-2">
                 {selectedCategory !== 'todos' && (
@@ -1400,7 +1403,7 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
                   onClick={onOpenAdmin}
                   className="text-xs font-black bg-amber-400 hover:bg-amber-300 text-slate-950 px-4 py-2 rounded-xl transition cursor-pointer shadow-md"
                 >
-                  Anunciar Meu Negócio
+                  Painel Admin (Gerenciar Anúncios)
                 </button>
               </div>
             </div>

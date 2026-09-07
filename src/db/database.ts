@@ -549,7 +549,7 @@ async function seedPostgresIfEmpty(): Promise<void> {
 async function pgReady(): Promise<boolean> {
   if (!pgInitPromise) return false;
   await pgInitPromise;
-  return !!pgPool;
+  return !!pgPool && pgConnected;
 }
 
 // ---- Row → interface mappers (pg returns NUMERIC as string and JSONB as parsed JS) ----
@@ -2060,6 +2060,24 @@ export async function getAdvertisementById(id: string): Promise<Advertisement | 
   }
   const db = loadLocalDB();
   return db.advertisements.find(a => a.id === id) || null;
+}
+
+export async function toggleAllAdvertisements(isActive: boolean): Promise<Advertisement[]> {
+  if (await pgReady()) {
+    await pgPool!.query('UPDATE advertisements SET is_active = $1, updated_at = NOW()', [isActive]);
+    const res = await pgPool!.query('SELECT * FROM advertisements');
+    return res.rows.map(rowToAdvertisement);
+  }
+  const db = loadLocalDB();
+  if (Array.isArray(db.advertisements)) {
+    db.advertisements = db.advertisements.map(a => ({
+      ...a,
+      is_active: isActive,
+      updated_at: new Date().toISOString()
+    }));
+    saveLocalDB(db);
+  }
+  return db.advertisements || [];
 }
 
 export async function createAdvertisement(ad: Advertisement): Promise<Advertisement> {

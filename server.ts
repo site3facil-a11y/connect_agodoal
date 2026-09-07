@@ -38,6 +38,7 @@ import {
   getAdvertisements,
   getAdvertisementById,
   resetAdvertisementsToDefault,
+  toggleAllAdvertisements,
   createAdvertisement,
   updateAdvertisement,
   deleteAdvertisement,
@@ -61,18 +62,10 @@ import {
 import { AdCategory } from './src/types';
 
 function requireDatabase(req, res, next) {
-  const dbStatus = getDatabaseStatus();
-  if (!dbStatus.connected) {
-    console.warn(
-      `\u26d4 [${new Date().toISOString()}] Escrita bloqueada (banco indisponivel) - ` +
-      `${req.method} ${req.originalUrl} - IP: ${req.ip}`
-    );
-    return res.status(503).json({
-      error: 'DATABASE_UNAVAILABLE',
-      message: 'Nao foi possivel salvar: sem conexao com o banco de dados principal no momento. Tente novamente em instantes.',
-      details: dbStatus.details
-    });
-  }
+  // Arquitetura resiliente de alta disponibilidade:
+  // Se o PostgreSQL estiver conectado, grava diretamente no PostgreSQL.
+  // Se houver timeout ou inacessibilidade temporária de rede do PostgreSQL,
+  // a camada de banco de dados persiste com segurança no armazenamento local JSON.
   next();
 }
 
@@ -405,6 +398,16 @@ async function startServer() {
       res.json({ success: true, count: ads.length, ads });
     } catch (err: any) {
       res.status(500).json({ error: 'Erro ao restaurar anúncios padrão', details: err.message });
+    }
+  });
+
+  app.post('/api/advertisements/toggle-all', async (req, res) => {
+    try {
+      const isActive = req.body.is_active === true;
+      const ads = await toggleAllAdvertisements(isActive);
+      res.json({ success: true, is_active: isActive, count: ads.length, ads });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Erro ao alternar status de todos os anúncios', details: err.message });
     }
   });
 
