@@ -49,6 +49,8 @@ import { WeatherDetailsModal } from './components/WeatherDetailsModal.tsx';
 import { DesktopNavbar } from './components/desktop/DesktopNavbar.tsx';
 import { AlgodoalRedesignPortal } from './components/desktop/AlgodoalRedesignPortal.tsx';
 import { DbStatusBanner } from './components/DbStatusBanner.tsx';
+import { PWAInstallBanner } from './components/pwa/PWAInstallBanner.tsx';
+import { OfflineIndicator } from './components/pwa/OfflineIndicator.tsx';
 
 // Fallback Initial Partners Data for Instant Prototype Rendering
 const INITIAL_PROTOTYPE_PARTNERS: Partner[] = [
@@ -920,6 +922,10 @@ export function App() {
           <span className="font-extrabold text-xs">Voltar ao topo</span>
         </button>
       )}
+
+      {/* PWA: Smart Install Banner and Offline Indicator */}
+      <PWAInstallBanner />
+      <OfflineIndicator />
 
       {/* ======================================================== */}
       {/* 4. MODALS SYSTEM                                         */}

@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { Advertisement, Partner, TideDayEntry, UserProfile, WeatherData } from '../../types/index.ts';
 import { StoriesRow } from '../mobile/StoriesRow.tsx';
+import { PWAInstallButton } from '../pwa/PWAInstallButton.tsx';
 
 interface AlgodoalRedesignPortalProps {
   theme: 'dark' | 'light';
@@ -485,6 +486,9 @@ export const AlgodoalRedesignPortal: React.FC<AlgodoalRedesignPortalProps> = ({
                 <span className="hidden sm:inline">Layout Antigo</span>
               </button>
             )}
+
+            {/* App Install Button (Android / iOS PWA) */}
+            <PWAInstallButton className="shrink-0" />
 
             {/* Theme Switcher Button */}
             <button

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sparkles, Sun, Moon, Waves, Search, ShieldCheck, User, MapPin, Bell } from 'lucide-react';
 import { UserProfile, WeatherData } from '../../types/index.ts';
+import { PWAInstallButton } from '../pwa/PWAInstallButton.tsx';
 
 interface MobileTopBarProps {
   theme?: 'dark' | 'light';
@@ -100,6 +101,9 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
 
         {/* Right Actions */}
         <div className="flex items-center gap-1.5">
+          {/* App Install Button */}
+          <PWAInstallButton className="shrink-0" />
+
           {/* Theme Toggle */}
           {onToggleTheme && (
             <button

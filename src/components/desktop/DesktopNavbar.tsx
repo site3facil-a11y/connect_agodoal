@@ -19,6 +19,7 @@ import {
   CloudSun
 } from 'lucide-react';
 import { UserProfile, WeatherData } from '../../types/index.ts';
+import { PWAInstallButton } from '../pwa/PWAInstallButton.tsx';
 
 interface DesktopNavbarProps {
   theme: 'dark' | 'light';
@@ -216,6 +217,9 @@ export const DesktopNavbar: React.FC<DesktopNavbarProps> = ({
             <Waves className="w-4 h-4 text-teal-500" />
             <span>Tábua de Marés</span>
           </button>
+
+          {/* App Install Button */}
+          <PWAInstallButton className="shrink-0" />
 
           {/* Admin Button */}
           <button
