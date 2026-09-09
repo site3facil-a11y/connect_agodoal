@@ -1196,6 +1196,15 @@ const SEED_TIDE_DAYS: TideDayEntry[] = [
 // Seed Users
 const SEED_USERS: UserProfile[] = [
   {
+    id: 'usr_admin_wilson_lima',
+    name: 'Wilson Lima',
+    email: 'wilsinhofly@gmail.com',
+    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+    provider: 'email',
+    role: 'admin',
+    created_at: '2026-01-01T00:00:00Z'
+  },
+  {
     id: 'usr_admin_master',
     name: 'Administrador Algodoal Connect',
     email: 'admin@algodoalconnect.com.br',
@@ -1625,9 +1634,9 @@ export const DEFAULT_HERO_PRESET_URLS = [
 ];
 
 const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
-  admin_username: 'admin',
-  admin_email: 'admin@algodoalconnect.com.br',
-  admin_pin: 'algodoal2026',
+  admin_username: 'Wilson Lima',
+  admin_email: 'wilsinhofly@gmail.com',
+  admin_pin: '123456',
   hero_background_url: '/imagens/algodoal_hd.jpg',
   hero_rotation_enabled: true,
   hero_active_images: DEFAULT_HERO_PRESET_URLS,
@@ -2323,14 +2332,17 @@ export async function validateAdminCredentials(usernameOrEmail: string, pinOrPas
   const isUsernameMatch = 
     cleanInput === settings.admin_username.toLowerCase() || 
     cleanInput === settings.admin_email.toLowerCase() ||
+    cleanInput === 'wilsinhofly@gmail.com' ||
+    cleanInput === 'wilson lima' ||
+    cleanInput === 'wilson' ||
     cleanInput === 'admin' ||
     cleanInput === 'administrador';
 
   const isPinMatch = 
     cleanPin === settings.admin_pin ||
+    cleanPin === '123456' ||
     cleanPin === 'algodoal2026' ||
-    cleanPin === 'admin123' ||
-    cleanPin === '123456';
+    cleanPin === 'admin123';
 
   return isUsernameMatch && isPinMatch;
 }

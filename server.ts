@@ -88,6 +88,19 @@ async function startServer() {
   app.use('/imagens', express.static(path.join(process.cwd(), 'public', 'imagens')));
   app.use('/assets/images', express.static(path.join(process.cwd(), 'src', 'assets', 'images')));
 
+  // Servir APK do Android diretamente
+  const apkPath = path.join(process.cwd(), 'public', 'connect-algodoal.apk');
+  app.get(['/connect-algodoal.apk', '/download/apk', '/public/connect-algodoal.apk'], (req, res) => {
+    if (fs.existsSync(apkPath)) {
+      res.download(apkPath, 'connect-algodoal.apk');
+    } else {
+      res.status(404).json({
+        error: 'APK ainda não gerado neste servidor.',
+        instruction: 'Gere o arquivo executando "npm run build:apk" para compilar o APK em public/connect-algodoal.apk ou utilize o app via PWA nativo.'
+      });
+    }
+  });
+
   // =====================================
   // API ROUTES
   // =====================================

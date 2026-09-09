@@ -51,6 +51,7 @@ import { AlgodoalRedesignPortal } from './components/desktop/AlgodoalRedesignPor
 import { DbStatusBanner } from './components/DbStatusBanner.tsx';
 import { PWAInstallBanner } from './components/pwa/PWAInstallBanner.tsx';
 import { OfflineIndicator } from './components/pwa/OfflineIndicator.tsx';
+import { SplashScreen } from './components/SplashScreen.tsx';
 
 // Fallback Initial Partners Data for Instant Prototype Rendering
 const INITIAL_PROTOTYPE_PARTNERS: Partner[] = [
@@ -530,6 +531,7 @@ export function App() {
     <div className={`min-h-screen w-full flex flex-col items-center justify-start selection:bg-teal-500 selection:text-white transition-colors duration-200 ${
       isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-800'
     }`}>
+      <SplashScreen />
       <DbStatusBanner />
       
       {/* ======================================================== */}
