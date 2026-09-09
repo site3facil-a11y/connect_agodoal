@@ -1,0 +1,59 @@
+name: Compilar APK Android (Connect-Algodoal)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch: # Permite disparar manualmente com 1 clique no GitHub Actions
+
+jobs:
+  build-android-apk:
+    name: Gerar APK Android
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clonar o repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Configurar Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar Dependências do Projeto
+        run: npm ci || npm install
+
+      - name: Compilar a Aplicação Web (Vite)
+        run: npm run build
+
+      - name: Sincronizar com o Capacitor Android
+        run: npx cap sync android
+
+      - name: Dar permissão de execução ao gradlew
+        run: chmod +x android/gradlew
+
+      - name: Compilar o APK (Gradle assembleDebug)
+        run: |
+          cd android
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Copiar e Renomear o APK
+        run: |
+          mkdir -p build-output
+          cp android/app/build/outputs/apk/debug/app-debug.apk build-output/connect-algodoal.apk
+
+      - name: Publicar o APK como Artefato para Download
+        uses: actions/upload-artifact@v4
+        with:
+          name: Connect-Algodoal-APK
+          path: build-output/connect-algodoal.apk
+          retention-days: 30
