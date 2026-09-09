@@ -15,6 +15,8 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          timeout: 20m
+          command_timeout: 20m
           script: |
             set -e
             cd /home/ec2-user/app
@@ -32,12 +34,15 @@ jobs:
               DOCKER_CMD="docker compose"
             fi
 
-            # Tenta rodar com docker ou com sudo se necessario
-            if $DOCKER_CMD down 2>/dev/null; then
-              $DOCKER_CMD up -d --build
+            # Compila e sobe com substituição contínua (sem downtime prévio)
+            if sudo $DOCKER_CMD up -d --build --remove-orphans; then
+              echo "✅ Containers iniciados com sucesso!"
             else
-              sudo $DOCKER_CMD down
-              sudo $DOCKER_CMD up -d --build
+              echo "⚠️ Tentando sem sudo..."
+              $DOCKER_CMD up -d --build --remove-orphans
             fi
+
+            # Limpa imagens antigas para liberar espaço em disco na VPS
+            sudo docker image prune -f || true
 
             echo "✅ Deploy concluído! Commit ativo: $(git rev-parse --short HEAD)"

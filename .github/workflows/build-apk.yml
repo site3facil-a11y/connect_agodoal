@@ -1,9 +1,9 @@
 name: Compilar APK Android (Connect-Algodoal)
 
 on:
-  push:
-    branches: [ main, master ]
-  workflow_dispatch: # Permite disparar manualmente com 1 clique no GitHub Actions
+  workflow_dispatch: # Permite disparar com 1 clique no GitHub Actions (aba Actions > Run workflow)
+  # push: branches: [ main ] # Descomente quando quiser gerar APK a cada push
+
 
 jobs:
   build-android-apk:
