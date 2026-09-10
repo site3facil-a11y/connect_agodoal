@@ -11,7 +11,7 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - DATABASE_URL=${DATABASE_URL:-postgres://postgres:postgres@algodoal-postgres:5432/algodoal_db}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
     volumes:
       - ./data:/app/data
       - ./public:/app/public

@@ -1,24 +1,27 @@
 # ==========================================
-# Estágio 1: Build da aplicação
+# Estágio 1: Build da aplicação (Node 20 Alpine)
 # ==========================================
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copia manifestos de dependência
+# Copia apenas os manifestos de dependência primeiro para cache eficiente
 COPY package*.json ./
 
-# Instala dependências de forma compatível
-RUN npm install
+# Instala todas as dependências com flags otimizadas para baixo consumo de CPU/RAM
+RUN npm install --no-audit --no-fund
 
-# Copia os arquivos do projeto
+# Copia os arquivos de código do projeto
 COPY . .
 
-# Compila o frontend e o servidor
+# Compila o frontend (dist/) e o bundle do servidor (dist/server.cjs)
 RUN npm run build
 
+# Remove as devDependencies do node_modules para que o runner receba apenas produção
+RUN npm prune --omit=dev --no-audit --no-fund && npm cache clean --force
+
 # ==========================================
-# Estágio 2: Imagem de produção ultraleve
+# Estágio 2: Imagem final de execução ultraleve
 # ==========================================
 FROM node:20-alpine AS runner
 
@@ -27,17 +30,18 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Instala apenas dependências de produção para economizar memória e espaço
-COPY package*.json ./
-RUN npm install --omit=dev && npm cache clean --force
+# Copia os manifestos e o node_modules pronto do builder (SEM fazer novo download da internet!)
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
 
-# Copia os arquivos compilados e dados necessários
+# Copia os artefatos compilados e arquivos públicos
 COPY --from=builder /app/dist ./dist
-RUN mkdir -p /app/data
+COPY --from=builder /app/public ./public
 COPY --from=builder /app/assets ./assets
+RUN mkdir -p /app/data
 
 # Expõe a porta 3000
 EXPOSE 3000
 
-# Inicia o servidor Node.js diretamente (Sem PM2, ultraleve, ~40MB RAM)
+# Inicia o servidor Node.js de produção
 CMD ["node", "dist/server.cjs"]
