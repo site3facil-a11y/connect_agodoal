@@ -9,7 +9,9 @@
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
-    "cap:sync": "cap sync",
+    "generate-icons": "node scripts/generate-android-assets.js",
+    "cap:sync": "cap sync android",
+    "cap:open": "cap open android",
     "build:apk": "npm run build && npx cap sync android && cd android && gradlew assembleDebug && cd .. && copy android\\app\\build\\outputs\\apk\\debug\\app-debug.apk public\\connect-algodoal.apk",
     "build:apk:unix": "npm run build && npx cap sync android && cd android && ./gradlew assembleDebug && cd .. && cp android/app/build/outputs/apk/debug/app-debug.apk public/connect-algodoal.apk"
   },

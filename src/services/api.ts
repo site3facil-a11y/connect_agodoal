@@ -15,7 +15,21 @@ import {
   IslandStory
 } from '../types/index.ts';
 
-const API_BASE = '/api';
+// Base URL dinâmica: se rodando embutido no Capacitor sem server.url, aponta para produção;
+// se rodando no navegador ou com server.url apontando para o domínio, usa caminho relativo '/api'
+export const getApiBaseUrl = (): string => {
+  if (typeof window !== 'undefined') {
+    const isCapacitor = (window as any).Capacitor?.isNativePlatform?.() || 
+      window.location.protocol === 'capacitor:' || 
+      (window.location.hostname === 'localhost' && !window.location.port);
+    if (isCapacitor) {
+      return 'https://algodoal.3facil.com/api';
+    }
+  }
+  return '/api';
+};
+
+const API_BASE = getApiBaseUrl();
 
 export const api = {
   // Health & Stats

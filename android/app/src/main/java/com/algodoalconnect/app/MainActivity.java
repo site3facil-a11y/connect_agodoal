@@ -1,4 +1,4 @@
-package br.com.algodoalconnect.app;
+package com.algodoalconnect.app;
 
 import com.getcapacitor.BridgeActivity;
 

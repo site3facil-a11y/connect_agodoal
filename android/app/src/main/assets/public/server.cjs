@@ -1216,7 +1216,7 @@ var SEED_USERS = [
     id: "usr_admin_wilson_lima",
     name: "Wilson Lima",
     email: "wilsinhofly@gmail.com",
-    avatar_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+    avatar_url: "https://ui-avatars.com/api/?name=Wilson+Lima&background=0284c7&color=fff",
     provider: "email",
     role: "admin",
     created_at: "2026-01-01T00:00:00Z"
@@ -1225,7 +1225,7 @@ var SEED_USERS = [
     id: "usr_admin_master",
     name: "Administrador Algodoal Connect",
     email: "admin@algodoalconnect.com.br",
-    avatar_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+    avatar_url: "https://ui-avatars.com/api/?name=Admin+Algodoal&background=0f172a&color=f59e0b",
     provider: "email",
     role: "admin",
     created_at: "2026-01-01T00:00:00Z"
@@ -1251,7 +1251,7 @@ var SEED_SERVICES = [
     price: 35,
     unit: "por viagem (at\xE9 4 pessoas + malas)",
     category: "transporte",
-    image_url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&auto=format&fit=crop&q=80",
+    image_url: "/imagens/carroca.jpg",
     available: true,
     estimated_time: "15 a 20 min"
   },
@@ -1263,7 +1263,7 @@ var SEED_SERVICES = [
     price: 25,
     unit: "por viagem",
     category: "transporte",
-    image_url: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&auto=format&fit=crop&q=80",
+    image_url: "/imagens/vila.jpg",
     available: true,
     estimated_time: "5 a 10 min"
   },
@@ -1302,7 +1302,7 @@ var SEED_SERVICES = [
     price: 18,
     unit: "gal\xE3o 20L",
     category: "compras",
-    image_url: "https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=600&auto=format&fit=crop&q=80",
+    image_url: "/imagens/porto2.jpg",
     available: true,
     estimated_time: "Entrega: 15-25 min"
   },
@@ -1314,7 +1314,7 @@ var SEED_SERVICES = [
     price: 14,
     unit: "saco 5kg",
     category: "compras",
-    image_url: "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=600&auto=format&fit=crop&q=80",
+    image_url: "/imagens/porto2.jpg",
     available: true,
     estimated_time: "Entrega: 15-25 min"
   },
@@ -1327,7 +1327,7 @@ var SEED_SERVICES = [
     price: 120,
     unit: "serve 2 a 3 pessoas",
     category: "alimentacao",
-    image_url: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&auto=format&fit=crop&q=80",
+    image_url: "/imagens/algodoal.jpg",
     available: true,
     estimated_time: "Preparo: 30-40 min"
   }
@@ -3248,7 +3248,7 @@ async function startServer() {
         id: "usr_admin_master",
         name: "Administrador Geral (Algodoal Connect)",
         email: settings.admin_email || "admin@algodoalconnect.com.br",
-        avatar_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+        avatar_url: "https://ui-avatars.com/api/?name=Admin+Geral&background=0f172a&color=f59e0b",
         provider: "email",
         role: "admin",
         created_at: (/* @__PURE__ */ new Date()).toISOString()
@@ -3785,7 +3785,7 @@ async function startServer() {
         phone: data.phone,
         whatsapp: data.whatsapp ? data.whatsapp.replace(/\D/g, "") : "",
         description: data.description || "",
-        photo_url: data.photo_url || "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&auto=format&fit=crop&q=80",
+        photo_url: data.photo_url || (data.category === "transporte" ? "/imagens/carroca.jpg" : data.category === "pousadas" ? "/imagens/vila2.jpg" : data.category === "alimentacao" ? "/imagens/algodoal.jpg" : "/imagens/porto.jpg"),
         location: data.location || "Ilha de Algodoal",
         rating: 5,
         total_reviews: 1,
@@ -3842,7 +3842,7 @@ async function startServer() {
         price: Number(data.price) || 0,
         unit: data.unit || "por unidade",
         category: data.category,
-        image_url: data.image_url || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&auto=format&fit=crop&q=80",
+        image_url: data.image_url || (data.category === "transporte" ? "/imagens/carroca.jpg" : data.category === "pousadas" ? "/imagens/vila2.jpg" : data.category === "alimentacao" ? "/imagens/algodoal.jpg" : "/imagens/porto.jpg"),
         available: data.available !== void 0 ? data.available : true,
         estimated_time: data.estimated_time || "15-20 min"
       };

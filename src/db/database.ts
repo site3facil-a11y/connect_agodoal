@@ -53,21 +53,83 @@ export function getDatabaseStatus(): {
   };
 }
 
+const knownNoSslHosts = new Set<string>();
+
+function recordNoSslHost(url: string): void {
+  try {
+    const clean = url.replace('postgresql://', 'http://').replace('postgres://', 'http://');
+    const parsed = new URL(clean);
+    if (parsed.hostname) {
+      knownNoSslHosts.add(parsed.hostname.toLowerCase());
+    }
+  } catch {
+    knownNoSslHosts.add(url.toLowerCase());
+  }
+}
+
+function shouldDisableSsl(url: string): boolean {
+  if (!url) return true;
+  const lower = url.toLowerCase();
+
+  // Se explicitamente solicitado desabilitar SSL
+  if (lower.includes('sslmode=disable') || lower.includes('ssl=false') || lower.includes('ssl=0')) {
+    return true;
+  }
+
+  // Hosts locais ou redes internas Docker / VPS
+  if (
+    lower.includes('localhost') ||
+    lower.includes('127.0.0.1') ||
+    lower.includes('@postgres:') ||
+    lower.includes('@postgres/') ||
+    lower.includes('@postgres_') ||
+    lower.includes('@db:') ||
+    lower.includes('@db/') ||
+    lower.includes('@database:') ||
+    lower.includes('172.17.') ||
+    lower.includes('172.18.') ||
+    lower.includes('172.19.') ||
+    lower.includes('172.20.') ||
+    lower.includes('172.21.') ||
+    lower.includes('172.22.') ||
+    lower.includes('172.23.') ||
+    lower.includes('172.24.') ||
+    lower.includes('172.25.') ||
+    lower.includes('172.26.') ||
+    lower.includes('172.27.') ||
+    lower.includes('172.28.') ||
+    lower.includes('172.29.') ||
+    lower.includes('172.30.') ||
+    lower.includes('172.31.') ||
+    lower.includes('192.168.') ||
+    lower.includes('10.')
+  ) {
+    return true;
+  }
+
+  // Se já registramos que este host não aceita SSL
+  for (const host of knownNoSslHosts) {
+    if (lower.includes(host)) return true;
+  }
+
+  return false;
+}
+
 const databaseUrl = process.env.DATABASE_URL;
 
 if (databaseUrl && databaseUrl.trim() !== '') {
   try {
-    const isLocal = databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1') || databaseUrl.includes('sslmode=disable') || databaseUrl.includes('@postgres:');
+    const disableSsl = shouldDisableSsl(databaseUrl);
     pgPool = new pg.Pool({
       connectionString: databaseUrl,
-      ssl: isLocal ? false : { rejectUnauthorized: false },
+      ssl: disableSsl ? false : { rejectUnauthorized: false },
       connectionTimeoutMillis: 8000,
       idleTimeoutMillis: 10000,
     });
     pgPool.on('error', (err) => {
       console.warn('⚠️ Erro no pool do PostgreSQL:', err.message);
     });
-    console.log('🔗 PostgreSQL pool initialized with connection string');
+    console.log(`🔗 PostgreSQL pool inicializado (SSL: ${disableSsl ? 'Desativado' : 'Ativo'})`);
   } catch (err) {
     console.warn('⚠️ Could not initialize external PostgreSQL pool, falling back to local relational store:', err);
     pgPool = null;
@@ -101,7 +163,7 @@ export async function attemptPostgresReconnect(customUrl?: string): Promise<{
 
   isReconnecting = true;
   try {
-    const isLocal = url.includes('localhost') || url.includes('127.0.0.1') || url.includes('sslmode=disable') || url.includes('@postgres:');
+    const disableSsl = shouldDisableSsl(url);
     
     // Encerra pool anterior com segurança
     if (pgPool) {
@@ -115,7 +177,7 @@ export async function attemptPostgresReconnect(customUrl?: string): Promise<{
 
     pgPool = new pg.Pool({
       connectionString: url,
-      ssl: isLocal ? false : { rejectUnauthorized: false },
+      ssl: disableSsl ? false : { rejectUnauthorized: false },
       connectionTimeoutMillis: 8000,
       idleTimeoutMillis: 10000,
     });
@@ -174,9 +236,10 @@ setInterval(async () => {
 // tables and initial seed data always exist before the first real query runs.
 let pgInitPromise: Promise<void> | null = pgPool ? initPostgres() : null;
 
-async function initPostgres(): Promise<void> {
+async function initPostgres(isSslFallback = false): Promise<void> {
+  if (!pgPool) return;
   try {
-    await pgPool!.query(`
+    await pgPool.query(`
       CREATE TABLE IF NOT EXISTS partners (
         id VARCHAR(64) PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
@@ -487,6 +550,39 @@ async function initPostgres(): Promise<void> {
     }
   } catch (err: any) {
     const errorMsg = err?.message || String(err);
+    const isSslMismatch = errorMsg.includes('does not support SSL') ||
+                          errorMsg.includes('server does not support SSL') ||
+                          errorMsg.includes('The server does not support SSL') ||
+                          errorMsg.includes('SSL routines') ||
+                          errorMsg.includes('tls:');
+
+    const currentUrl = process.env.DATABASE_URL;
+
+    // Se o PostgreSQL acusou especificamente que não suporta SSL e ainda não tentamos sem SSL
+    if (!isSslFallback && isSslMismatch && currentUrl) {
+      console.warn(`🔄 PostgreSQL rejeitou SSL (${errorMsg}). Alternando automaticamente para conexão sem SSL (ssl: false)...`);
+      try {
+        await pgPool?.end();
+      } catch {}
+      
+      recordNoSslHost(currentUrl);
+
+      pgPool = new pg.Pool({
+        connectionString: currentUrl,
+        ssl: false,
+        connectionTimeoutMillis: 8000,
+        idleTimeoutMillis: 10000,
+      });
+
+      pgPool.on('error', (poolErr) => {
+        console.warn('⚠️ Erro no pool do PostgreSQL:', poolErr.message);
+        pgConnected = false;
+        pgStatusDetails = `Erro no pool PostgreSQL: ${poolErr.message}`;
+      });
+
+      return initPostgres(true);
+    }
+
     console.warn(`ℹ️ PostgreSQL externo indisponível (${errorMsg}). Alternando com segurança para o armazenamento local em arquivo JSON.`);
     pgConnected = false;
     pgStatusDetails = `Armazenamento Local JSON Ativo (${errorMsg.includes('ETIMEDOUT') ? 'Host externo inalcançável' : errorMsg})`;
@@ -2968,15 +3064,37 @@ export async function testPostgresConnection(customUrl?: string): Promise<{
     };
   }
 
-  const isLocal = url.includes('localhost') || url.includes('127.0.0.1') || url.includes('sslmode=disable') || url.includes('@postgres:');
-  const client = new pg.Client({
+  const disableSsl = shouldDisableSsl(url);
+  let client = new pg.Client({
     connectionString: url,
-    ssl: isLocal ? false : { rejectUnauthorized: false },
+    ssl: disableSsl ? false : { rejectUnauthorized: false },
     connectionTimeoutMillis: 4000
   });
 
   try {
-    await client.connect();
+    try {
+      await client.connect();
+    } catch (connErr: any) {
+      const errMsg = connErr?.message || String(connErr);
+      if (
+        errMsg.includes('does not support SSL') ||
+        errMsg.includes('server does not support SSL') ||
+        errMsg.includes('SSL routines') ||
+        errMsg.includes('tls:')
+      ) {
+        try { await client.end(); } catch {}
+        recordNoSslHost(url);
+        client = new pg.Client({
+          connectionString: url,
+          ssl: false,
+          connectionTimeoutMillis: 4000
+        });
+        await client.connect();
+      } else {
+        throw connErr;
+      }
+    }
+
     const verRes = await client.query('SELECT version()');
     const tblRes = await client.query(`
       SELECT table_name 
@@ -2990,9 +3108,10 @@ export async function testPostgresConnection(customUrl?: string): Promise<{
     if (!pgConnected && (!customUrl || customUrl === process.env.DATABASE_URL)) {
       try {
         if (!pgPool) {
+          const finalNoSsl = shouldDisableSsl(url);
           pgPool = new pg.Pool({
             connectionString: url,
-            ssl: isLocal ? false : { rejectUnauthorized: false },
+            ssl: finalNoSsl ? false : { rejectUnauthorized: false },
             connectionTimeoutMillis: 5000,
             idleTimeoutMillis: 10000,
           });

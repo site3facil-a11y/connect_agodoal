@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Paleta oficial Algodoal Connect -->
+    <color name="colorPrimary">#0284c7</color>
+    <color name="colorPrimaryDark">#060a12</color>
+    <color name="colorAccent">#f59e0b</color>
+    <color name="splashBackground">#060a12</color>
+    <color name="ic_launcher_background">#060a12</color>
+</resources>

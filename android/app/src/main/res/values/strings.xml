@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Connect-Algodoal</string>
-    <string name="title_activity_main">Connect-Algodoal</string>
-    <string name="package_name">br.com.algodoalconnect.app</string>
-    <string name="custom_url_scheme">br.com.algodoalconnect.app</string>
+    <string name="app_name">Algodoal Connect</string>
+    <string name="title_activity_main">Algodoal Connect</string>
+    <string name="package_name">com.algodoalconnect.app</string>
+    <string name="custom_url_scheme">com.algodoalconnect.app</string>
 </resources>
