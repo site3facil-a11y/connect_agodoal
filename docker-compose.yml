@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: app-algodoal-connect
     container_name: algodoal-connect-app
     restart: unless-stopped
     ports:
@@ -16,8 +17,9 @@ services:
       - ./data:/app/data
       - ./public:/app/public
     networks:
-      - app_default
+      - default
 
 networks:
-  app_default:
+  default:
     name: app_default
+    external: true
