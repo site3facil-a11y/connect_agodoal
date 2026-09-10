@@ -140,7 +140,7 @@ export const TransportView: React.FC<TransportViewProps> = ({
                     price: selectedDestination.includes('Fortalezinha') ? 120.0 : 35.0,
                     unit: 'por viagem',
                     category: 'transporte',
-                    image_url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&auto=format&fit=crop&q=80',
+                    image_url: '/imagens/carroca.jpg',
                     available: true
                   };
                   const partner = transportPartners[0] || partners[0];

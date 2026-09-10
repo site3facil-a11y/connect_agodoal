@@ -311,7 +311,7 @@ async function startServer() {
         id: 'usr_admin_master',
         name: 'Administrador Geral (Algodoal Connect)',
         email: settings.admin_email || 'admin@algodoalconnect.com.br',
-        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+        avatar_url: 'https://ui-avatars.com/api/?name=Admin+Geral&background=0f172a&color=f59e0b',
         provider: 'email' as const,
         role: 'admin' as const,
         created_at: new Date().toISOString()
@@ -937,7 +937,7 @@ async function startServer() {
         phone: data.phone,
         whatsapp: data.whatsapp ? data.whatsapp.replace(/\D/g, '') : '',
         description: data.description || '',
-        photo_url: data.photo_url || 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&auto=format&fit=crop&q=80',
+        photo_url: data.photo_url || (data.category === 'transporte' ? '/imagens/carroca.jpg' : data.category === 'pousadas' ? '/imagens/vila2.jpg' : data.category === 'alimentacao' ? '/imagens/algodoal.jpg' : '/imagens/porto.jpg'),
         location: data.location || 'Ilha de Algodoal',
         rating: 5.0,
         total_reviews: 1,
@@ -999,7 +999,7 @@ async function startServer() {
         price: Number(data.price) || 0,
         unit: data.unit || 'por unidade',
         category: data.category,
-        image_url: data.image_url || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&auto=format&fit=crop&q=80',
+        image_url: data.image_url || (data.category === 'transporte' ? '/imagens/carroca.jpg' : data.category === 'pousadas' ? '/imagens/vila2.jpg' : data.category === 'alimentacao' ? '/imagens/algodoal.jpg' : '/imagens/porto.jpg'),
         available: data.available !== undefined ? data.available : true,
         estimated_time: data.estimated_time || '15-20 min'
       };

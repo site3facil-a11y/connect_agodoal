@@ -49,24 +49,24 @@ export const SocialAuthModal: React.FC<SocialAuthModalProps> = ({
     try {
       let defaultName = 'Turista de Algodoal';
       let defaultEmail = `turista_${Math.floor(Math.random() * 1000)}@exemplo.com`;
-      let avatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80';
+      let avatar = `https://ui-avatars.com/api/?name=Turista+Algodoal&background=0284c7&color=fff`;
 
       if (provider === 'google') {
         defaultName = 'Wilson Lima (Gmail)';
         defaultEmail = 'wilsonlima@gmail.com';
-        avatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
+        avatar = `https://ui-avatars.com/api/?name=Wilson+Lima&background=ea4335&color=fff`;
       } else if (provider === 'instagram') {
         defaultName = '@turista_algodoal';
         defaultEmail = 'instagram.user@algodoal.app';
-        avatar = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80';
+        avatar = `https://ui-avatars.com/api/?name=Instagram+User&background=e1306c&color=fff`;
       } else if (provider === 'facebook') {
         defaultName = 'Visitante Facebook';
         defaultEmail = 'face.user@algodoal.app';
-        avatar = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80';
+        avatar = `https://ui-avatars.com/api/?name=Facebook+User&background=1877f2&color=fff`;
       } else if (provider === 'apple') {
         defaultName = 'Usuário Apple iCloud';
         defaultEmail = 'apple.id@icloud.com';
-        avatar = 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80';
+        avatar = `https://ui-avatars.com/api/?name=Apple+User&background=000000&color=fff`;
       }
 
       const res = await fetch('/api/auth/login', {
@@ -144,7 +144,7 @@ export const SocialAuthModal: React.FC<SocialAuthModalProps> = ({
           <div className="text-center py-4 space-y-4">
             <div className="relative inline-block mx-auto">
               <img
-                src={currentUser.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                src={currentUser.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name || 'Turista')}&background=f59e0b&color=0f172a`}
                 alt={currentUser.name}
                 className="w-20 h-20 rounded-full border-4 border-amber-400 shadow-md object-cover"
               />

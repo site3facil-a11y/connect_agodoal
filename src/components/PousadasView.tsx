@@ -42,7 +42,7 @@ export const PousadasView: React.FC<PousadasViewProps> = ({
       <div className="bg-gradient-to-r from-teal-900 via-emerald-800 to-teal-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
         <div 
           className="absolute inset-0 bg-cover bg-center opacity-20 mix-blend-overlay"
-          style={{ backgroundImage: `url('https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&auto=format&fit=crop&q=80')` }}
+          style={{ backgroundImage: `url('/imagens/vila2.jpg')` }}
         />
         <div className="relative z-10 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-black uppercase mb-3 border border-emerald-500/30">

@@ -31,7 +31,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
       business_name: 'Coletivo Cultural Maiandeua',
       category: 'evento' as const,
       description: 'Tradicional luau na areia da praia com fogueira ecológica, discotecagem de reggae roots paraense, roda de Carimbó e clima paradisíaco sob a lua cheia.',
-      image_url: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&auto=format&fit=crop&q=80',
+      image_url: '/imagens/festa.jpg',
       whatsapp: '5591983342211',
       location: 'Praia da Princesa (Próx. à Barraca Sol & Lua)',
       event_date: '2026-09-05T21:00:00Z',
@@ -48,7 +48,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
       business_name: 'Espaço Raízes do Pará',
       category: 'evento' as const,
       description: 'Apresentação ao vivo de grupos de Carimbó tradicional com tambores de curimbó, maracás e dançarinas com saias rodadas no centro da Vila.',
-      image_url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop&q=80',
+      image_url: '/imagens/festa.jpg',
       whatsapp: '5591981125566',
       location: 'Praça Central da Vila de Maiandeua',
       event_date: '2026-09-12T20:00:00Z',
@@ -69,7 +69,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
       <div className="bg-gradient-to-r from-purple-950 via-purple-900 to-indigo-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
         <div 
           className="absolute inset-0 bg-cover bg-center opacity-20 mix-blend-overlay"
-          style={{ backgroundImage: `url('https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=1200&auto=format&fit=crop&q=80')` }}
+          style={{ backgroundImage: `url('/imagens/festa.jpg')` }}
         />
         <div className="relative z-10 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-black uppercase mb-3 border border-purple-500/30">

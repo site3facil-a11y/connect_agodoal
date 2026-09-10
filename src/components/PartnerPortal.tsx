@@ -83,7 +83,7 @@ export const PartnerPortal: React.FC<PartnerPortalProps> = ({
         price: Number(newServicePrice),
         unit: newServiceUnit.trim(),
         category: currentPartner?.category || 'transporte',
-        image_url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&auto=format&fit=crop&q=80',
+        image_url: currentPartner?.category === 'alimentacao' ? '/imagens/algodoal.jpg' : currentPartner?.category === 'pousadas' ? '/imagens/vila2.jpg' : '/imagens/carroca.jpg',
         available: true,
         estimated_time: newServiceTime.trim()
       });

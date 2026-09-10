@@ -270,7 +270,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               {currentUser ? (
                 <div className="flex items-center gap-1.5">
                   <img
-                    src={currentUser.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'}
+                    src={currentUser.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name || 'Turista')}&background=f59e0b&color=0f172a`}
                     alt={currentUser.name}
                     className="w-5 h-5 rounded-full object-cover border border-amber-400"
                   />
