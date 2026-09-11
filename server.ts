@@ -213,6 +213,16 @@ async function startServer() {
       const filePath = path.join(uploadDir, newFileName);
       fs.writeFileSync(filePath, buffer);
 
+      // Also ensure it is present in dist/imagens for immediate production serving if dist exists
+      try {
+        const distImagensDir = path.join(process.cwd(), 'dist', 'imagens');
+        if (fs.existsSync(distImagensDir)) {
+          fs.writeFileSync(path.join(distImagensDir, newFileName), buffer);
+        }
+      } catch (e) {
+        // Non-fatal if dist doesn't exist in dev
+      }
+
       const publicUrl = `/imagens/${newFileName}`;
       res.json({
         success: true,
@@ -1163,7 +1173,16 @@ async function startServer() {
       app.use(vite.middlewares);
     } else {
       const distPath = path.join(process.cwd(), 'dist');
+      const publicPath = path.join(process.cwd(), 'public');
+      const publicImages = path.join(publicPath, 'imagens');
+
+      // Serve uploaded and public images directly
+      if (fs.existsSync(publicImages)) {
+        app.use('/imagens', express.static(publicImages));
+      }
+      app.use(express.static(publicPath));
       app.use(express.static(distPath));
+
       app.get('*', (req, res) => {
         res.sendFile(path.join(distPath, 'index.html'));
       });

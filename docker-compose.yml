@@ -16,10 +16,31 @@ services:
     volumes:
       - ./data:/app/data
       - ./public:/app/public
+    depends_on:
+      - postgres
     networks:
       - default
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: algodoal-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: algodoal_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - default
+
+volumes:
+  pgdata:
 
 networks:
   default:
     name: app_default
     external: true
+
