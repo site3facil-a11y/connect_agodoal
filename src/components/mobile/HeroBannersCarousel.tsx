@@ -110,9 +110,9 @@ export const HeroBannersCarousel: React.FC<HeroBannersCarouselProps> = ({
   const isDark = theme === 'dark';
   const activeBanners = (advertisements && advertisements.length > 0)
     ? advertisements.filter(a => a.is_active)
-    : DEFAULT_BANNER_FALLBACKS;
+    : [];
 
-  const displayList = activeBanners.length > 0 ? activeBanners : DEFAULT_BANNER_FALLBACKS;
+  const displayList = activeBanners;
 
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -123,6 +123,20 @@ export const HeroBannersCarousel: React.FC<HeroBannersCarouselProps> = ({
     }, 5500);
     return () => clearInterval(interval);
   }, [displayList.length]);
+
+  if (displayList.length === 0) {
+    return (
+      <div className={`relative w-full rounded-3xl overflow-hidden border p-6 flex flex-col justify-end min-h-[220px] sm:min-h-[280px] animate-pulse ${
+        isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-100 border-slate-200'
+      }`}>
+        <div className="space-y-3">
+          <div className={`h-6 w-28 rounded-full ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
+          <div className={`h-8 w-2/3 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
+          <div className={`h-4 w-1/3 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
+        </div>
+      </div>
+    );
+  }
 
   const current = displayList[currentIndex] || displayList[0];
 

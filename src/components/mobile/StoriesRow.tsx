@@ -141,7 +141,16 @@ export const StoriesRow: React.FC<StoriesRowProps> = ({
   showHeaderTitle = true,
   className = ''
 }) => {
-  const [stories, setStories] = useState<IslandStory[]>(DEFAULT_ISLAND_STORIES);
+  const [stories, setStories] = useState<IslandStory[]>(() => {
+    try {
+      const cached = localStorage.getItem('algodoal_cached_stories');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  });
   const [selectedStory, setSelectedStory] = useState<IslandStory | null>(null);
   const isDark = theme === 'dark';
 
@@ -154,7 +163,11 @@ export const StoriesRow: React.FC<StoriesRowProps> = ({
           const activeSorted = data
             .filter((s: IslandStory) => s.active !== false)
             .sort((a: IslandStory, b: IslandStory) => (a.orderIndex || 0) - (b.orderIndex || 0));
-          setStories(activeSorted.length > 0 ? activeSorted : DEFAULT_ISLAND_STORIES);
+          const listToSet = activeSorted.length > 0 ? activeSorted : DEFAULT_ISLAND_STORIES;
+          setStories(listToSet);
+          try {
+            localStorage.setItem('algodoal_cached_stories', JSON.stringify(listToSet));
+          } catch (e) {}
         }
       } catch (err) {
         console.warn('Usando destaques padrão offline:', err);

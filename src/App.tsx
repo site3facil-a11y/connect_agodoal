@@ -343,9 +343,27 @@ export function App() {
     return localStorage.getItem('algodoal_hero_background') || '/imagens/algodoal.jpg';
   });
 
-  // Data States
-  const [advertisements, setAdvertisements] = useState<Advertisement[]>(INITIAL_PROTOTYPE_ADVERTISEMENTS);
-  const [partners, setPartners] = useState<Partner[]>(INITIAL_PROTOTYPE_PARTNERS);
+  // Data States (Carregamento instantâneo via cache local dos dados reais para evitar "flicker" de anúncios antigos)
+  const [advertisements, setAdvertisements] = useState<Advertisement[]>(() => {
+    try {
+      const cached = localStorage.getItem('algodoal_cached_advertisements');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  });
+  const [partners, setPartners] = useState<Partner[]>(() => {
+    try {
+      const cached = localStorage.getItem('algodoal_cached_partners');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  });
   const [tideDays, setTideDays] = useState<TideDayEntry[]>([]);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [isWeatherLoading, setIsWeatherLoading] = useState(false);
@@ -420,6 +438,9 @@ export function App() {
         const dataAds = await resAds.json();
         if (Array.isArray(dataAds)) {
           setAdvertisements(dataAds);
+          try {
+            localStorage.setItem('algodoal_cached_advertisements', JSON.stringify(dataAds));
+          } catch (e) {}
         }
       }
 
@@ -429,6 +450,9 @@ export function App() {
         const dataPartners = await resPartners.json();
         if (Array.isArray(dataPartners) && dataPartners.length > 0) {
           setPartners(dataPartners);
+          try {
+            localStorage.setItem('algodoal_cached_partners', JSON.stringify(dataPartners));
+          } catch (e) {}
         }
       }
 
