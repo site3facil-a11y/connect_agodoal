@@ -83,6 +83,8 @@ function shouldDisableSsl(url: string): boolean {
     lower.includes('@postgres:') ||
     lower.includes('@postgres/') ||
     lower.includes('@postgres_') ||
+    lower.includes('@algodoal-postgres') ||
+    lower.includes('algodoal-postgres') ||
     lower.includes('@db:') ||
     lower.includes('@db/') ||
     lower.includes('@database:') ||

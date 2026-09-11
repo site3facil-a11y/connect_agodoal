@@ -8,8 +8,8 @@ WORKDIR /app
 # Copia apenas os manifestos de dependência primeiro para cache eficiente
 COPY package*.json ./
 
-# Instala todas as dependências com flags otimizadas para baixo consumo de CPU/RAM
-RUN npm install --no-audit --no-fund
+# Instala todas as dependências com flags otimizadas para baixo consumo de CPU/RAM e cache de lockfile
+RUN npm ci --no-audit --no-fund || npm install --no-audit --no-fund
 
 # Copia os arquivos de código do projeto
 COPY . .

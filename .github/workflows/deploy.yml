@@ -15,8 +15,8 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          timeout: 20m
-          command_timeout: 20m
+          timeout: 45m
+          command_timeout: 45m
           script: |
             set -e
             cd /home/ec2-user/app
@@ -42,7 +42,9 @@ jobs:
               $DOCKER_CMD up -d --build --remove-orphans
             fi
 
-            # Limpa imagens antigas para liberar espaço em disco na VPS
-            sudo docker image prune -f || true
+            # Limpa imagens antigas e cache de build antigo para liberar espaço em disco na VPS
+            echo "🧹 Limpando cache de build antigo e imagens não utilizadas..."
+            sudo docker builder prune -a -f || docker builder prune -a -f || true
+            sudo docker image prune -f || docker image prune -f || true
 
             echo "✅ Deploy concluído! Commit ativo: $(git rev-parse --short HEAD)"
